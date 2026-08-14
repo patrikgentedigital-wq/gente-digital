@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { TeamMember, PerformanceStatus } from './types';
+import { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import { INITIAL_TEAM_MEMBERS } from './data/initialData';
-import { subscribeToMembers, updateMemberInFirestore, saveEvaluationInFirestore } from './lib/firebase';
+import {
+  subscribeToMembers,
+  updateMemberInFirestore,
+  addMemberToFirestore,
+  deleteMemberFromFirestore,
+  saveEvaluationInFirestore,
+} from './lib/firebase';
 import { Navbar } from './components/Navbar';
 import { LeaderboardView } from './components/LeaderboardView';
 import { DashboardView } from './components/DashboardView';
@@ -11,6 +17,10 @@ import { ImageLinkModal } from './components/ImageLinkModal';
 import { EmployeeDetailModal } from './components/EmployeeDetailModal';
 import { LeaderLoginModal } from './components/LeaderLoginModal';
 import { ReportExportModal } from './components/ReportExportModal';
+import { MemberFormModal } from './components/MemberFormModal';
+import { KioskModeModal } from './components/KioskModeModal';
+import { ToastContainer } from './components/ToastContainer';
+import { toast } from './utils/toastUtils';
 
 export default function App() {
   const [members, setMembers] = useState<TeamMember[]>(INITIAL_TEAM_MEMBERS);
@@ -37,6 +47,13 @@ export default function App() {
   const [isLeaderModalOpen, setIsLeaderModalOpen] = useState<boolean>(false);
   const [currentLeader, setCurrentLeader] = useState<string | null>(null);
 
+  // Member CRUD modal state
+  const [isMemberFormOpen, setIsMemberFormOpen] = useState<boolean>(false);
+  const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
+
+  // TV / Kiosk Mode state
+  const [isKioskOpen, setIsKioskOpen] = useState<boolean>(false);
+
   // Handle direct avatar URL update
   const handleSaveAvatarUrl = (newAvatarUrl: string) => {
     if (!imageModalMember) return;
@@ -56,6 +73,62 @@ export default function App() {
     }
 
     setImageModalMember(null);
+    toast.success('Foto do perfil atualizada com sucesso!');
+  };
+
+  // Handle saving (Add or Edit) member
+  const handleSaveMember = (memberData: TeamMember) => {
+    const isExisting = members.some((m) => m.id === memberData.id);
+
+    setMembers((prevMembers) => {
+      let updatedList: TeamMember[];
+      if (isExisting) {
+        updatedList = prevMembers.map((m) => (m.id === memberData.id ? memberData : m));
+      } else {
+        updatedList = [...prevMembers, memberData];
+      }
+
+      // Re-sort and re-rank
+      const sorted = [...updatedList].sort((a, b) => b.score - a.score);
+      const ranked = sorted.map((m, idx) => ({
+        ...m,
+        previousRank: m.rank,
+        rank: idx + 1,
+      }));
+
+      // Update in Firestore
+      if (isExisting) {
+        updateMemberInFirestore(memberData);
+      } else {
+        addMemberToFirestore(memberData);
+      }
+
+      return ranked;
+    });
+
+    toast.success(
+      isExisting
+        ? `Dados de ${memberData.name} atualizados com sucesso!`
+        : `Colaborador ${memberData.name} cadastrado com sucesso!`,
+      isExisting ? 'Atualização Concluída' : 'Cadastro Concluído'
+    );
+  };
+
+  // Handle deleting member
+  const handleDeleteMember = (memberId: string) => {
+    const target = members.find((m) => m.id === memberId);
+    setMembers((prev) => {
+      const filtered = prev.filter((m) => m.id !== memberId);
+      const sorted = [...filtered].sort((a, b) => b.score - a.score);
+      return sorted.map((m, idx) => ({
+        ...m,
+        previousRank: m.rank,
+        rank: idx + 1,
+      }));
+    });
+
+    deleteMemberFromFirestore(memberId);
+    toast.info(`Colaborador ${target?.name || ''} removido com sucesso.`);
   };
 
   // Handle saving evaluation from leader view
@@ -63,7 +136,9 @@ export default function App() {
     memberId: string,
     newTotalScore: number,
     criteriaScores: Record<string, number>,
-    comments: string
+    comments: string,
+    cycle = 'Agosto/2026',
+    pdiGoals: PdiGoal[] = []
   ) => {
     let newStatus: PerformanceStatus = 'Caminho Certo';
     if (newTotalScore > 140) newStatus = 'Voando';
@@ -73,11 +148,20 @@ export default function App() {
 
     const targetMember = members.find((m) => m.id === memberId);
     if (targetMember) {
+      // Update history
+      const existingHistory = targetMember.history || [];
+      const updatedHistory = [
+        ...existingHistory.filter((h) => h.month !== cycle.slice(0, 3)),
+        { month: cycle.slice(0, 3), score: newTotalScore },
+      ];
+
       const updatedMember: TeamMember = {
         ...targetMember,
         score: newTotalScore,
         status: newStatus,
         evaluationStatus: 'Concluído' as const,
+        pdiGoals,
+        history: updatedHistory,
       };
 
       updateMemberInFirestore(updatedMember);
@@ -89,6 +173,10 @@ export default function App() {
         leaderName: currentLeader || targetMember.team,
         score: newTotalScore,
         status: newStatus,
+        cycle,
+        comments,
+        pdiGoals,
+        criteriaScores,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -96,11 +184,17 @@ export default function App() {
     setMembers((prevMembers) => {
       const updated = prevMembers.map((m) => {
         if (m.id === memberId) {
+          const existingHistory = m.history || [];
           return {
             ...m,
             score: newTotalScore,
             status: newStatus,
             evaluationStatus: 'Concluído' as const,
+            pdiGoals,
+            history: [
+              ...existingHistory.filter((h) => h.month !== cycle.slice(0, 3)),
+              { month: cycle.slice(0, 3), score: newTotalScore },
+            ],
           };
         }
         return m;
@@ -118,11 +212,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0A1424] text-[#F2F5FA] flex flex-col font-sans selection:bg-[#E3A73B] selection:text-[#1a1200]">
+      {/* Toast Feedback Notification Overlay */}
+      <ToastContainer />
+
       {/* Top Header */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenLeaderModal={() => setIsLeaderModalOpen(true)}
+        onOpenKioskMode={() => setIsKioskOpen(true)}
+        onOpenMemberForm={() => {
+          setMemberToEdit(null);
+          setIsMemberFormOpen(true);
+        }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
@@ -139,6 +241,10 @@ export default function App() {
             }}
             onOpenReportModal={(m) => setReportModalMember(m)}
             onSelectMemberForDetail={(m) => setDetailModalMember(m)}
+            onOpenMemberForm={(m) => {
+              setMemberToEdit(m || null);
+              setIsMemberFormOpen(true);
+            }}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
           />
@@ -186,7 +292,27 @@ export default function App() {
         onLoginSuccess={(leaderName) => {
           setCurrentLeader(leaderName);
           setActiveTab('leader');
+          toast.success(`Autenticado como Líder: ${leaderName}`, 'Área do Líder');
         }}
+      />
+
+      {/* Member Form Modal (Create / Edit) */}
+      <MemberFormModal
+        isOpen={isMemberFormOpen}
+        onClose={() => {
+          setIsMemberFormOpen(false);
+          setMemberToEdit(null);
+        }}
+        memberToEdit={memberToEdit}
+        onSaveMember={handleSaveMember}
+        onDeleteMember={handleDeleteMember}
+      />
+
+      {/* TV / Kiosk Presentation Mode */}
+      <KioskModeModal
+        isOpen={isKioskOpen}
+        onClose={() => setIsKioskOpen(false)}
+        members={members}
       />
 
       {/* Image Link Modal for Avatar URLs */}

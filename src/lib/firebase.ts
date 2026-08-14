@@ -16,6 +16,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   orderBy,
@@ -33,7 +34,18 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-const app = initializeApp(firebaseConfig);
+// Resolved Firebase configuration with environment variable support & fallback
+const resolvedFirebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)',
+};
+
+const app = initializeApp(resolvedFirebaseConfig);
 
 export const auth = getAuth(app);
 
@@ -71,7 +83,7 @@ export function subscribeToAuth(onUserChange: (user: User | null) => void) {
 }
 
 // Initialize Firestore with specific database ID from config
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId);
 
 export interface FirestoreErrorInfo {
   error: string;
@@ -157,6 +169,16 @@ export function subscribeToMembers(onData: (members: TeamMember[]) => void) {
   );
 }
 
+// Add a new member to Firestore
+export async function addMemberToFirestore(newMember: TeamMember) {
+  try {
+    const docRef = doc(db, 'members', newMember.id);
+    await setDoc(docRef, newMember);
+  } catch (error) {
+    handleFirestoreError(error, 'create', `members/${newMember.id}`);
+  }
+}
+
 // Update a member score/data in Firestore
 export async function updateMemberInFirestore(updatedMember: TeamMember) {
   try {
@@ -164,6 +186,16 @@ export async function updateMemberInFirestore(updatedMember: TeamMember) {
     await setDoc(docRef, updatedMember, { merge: true });
   } catch (error) {
     handleFirestoreError(error, 'write', `members/${updatedMember.id}`);
+  }
+}
+
+// Delete a member from Firestore
+export async function deleteMemberFromFirestore(memberId: string) {
+  try {
+    const docRef = doc(db, 'members', memberId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, 'delete', `members/${memberId}`);
   }
 }
 
@@ -176,6 +208,11 @@ export async function saveEvaluationInFirestore(evaluationData: {
   score: number;
   status: string;
   updatedAt: string;
+  cycle?: string;
+  comments?: string;
+  pdiGoals?: any[];
+  criteriaScores?: Record<string, number>;
+  selfScores?: Record<string, number>;
 }) {
   try {
     const docRef = doc(db, 'evaluations', evaluationData.id);

@@ -1,7 +1,9 @@
 import React from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/initialData';
-import { BarChart3, Filter } from 'lucide-react';
+import { exportMembersToCSV } from '../utils/exportUtils';
+import { toast } from '../utils/toastUtils';
+import { BarChart3, Filter, Download } from 'lucide-react';
 import { DashboardKpiCards } from './dashboard/DashboardKpiCards';
 import { TeamComparisonChart } from './dashboard/TeamComparisonChart';
 import { StatusDistributionChart } from './dashboard/StatusDistributionChart';
@@ -167,10 +169,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#0F1E38] border border-[#22365C] rounded-xl px-3 py-1.5 self-start sm:self-auto">
-          <Filter className="w-3.5 h-3.5 text-[#E3A73B]" />
-          <span className="text-xs font-mono font-bold text-[#A9B7CE]">Período:</span>
-          <span className="text-xs font-mono font-bold text-[#E3A73B]">Agosto / 2026</span>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={() => {
+              exportMembersToCSV(members, 'dashboard-analytics-gente-digital.csv');
+              toast.success('Métricas e dados do dashboard exportados para CSV!', 'Exportação Concluída');
+            }}
+            className="flex items-center gap-1.5 bg-[#0F1E38] hover:bg-[#14294A] border border-[#22365C] hover:border-[#E3A73B] text-[#A9B7CE] hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
+          >
+            <Download className="w-3.5 h-3.5 text-[#E3A73B]" />
+            Exportar CSV
+          </button>
+
+          <div className="flex items-center gap-2 bg-[#0F1E38] border border-[#22365C] rounded-xl px-3 py-1.5">
+            <Filter className="w-3.5 h-3.5 text-[#E3A73B]" />
+            <span className="text-xs font-mono font-bold text-[#A9B7CE]">Período:</span>
+            <span className="text-xs font-mono font-bold text-[#E3A73B]">Agosto / 2026</span>
+          </div>
         </div>
       </div>
 

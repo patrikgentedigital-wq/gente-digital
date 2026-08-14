@@ -1,0 +1,307 @@
+import React, { useState, useEffect } from 'react';
+import { TeamMember, LeaderName } from '../types';
+import { TEAMS } from '../data/initialData';
+import { X, UserPlus, Edit3, Trash2, Mail, Briefcase, Users, Link as LinkIcon, AlertTriangle, Check } from 'lucide-react';
+
+interface MemberFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  memberToEdit?: TeamMember | null;
+  onSaveMember: (memberData: TeamMember) => void;
+  onDeleteMember?: (memberId: string) => void;
+}
+
+export const MemberFormModal: React.FC<MemberFormModalProps> = ({
+  isOpen,
+  onClose,
+  memberToEdit,
+  onSaveMember,
+  onDeleteMember,
+}) => {
+  const isEditing = !!memberToEdit;
+
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [team, setTeam] = useState<LeaderName>('Djemerson');
+  const [email, setEmail] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [score, setScore] = useState(135);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (memberToEdit) {
+      setName(memberToEdit.name);
+      setRole(memberToEdit.role);
+      setTeam(memberToEdit.team);
+      setEmail(memberToEdit.email || '');
+      setAvatarUrl(memberToEdit.avatarUrl || '');
+      setScore(memberToEdit.score || 135);
+    } else {
+      setName('');
+      setRole('');
+      setTeam('Djemerson');
+      setEmail('');
+      setAvatarUrl('');
+      setScore(135);
+    }
+    setShowDeleteConfirm(false);
+  }, [memberToEdit, isOpen]);
+
+  if (!isOpen) return null;
+
+  const selectedTeamData = TEAMS.find((t) => t.leader === team) || TEAMS[0];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !role.trim()) return;
+
+    let status: TeamMember['status'] = 'Caminho Certo';
+    if (score > 140) status = 'Voando';
+    else if (score > 130) status = 'Caminho Certo';
+    else if (score >= 120) status = 'Atenção';
+    else status = 'Alarme';
+
+    const memberId = memberToEdit?.id || `member_${Date.now()}`;
+
+    const memberData: TeamMember = {
+      id: memberId,
+      name: name.trim(),
+      role: role.trim(),
+      team,
+      teamColor: selectedTeamData.color,
+      rank: memberToEdit?.rank || 99,
+      previousRank: memberToEdit?.previousRank,
+      score,
+      maxScore: 155,
+      status,
+      avatarUrl: avatarUrl.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
+      evaluationStatus: memberToEdit?.evaluationStatus || 'Pendente',
+      email: email.trim() || `${name.trim().toLowerCase().replace(/\s+/g, '.')}@gentedigital.com.br`,
+      pdiGoals: memberToEdit?.pdiGoals || [],
+      history: memberToEdit?.history || [
+        { month: 'Jun', score: Math.max(100, score - 6) },
+        { month: 'Jul', score: Math.max(100, score - 3) },
+        { month: 'Ago', score },
+      ],
+    };
+
+    onSaveMember(memberData);
+    onClose();
+  };
+
+  const handleDelete = () => {
+    if (memberToEdit && onDeleteMember) {
+      onDeleteMember(memberToEdit.id);
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E3A73B]/10 border border-[#E3A73B]/30 flex items-center justify-center text-[#E3A73B]">
+              {isEditing ? <Edit3 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-lg text-white">
+                {isEditing ? 'Editar Colaborador' : 'Novo Colaborador'}
+              </h3>
+              <p className="text-xs text-[#A9B7CE]">
+                {isEditing ? 'Atualize as informações cadastrais e de equipe' : 'Cadastre um novo membro para o ranking e avaliação'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Delete Confirmation Alert if active */}
+        {showDeleteConfirm ? (
+          <div className="bg-[#3A1620] border border-[#e2687a]/40 p-4 rounded-xl flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-[#e2687a] font-bold text-xs">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Confirmar exclusão de {memberToEdit?.name}?</span>
+            </div>
+            <p className="text-xs text-[#ffebee] leading-relaxed">
+              Esta ação removerá o colaborador do ranking e do Firestore.
+            </p>
+            <div className="flex justify-end gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#14294A] hover:bg-[#1c3966] text-[#A9B7CE]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#e2687a] hover:bg-[#c95062] text-white flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Live Avatar Preview */}
+            <div className="flex items-center gap-4 bg-[#14294A] p-3.5 rounded-xl border border-[#22365C]">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-[#0A1424] border-2 border-[#E3A73B]/50 shrink-0 flex items-center justify-center">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="font-bold text-sm text-[#E3A73B]">
+                    {name ? name.slice(0, 2).toUpperCase() : 'GD'}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-semibold text-[#A9B7CE] mb-1">
+                  URL da Foto / Avatar
+                </label>
+                <div className="relative">
+                  <LinkIcon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+                  <input
+                    type="url"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    placeholder="https://exemplo.com/foto.jpg (ou gerador automático)"
+                    className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-[#A9B7CE]">Nome Completo *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: João da Silva"
+                className="w-full bg-[#14294A] border border-[#22365C] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                required
+              />
+            </div>
+
+            {/* Role & Email Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-[#A9B7CE]">Cargo / Especialidade *</label>
+                <div className="relative">
+                  <Briefcase className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+                  <input
+                    type="text"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="Ex: Suporte IXC N1"
+                    className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-[#A9B7CE]">E-mail Corporativo</label>
+                <div className="relative">
+                  <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nome@gentedigital.com.br"
+                    className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Team Selection */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-[#A9B7CE]">Equipe / Líder Responsável *</label>
+              <div className="relative">
+                <Users className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+                <select
+                  value={team}
+                  onChange={(e) => setTeam(e.target.value as LeaderName)}
+                  className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                >
+                  {TEAMS.map((t) => (
+                    <option key={t.leader} value={t.leader}>
+                      Time {t.leader}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Score slider */}
+            <div className="space-y-1 bg-[#14294A] p-3 rounded-xl border border-[#22365C]">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-[#A9B7CE] font-semibold">Pontuação Inicial:</span>
+                <span className="font-mono font-bold text-[#E3A73B]">{score} / 155 pts</span>
+              </div>
+              <input
+                type="range"
+                min="60"
+                max="155"
+                value={score}
+                onChange={(e) => setScore(Number(e.target.value))}
+                className="w-full accent-[#E3A73B] cursor-pointer"
+              />
+            </div>
+
+            {/* Form actions */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#22365C]">
+              {isEditing ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-xs text-[#e2687a] hover:text-[#ff8597] font-semibold flex items-center gap-1.5 p-2 rounded-lg hover:bg-[#3A1620] transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir Colaborador
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex gap-2.5">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#14294A] hover:bg-[#1c3966] text-[#A9B7CE] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#E3A73B] hover:bg-[#eeb64f] text-[#1a1200] flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  {isEditing ? 'Salvar Alterações' : 'Cadastrar Membro'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};

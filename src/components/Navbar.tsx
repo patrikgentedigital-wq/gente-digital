@@ -1,10 +1,12 @@
 import React from 'react';
-import { Lock, Trophy, BarChart3, Users } from 'lucide-react';
+import { Lock, Trophy, BarChart3, Users, Tv, UserPlus } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: 'ranking' | 'dashboard' | 'teams' | 'leader';
   setActiveTab: (tab: 'ranking' | 'dashboard' | 'teams' | 'leader') => void;
   onOpenLeaderModal: () => void;
+  onOpenKioskMode?: () => void;
+  onOpenMemberForm?: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 }
@@ -13,6 +15,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenLeaderModal,
+  onOpenKioskMode,
+  onOpenMemberForm,
 }) => {
   return (
     <header className="border-b border-[#22365C] bg-[#0A1424] relative overflow-hidden">
@@ -39,10 +43,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="font-mono text-xs text-[#A9B7CE] border border-[#22365C] rounded-full px-3.5 py-1.5 bg-[#0F1E38]/50">
-            AGOSTO · 2026
-          </span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {onOpenKioskMode && (
+            <button
+              onClick={onOpenKioskMode}
+              className="bg-[#0F1E38] hover:bg-[#14294A] hover:border-[#E3A73B] border border-[#22365C] text-[#E3A73B] font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Abrir Modo Telão / TV para apresentações ao vivo"
+            >
+              <Tv className="w-3.5 h-3.5" />
+              <span>Modo TV (Telão)</span>
+            </button>
+          )}
+
+          {onOpenMemberForm && (
+            <button
+              onClick={onOpenMemberForm}
+              className="bg-[#0F1E38] hover:bg-[#14294A] hover:border-[#4fb579] border border-[#22365C] text-[#4fb579] font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Cadastrar novo colaborador"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Novo Membro</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenLeaderModal}
@@ -56,10 +78,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Navigation Tabs Bar */}
       <div className="max-w-[1040px] mx-auto px-6 pb-2 relative">
-        <nav className="flex items-center gap-2 border-t border-[#22365C]/60 pt-3">
+        <nav className="flex items-center gap-2 border-t border-[#22365C]/60 pt-3 overflow-x-auto">
           <button
             onClick={() => setActiveTab('ranking')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'ranking'
                 ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
                 : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
@@ -71,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'dashboard'
                 ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
                 : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
@@ -83,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('teams')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'teams'
                 ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
                 : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
@@ -95,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setActiveTab('leader')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'leader'
                 ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
                 : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
@@ -109,5 +131,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-
-

@@ -19,6 +19,27 @@ export interface EvaluationCriterion {
   score: number; // 0 to 5
 }
 
+export interface PdiGoal {
+  id: string;
+  title: string;
+  deadline: string;
+  status: 'pending' | 'completed';
+  description?: string;
+}
+
+export interface EvaluationHistoryEntry {
+  id: string;
+  cycle: string;
+  date: string;
+  score: number;
+  status: PerformanceStatus;
+  leaderName: string;
+  comments: string;
+  criteriaScores?: Record<string, number>;
+  selfScores?: Record<string, number>;
+  pdiGoals?: PdiGoal[];
+}
+
 export interface TeamMember {
   id: string;
   name: string;
@@ -38,6 +59,9 @@ export interface TeamMember {
     month: string;
     score: number;
   }[];
+  pdiGoals?: PdiGoal[];
+  selfEvaluationScores?: Record<string, number>;
+  evaluationHistory?: EvaluationHistoryEntry[];
 }
 
 export interface Badge {

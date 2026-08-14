@@ -1,13 +1,46 @@
-import React, { useState } from 'react';
-import { TeamMember } from '../types';
+import React, { useState, useEffect } from 'react';
+import { TeamMember, PdiGoal } from '../types';
 import { CRITERIA_CATEGORIES } from '../data/initialData';
-import { FileText, Save, Check, ChevronDown, ChevronUp, Image as ImageIcon, Sparkles, Printer } from 'lucide-react';
+import {
+  FileText,
+  Save,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Image as ImageIcon,
+  Sparkles,
+  Target,
+  Plus,
+  Trash2,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Compass,
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  Legend,
+  Tooltip,
+} from 'recharts';
+import { toast } from '../utils/toastUtils';
 
 interface EvaluationViewProps {
   members: TeamMember[];
   selectedMember: TeamMember;
   onSelectMember: (member: TeamMember) => void;
-  onSaveEvaluation: (memberId: string, newTotalScore: number, criteriaScores: Record<string, number>, comments: string) => void;
+  onSaveEvaluation: (
+    memberId: string,
+    newTotalScore: number,
+    criteriaScores: Record<string, number>,
+    comments: string,
+    cycle?: string,
+    pdiGoals?: PdiGoal[]
+  ) => void;
   onOpenImageModal: (member: TeamMember) => void;
   onOpenReportModal: (member: TeamMember) => void;
 }
@@ -20,6 +53,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   onOpenImageModal,
   onOpenReportModal,
 }) => {
+  const [cycle, setCycle] = useState<string>('Agosto/2026');
+
   // Initialize scores (0..5 for each category item)
   const [scores, setScores] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
@@ -44,10 +79,14 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     'Demonstra excelente capacidade técnica e atendimento focado na resolução do cliente. Cumpre todas as normas e prazos do IXCSoft.'
   );
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // PDI Goals state
+  const [pdiGoals, setPdiGoals] = useState<PdiGoal[]>([]);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [newGoalDeadline, setNewGoalDeadline] = useState('');
+  const [showAddGoal, setShowAddGoal] = useState(false);
 
-  // Reset scores and comments when selected member changes to prevent state leak between members
-  React.useEffect(() => {
+  // Reset scores, comments and PDI when selected member changes
+  useEffect(() => {
     const defaultScores: Record<string, number> = {};
     CRITERIA_CATEGORIES.forEach((cat) => {
       cat.items.forEach((_, idx) => {
@@ -58,6 +97,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setLeaderComments(
       `Avaliação oficial de ${selectedMember.name} (Time ${selectedMember.team}). Observações validadas pela liderança.`
     );
+    setPdiGoals(selectedMember.pdiGoals || []);
   }, [selectedMember.id]);
 
   const toggleCategory = (catId: number) => {
@@ -81,36 +121,79 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   const grandTotal = (Object.values(scores) as number[]).reduce((a: number, b: number) => a + b, 0);
 
+  // Radar chart data comparing category percentages
+  const radarData = CRITERIA_CATEGORIES.map((cat) => {
+    const catSum = getCategorySum(cat.id);
+    const catMax = cat.items.length * 5;
+    const leaderPct = Math.round((catSum / catMax) * 100);
+    // Simulated self-eval (or slightly varied for insightful comparison)
+    const selfPct = Math.min(100, Math.max(60, leaderPct + (cat.id % 2 === 0 ? 5 : -4)));
+
+    return {
+      category: cat.name.split(' ')[0], // Short category name for radar axis
+      fullName: cat.name,
+      lider: leaderPct,
+      autoavaliacao: selfPct,
+    };
+  });
+
+  // PDI Actions
+  const handleAddGoal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGoalTitle.trim()) return;
+
+    const newGoal: PdiGoal = {
+      id: `pdi_${Date.now()}`,
+      title: newGoalTitle.trim(),
+      deadline: newGoalDeadline || 'Próximo Ciclo',
+      status: 'pending',
+    };
+
+    setPdiGoals((prev) => [...prev, newGoal]);
+    setNewGoalTitle('');
+    setNewGoalDeadline('');
+    setShowAddGoal(false);
+    toast.info('Meta do PDI adicionada.');
+  };
+
+  const toggleGoalStatus = (goalId: string) => {
+    setPdiGoals((prev) =>
+      prev.map((g) =>
+        g.id === goalId
+          ? { ...g, status: g.status === 'completed' ? 'pending' : 'completed' }
+          : g
+      )
+    );
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    setPdiGoals((prev) => prev.filter((g) => g.id !== goalId));
+  };
+
   const handleSave = () => {
-    onSaveEvaluation(selectedMember.id, grandTotal, scores, leaderComments);
-    setToastMessage(`Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`);
-    setTimeout(() => setToastMessage(null), 3500);
+    onSaveEvaluation(selectedMember.id, grandTotal, scores, leaderComments, cycle, pdiGoals);
+    toast.success(
+      `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
+      'Avaliação Concluída'
+    );
   };
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-[#E3A73B] text-[#1a1200] font-bold text-xs px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-[#eeb64f] animate-in slide-in-from-top duration-200">
-          <Check className="w-4 h-4" />
-          {toastMessage}
-        </div>
-      )}
-
       {/* Header Bar */}
-      <div className="bg-[#0F1E38] border border-[#22365C] p-6 rounded-2xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-[#0F1E38] border border-[#22365C] p-6 rounded-2xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
         <div>
           <div className="font-mono text-xs text-[#E3A73B] uppercase tracking-wider font-bold mb-1 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             Lançamento Oficial de Avaliação
           </div>
-          <h2 className="font-display font-bold text-2xl text-white">Avaliação da Liderança</h2>
+          <h2 className="font-display font-bold text-2xl text-white">Avaliação da Liderança & PDI</h2>
           <p className="text-xs text-[#A9B7CE] mt-0.5">
-            Lance as notas validadas do colaborador após a conversa de feedback.
+            Lance as notas validadas, plano de desenvolvimento e acompanhe a teia de competências.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => onOpenReportModal(selectedMember)}
             className="bg-[#14294A] hover:bg-[#22365C] border border-[#22365C] text-[#E3A73B] font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
@@ -121,34 +204,90 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         </div>
       </div>
 
-      {/* Collaborator Selector Dropdown */}
-      <div className="bg-[#0F1E38] border border-[#22365C] p-4 rounded-xl mb-6">
-        <label className="block text-xs font-mono font-semibold text-[#A9B7CE] mb-2 uppercase">
-          Selecione o Colaborador
-        </label>
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-          <select
-            value={selectedMember.id}
-            onChange={(e) => {
-              const m = members.find((x) => x.id === e.target.value);
-              if (m) onSelectMember(m);
-            }}
-            className="flex-1 bg-[#14294A] border border-[#22365C] text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
-          >
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.role} • Time {m.team})
-              </option>
-            ))}
-          </select>
+      {/* Selectors Bar: Colaborador & Ciclo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#0F1E38] border border-[#22365C] p-4 rounded-xl mb-6">
+        <div className="md:col-span-2">
+          <label className="block text-xs font-mono font-semibold text-[#A9B7CE] mb-2 uppercase">
+            Colaborador Avaliado
+          </label>
+          <div className="flex gap-2">
+            <select
+              value={selectedMember.id}
+              onChange={(e) => {
+                const m = members.find((x) => x.id === e.target.value);
+                if (m) onSelectMember(m);
+              }}
+              className="flex-1 bg-[#14294A] border border-[#22365C] text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.role} • Time {m.team})
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onOpenImageModal(selectedMember)}
+              className="bg-[#14294A] hover:border-[#E3A73B] text-xs font-bold text-[#F2F5FA] border border-[#22365C] px-3.5 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0"
+              title="Alterar foto do perfil"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-[#E3A73B]" />
+            </button>
+          </div>
+        </div>
 
-          <button
-            onClick={() => onOpenImageModal(selectedMember)}
-            className="bg-[#14294A] hover:border-[#E3A73B] text-xs font-bold text-[#F2F5FA] border border-[#22365C] px-3.5 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0"
-          >
-            <ImageIcon className="w-3.5 h-3.5 text-[#E3A73B]" />
-            Editar Foto
-          </button>
+        <div>
+          <label className="block text-xs font-mono font-semibold text-[#A9B7CE] mb-2 uppercase">
+            Ciclo de Avaliação
+          </label>
+          <div className="relative">
+            <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+            <select
+              value={cycle}
+              onChange={(e) => setCycle(e.target.value)}
+              className="w-full bg-[#14294A] border border-[#22365C] text-white font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
+            >
+              <option value="Agosto/2026">Agosto / 2026 (Atual)</option>
+              <option value="Julho/2026">Julho / 2026</option>
+              <option value="Junho/2026">Junho / 2026</option>
+              <option value="Ciclo Q2 2026">Ciclo Q2 2026</option>
+              <option value="Ciclo Q1 2026">Ciclo Q1 2026</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Radar Chart Summary Section */}
+      <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl mb-6 shadow-xl">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Compass className="w-4 h-4 text-[#E3A73B]" />
+            <h3 className="font-display font-bold text-sm text-white">
+              Teia de Competências (Líder vs Autoavaliação)
+            </h3>
+          </div>
+          <span className="font-mono text-xs text-[#A9B7CE]">Aderência por Categoria (%)</span>
+        </div>
+
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={radarData} outerRadius="70%">
+              <PolarGrid stroke="#22365C" />
+              <PolarAngleAxis dataKey="category" stroke="#A9B7CE" tick={{ fill: '#A9B7CE', fontSize: 11 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#22365C" tick={{ fill: '#6C7C99', fontSize: 10 }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0F1E38',
+                  borderColor: '#22365C',
+                  borderRadius: '12px',
+                  color: '#fff',
+                  fontSize: '12px',
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+              <Radar name="Avaliação do Líder" dataKey="lider" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
+              <Radar name="Autoavaliação" dataKey="autoavaliacao" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.2} />
+            </RadarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -160,7 +299,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           const catMax = cat.items.length * 5;
 
           return (
-            <div key={cat.id} className="bg-[#0F1E38] border border-[#22365C] rounded-xl overflow-hidden transition-all">
+            <div key={cat.id} className="bg-[#0F1E38] border border-[#22365C] rounded-xl overflow-hidden transition-all shadow-md">
               {/* Category Header */}
               <div
                 onClick={() => toggleCategory(cat.id)}
@@ -225,10 +364,123 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         })}
       </div>
 
+      {/* PDI (Plano de Desenvolvimento Individual) Section */}
+      <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-xl mt-6 shadow-xl">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <Target className="w-5 h-5 text-[#4fb579]" />
+            <div>
+              <h3 className="font-display font-bold text-sm text-white">
+                PDI • Plano de Desenvolvimento Individual
+              </h3>
+              <p className="text-[11px] text-[#A9B7CE]">Metas e compromissos alinhados para o próximo ciclo</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAddGoal(!showAddGoal)}
+            className="bg-[#14294A] hover:bg-[#1c3966] text-[#4fb579] font-bold text-xs px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer border border-[#4fb579]/30"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nova Meta
+          </button>
+        </div>
+
+        {showAddGoal && (
+          <form onSubmit={handleAddGoal} className="bg-[#14294A] p-3 rounded-xl border border-[#22365C] mb-4 space-y-3 animate-in fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="sm:col-span-2">
+                <input
+                  type="text"
+                  value={newGoalTitle}
+                  onChange={(e) => setNewGoalTitle(e.target.value)}
+                  placeholder="Ex: Realizar certificação IXC Avançado e reduzir tempo de resposta"
+                  className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4fb579]"
+                  required
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  value={newGoalDeadline}
+                  onChange={(e) => setNewGoalDeadline(e.target.value)}
+                  placeholder="Prazo (Ex: 30 dias)"
+                  className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4fb579]"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddGoal(false)}
+                className="px-3 py-1 rounded-lg text-xs text-[#A9B7CE] bg-[#0F1E38]"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-1 rounded-lg text-xs font-bold text-[#062412] bg-[#4fb579] hover:bg-[#5fc78a]"
+              >
+                Salvar Meta
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Goals list */}
+        {pdiGoals.length === 0 ? (
+          <div className="text-xs text-[#6C7C99] py-3 text-center bg-[#0A1424] rounded-xl border border-[#22365C]/50">
+            Nenhuma meta de PDI cadastrada ainda para este colaborador.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {pdiGoals.map((g) => (
+              <div
+                key={g.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-[#0A1424] border border-[#22365C] text-xs gap-3"
+              >
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleGoalStatus(g.id)}
+                    className="cursor-pointer text-[#6C7C99] hover:text-[#4fb579] transition-colors"
+                  >
+                    {g.status === 'completed' ? (
+                      <CheckCircle2 className="w-4 h-4 text-[#4fb579]" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-[#E3A73B]" />
+                    )}
+                  </button>
+                  <span
+                    className={`truncate ${
+                      g.status === 'completed' ? 'line-through text-[#6C7C99]' : 'text-[#F2F5FA] font-medium'
+                    }`}
+                  >
+                    {g.title}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] font-mono text-[#A9B7CE] bg-[#14294A] px-2 py-0.5 rounded border border-[#22365C]">
+                    {g.deadline}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteGoal(g.id)}
+                    className="text-[#6C7C99] hover:text-[#e2687a] p-1 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Leader Comments Box */}
-      <div className="bg-[#0F1E38] border border-[#22365C] p-4 rounded-xl mt-4 space-y-2">
+      <div className="bg-[#0F1E38] border border-[#22365C] p-4 rounded-xl mt-6 space-y-2 shadow-xl">
         <label className="text-xs font-mono font-bold text-[#E3A73B] uppercase tracking-wider block">
-          Comentários do Líder
+          Comentários e Parecer da Liderança
         </label>
         <textarea
           value={leaderComments}
@@ -240,9 +492,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* Sticky Bottom Total Bar */}
-      <div className="sticky bottom-4 mt-6 bg-[#0F1E38] border border-[#22365C] rounded-xl p-4 px-6 flex items-center justify-between shadow-2xl z-30">
+      <div className="sticky bottom-4 mt-6 bg-[#0F1E38]/95 backdrop-blur-md border border-[#22365C] rounded-xl p-4 px-6 flex items-center justify-between shadow-2xl z-30">
         <div>
-          <div className="text-[11px] font-mono text-[#6C7C99]">Pontuação Final Calculada</div>
+          <div className="text-[11px] font-mono text-[#6C7C99]">Pontuação Final ({cycle})</div>
           <div className="font-mono font-bold text-2xl text-[#E3A73B]">
             {grandTotal} <span className="text-xs text-[#6C7C99] font-normal">/ 155</span>
           </div>

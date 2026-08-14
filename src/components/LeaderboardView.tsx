@@ -1,8 +1,22 @@
 import React, { useState } from 'react';
-import { TeamMember, LeaderName } from '../types';
+import { TeamMember, LeaderName, PerformanceStatus } from '../types';
 import { TEAMS } from '../data/initialData';
 import { getMemberBadges } from '../utils/badgeUtils';
-import { Image as ImageIcon, FileText, ShieldCheck, ArrowUp, ArrowDown, Minus, TrendingUp } from 'lucide-react';
+import { exportMembersToCSV } from '../utils/exportUtils';
+import { toast } from '../utils/toastUtils';
+import {
+  Image as ImageIcon,
+  FileText,
+  ShieldCheck,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  TrendingUp,
+  Download,
+  UserPlus,
+  Edit3,
+  Filter,
+} from 'lucide-react';
 
 interface LeaderboardViewProps {
   members: TeamMember[];
@@ -10,6 +24,7 @@ interface LeaderboardViewProps {
   onSelectMemberForEvaluation: (member: TeamMember) => void;
   onOpenReportModal: (member: TeamMember) => void;
   onSelectMemberForDetail?: (member: TeamMember) => void;
+  onOpenMemberForm?: (member?: TeamMember) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
 }
@@ -20,11 +35,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   onSelectMemberForEvaluation,
   onOpenReportModal,
   onSelectMemberForDetail,
+  onOpenMemberForm,
   searchQuery,
   setSearchQuery,
 }) => {
   const [view, setView] = useState<'geral' | 'equipe'>('geral');
   const [selectedTeamLeader, setSelectedTeamLeader] = useState<string>('Djemerson');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Helper for rank trend indicator
   const renderRankTrend = (currentRank: number, prevRank?: number, showLabel = true) => {
@@ -89,6 +106,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     data = members.filter((m) => m.team === selectedTeamLeader);
   }
 
+  if (statusFilter !== 'all') {
+    data = data.filter((m) => m.status === statusFilter);
+  }
+
   if (searchQuery.trim()) {
     data = data.filter(
       (m) =>
@@ -99,8 +120,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   }
 
   const sortedData = [...data].sort((a, b) => b.score - a.score);
-  const top3 = sortedData.slice(0, 3);
-  const remainingList = sortedData.slice(3);
+  const top3 = statusFilter === 'all' && !searchQuery.trim() ? sortedData.slice(0, 3) : [];
+
+  // CSV Export Handler
+  const handleExportCSV = () => {
+    exportMembersToCSV(sortedData, `ranking-gente-digital-${view}.csv`);
+    toast.success(`Exportados ${sortedData.length} colaboradores para CSV com sucesso!`, 'Exportação Concluída');
+  };
 
   // Helper for 5-segment bars
   const renderBars = (score: number) => {
@@ -125,48 +151,99 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 my-7">
-        <div className="inline-flex bg-[#0F1E38] border border-[#22365C] rounded-xl p-1">
-          <button
-            onClick={() => setView('geral')}
-            className={`font-sans font-semibold text-xs px-4 py-2 rounded-lg transition-all cursor-pointer ${
-              view === 'geral'
-                ? 'bg-[#E3A73B] text-[#1a1200] shadow-sm font-bold'
-                : 'text-[#A9B7CE] hover:text-white'
-            }`}
-          >
-            Ranking Geral
-          </button>
-          <button
-            onClick={() => setView('equipe')}
-            className={`font-sans font-semibold text-xs px-4 py-2 rounded-lg transition-all cursor-pointer ${
-              view === 'equipe'
-                ? 'bg-[#E3A73B] text-[#1a1200] shadow-sm font-bold'
-                : 'text-[#A9B7CE] hover:text-white'
-            }`}
-          >
-            Por Equipe
-          </button>
+      {/* Action Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 my-6">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Toggle */}
+          <div className="inline-flex bg-[#0F1E38] border border-[#22365C] rounded-xl p-1">
+            <button
+              onClick={() => setView('geral')}
+              className={`font-sans font-semibold text-xs px-4 py-2 rounded-lg transition-all cursor-pointer ${
+                view === 'geral'
+                  ? 'bg-[#E3A73B] text-[#1a1200] shadow-sm font-bold'
+                  : 'text-[#A9B7CE] hover:text-white'
+              }`}
+            >
+              Ranking Geral
+            </button>
+            <button
+              onClick={() => setView('equipe')}
+              className={`font-sans font-semibold text-xs px-4 py-2 rounded-lg transition-all cursor-pointer ${
+                view === 'equipe'
+                  ? 'bg-[#E3A73B] text-[#1a1200] shadow-sm font-bold'
+                  : 'text-[#A9B7CE] hover:text-white'
+              }`}
+            >
+              Por Equipe
+            </button>
+          </div>
+
+          {view === 'equipe' && (
+            <select
+              value={selectedTeamLeader}
+              onChange={(e) => setSelectedTeamLeader(e.target.value)}
+              className="bg-[#0F1E38] border border-[#22365C] text-[#F2F5FA] font-sans text-xs px-3.5 py-2 rounded-xl focus:outline-none focus:border-[#E3A73B]"
+            >
+              {TEAMS.map((t) => (
+                <option key={t.leader} value={t.leader}>
+                  Time {t.leader} ({t.members.length} membros)
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
-        {view === 'equipe' && (
-          <select
-            value={selectedTeamLeader}
-            onChange={(e) => setSelectedTeamLeader(e.target.value)}
-            className="bg-[#0F1E38] border border-[#22365C] text-[#F2F5FA] font-sans text-xs px-3.5 py-2 rounded-xl focus:outline-none focus:border-[#E3A73B]"
+        {/* Buttons: Export & Add Member */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="bg-[#0F1E38] hover:bg-[#14294A] border border-[#22365C] hover:border-[#E3A73B] text-[#A9B7CE] hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Exportar dados filtrados em CSV/Excel"
           >
-            {TEAMS.map((t) => (
-              <option key={t.leader} value={t.leader}>
-                Time {t.leader} ({t.members.length} membros)
-              </option>
-            ))}
-          </select>
-        )}
+            <Download className="w-3.5 h-3.5 text-[#E3A73B]" />
+            Exportar CSV
+          </button>
+
+          {onOpenMemberForm && (
+            <button
+              onClick={() => onOpenMemberForm()}
+              className="bg-[#E3A73B] hover:bg-[#eeb64f] text-[#1a1200] text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Novo Colaborador
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Podium (Top 3) */}
-      {top3.length > 0 && (
+      {/* Status Filter Chips */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 text-xs font-mono">
+        <span className="text-[#6C7C99] text-[11px] uppercase mr-1 flex items-center gap-1">
+          <Filter className="w-3 h-3" /> Status:
+        </span>
+        {[
+          { id: 'all', label: 'Todos' },
+          { id: 'Voando', label: 'Voando (>140)', color: 'text-[#E3A73B]' },
+          { id: 'Caminho Certo', label: 'Caminho Certo (>130)', color: 'text-[#4fb579]' },
+          { id: 'Atenção', label: 'Atenção (120-130)', color: 'text-[#d99a3d]' },
+          { id: 'Alarme', label: 'Alarme (<120)', color: 'text-[#e2687a]' },
+        ].map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setStatusFilter(f.id)}
+            className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              statusFilter === f.id
+                ? 'bg-[#14294A] border-[#E3A73B] text-white shadow-sm'
+                : 'bg-[#0F1E38]/60 border-[#22365C] text-[#A9B7CE] hover:text-white'
+            }`}
+          >
+            <span className={f.color || ''}>{f.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Podium (Top 3) - only displayed when no specific status filter is applied */}
+      {top3.length >= 3 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-7 items-end">
           {/* #2 Rank (Left on desktop) */}
           {top3[1] && (
@@ -325,18 +402,23 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               Nenhum colaborador encontrado
             </div>
             <p className="text-xs text-[#A9B7CE] max-w-md mx-auto">
-              Não encontramos nenhum integrante correspondente à pesquisa "{searchQuery}". Verifique os termos digitados ou remova o filtro.
+              Não encontramos nenhum integrante correspondente aos filtros atuais. Verifique os termos digitados ou redefina o filtro.
             </p>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="px-4 py-2 bg-[#14294A] hover:bg-[#22365C] border border-[#22365C] text-xs font-bold text-[#E3A73B] rounded-xl transition-all cursor-pointer"
-            >
-              Limpar Filtro de Pesquisa
-            </button>
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                }}
+                className="px-4 py-2 bg-[#14294A] hover:bg-[#22365C] border border-[#22365C] text-xs font-bold text-[#E3A73B] rounded-xl transition-all cursor-pointer"
+              >
+                Limpar Todos os Filtros
+              </button>
+            </div>
           </div>
         )}
 
-        {sortedData.map((person, index) => {
+        {sortedData.map((person) => {
           const tier = getTierInfo(person.score);
 
           return (
@@ -412,7 +494,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                         ))}
                     </div>
                   </div>
-                  <div className="text-[11.5px] text-[#6C7C99]">Time {person.team}</div>
+                  <div className="text-[11.5px] text-[#6C7C99]">{person.role} • Time {person.team}</div>
                 </div>
               </div>
 
@@ -434,6 +516,15 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-1.5 shrink-0 pl-2 border-l border-[#22365C]">
+                {onOpenMemberForm && (
+                  <button
+                    onClick={() => onOpenMemberForm(person)}
+                    className="p-1.5 rounded-lg border border-[#22365C] hover:border-[#E3A73B] hover:bg-[#14294A] text-[#A9B7CE] hover:text-[#E3A73B] transition-colors cursor-pointer"
+                    title="Editar Dados do Colaborador"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 {onSelectMemberForDetail && (
                   <button
                     onClick={() => onSelectMemberForDetail(person)}

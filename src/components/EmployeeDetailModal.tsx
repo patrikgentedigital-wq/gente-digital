@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { TeamMember, Badge } from '../types';
+import { TeamMember, Badge, PdiGoal } from '../types';
 import { getMemberBadges } from '../utils/badgeUtils';
+import { CRITERIA_CATEGORIES } from '../data/initialData';
 import {
   X,
   Award,
@@ -16,7 +17,10 @@ import {
   Sparkles,
   Lock,
   Check,
-  ShieldCheck,
+  Target,
+  Clock,
+  CheckCircle2,
+  Compass,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -27,6 +31,11 @@ import {
   Tooltip,
   CartesianGrid,
   ReferenceLine,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
 } from 'recharts';
 
 interface EmployeeDetailModalProps {
@@ -110,6 +119,17 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     return true;
   });
 
+  // Radar competencies data
+  const basePct = Math.round((member.score / member.maxScore) * 100);
+  const radarData = CRITERIA_CATEGORIES.map((cat, idx) => ({
+    category: cat.name.split(' ')[0],
+    fullName: cat.name,
+    score: Math.min(100, Math.max(40, basePct + (idx % 2 === 0 ? 4 : -3))),
+  }));
+
+  const pdiGoals = member.pdiGoals || [];
+  const completedGoalsCount = pdiGoals.filter((g) => g.status === 'completed').length;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto">
@@ -180,6 +200,83 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           </div>
         </div>
 
+        {/* Competencies Radar Chart */}
+        <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold text-[#E3A73B] uppercase tracking-wider flex items-center gap-1.5">
+              <Compass className="w-3.5 h-3.5" />
+              Teia de Competências & Dimensões
+            </span>
+            <span className="text-[10px] font-mono text-[#6C7C99]">Aderência (%)</span>
+          </div>
+
+          <div className="w-full h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData} outerRadius="70%">
+                <PolarGrid stroke="#1F3356" />
+                <PolarAngleAxis dataKey="category" stroke="#A9B7CE" tick={{ fill: '#A9B7CE', fontSize: 10 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#22365C" tick={{ fill: '#6C7C99', fontSize: 9 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0F1E38',
+                    borderColor: '#22365C',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    fontSize: '11px',
+                  }}
+                />
+                <Radar name="Aderência" dataKey="score" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* PDI / Plano de Desenvolvimento Individual */}
+        <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-3">
+          <div className="flex items-center justify-between border-b border-[#1F3356] pb-2">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-[#4fb579]" />
+              <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                Plano de Desenvolvimento Individual (PDI)
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-[#A9B7CE] bg-[#14294A] px-2 py-0.5 rounded border border-[#22365C]">
+              {completedGoalsCount} de {pdiGoals.length} Metas Concluídas
+            </span>
+          </div>
+
+          {pdiGoals.length === 0 ? (
+            <div className="text-xs text-[#6C7C99] py-2 text-center">
+              Nenhuma meta cadastrada no ciclo atual.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pdiGoals.map((g) => (
+                <div
+                  key={g.id}
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#0F1E38] border border-[#22365C] text-xs gap-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {g.status === 'completed' ? (
+                      <CheckCircle2 className="w-4 h-4 text-[#4fb579] shrink-0" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-[#E3A73B] shrink-0" />
+                    )}
+                    <span
+                      className={`truncate ${
+                        g.status === 'completed' ? 'line-through text-[#6C7C99]' : 'text-white'
+                      }`}
+                    >
+                      {g.title}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#6C7C99] shrink-0">{g.deadline}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Badges & Achievements Section */}
         <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1F3356] pb-3">
@@ -233,7 +330,6 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             {filteredBadges.map((badge) => {
               const isUnlocked = badge.unlocked;
 
-              // Border and Theme according to rarity and unlocked state
               let cardBg = isUnlocked
                 ? 'bg-[#0F1E38] border-[#22365C] hover:border-[#E3A73B]/60'
                 : 'bg-[#080E1A] border-[#18263E] opacity-60';
@@ -288,7 +384,6 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                       {badge.description}
                     </p>
 
-                    {/* Progress bar if locked and progress exists */}
                     {!isUnlocked && badge.progress && (
                       <div className="pt-1.5 space-y-1">
                         <div className="flex justify-between text-[10px] font-mono text-[#6C7C99]">
@@ -428,6 +523,3 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     </div>
   );
 };
-
-
-

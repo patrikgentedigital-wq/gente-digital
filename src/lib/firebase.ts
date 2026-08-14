@@ -2,8 +2,6 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInAnonymously,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
@@ -11,19 +9,17 @@ import {
 import {
   getFirestore,
   doc,
-  getDocFromServer,
   collection,
-  getDocs,
   setDoc,
-  updateDoc,
   deleteDoc,
   onSnapshot,
   query,
   orderBy,
+  runTransaction,
+  serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { TeamMember } from '../types';
-import { INITIAL_TEAM_MEMBERS } from '../data/initialData';
+import { TeamMember, PdiGoal } from '../types';
 
 export enum OperationType {
   CREATE = 'create',
@@ -34,7 +30,8 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-// Resolved Firebase configuration with environment variable support & fallback
+const EXPECTED_PROJECT_ID = 'gen-lang-client-0169317507';
+
 const resolvedFirebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
@@ -42,36 +39,34 @@ const resolvedFirebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId || '(default)',
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId,
 };
 
-const app = initializeApp(resolvedFirebaseConfig);
-
-export const auth = getAuth(app);
-
-// Authentication helper functions
-export async function loginWithEmailAndPassword(email: string, pass: string) {
-  try {
-    return await signInWithEmailAndPassword(auth, email, pass);
-  } catch (error: any) {
-    // If user not found, attempt sign up automatically for smooth demo / leader onboarding
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-      try {
-        return await createUserWithEmailAndPassword(auth, email, pass);
-      } catch (createErr) {
-        throw error;
-      }
-    }
-    throw error;
-  }
+if (resolvedFirebaseConfig.projectId !== EXPECTED_PROJECT_ID) {
+  throw new Error(
+    `Projeto Firebase incorreto: esperado ${EXPECTED_PROJECT_ID}, recebido ${resolvedFirebaseConfig.projectId}`
+  );
 }
 
-export async function loginDemoLeader() {
-  try {
-    return await signInAnonymously(auth);
-  } catch (error) {
-    console.warn('Fallback anonymous login error:', error);
+if (!resolvedFirebaseConfig.firestoreDatabaseId) {
+  throw new Error('VITE_FIREBASE_DATABASE_ID não configurado.');
+}
+
+const { firestoreDatabaseId, ...firebaseOptions } = resolvedFirebaseConfig;
+const app = initializeApp(firebaseOptions);
+
+export const auth = getAuth(app);
+export const db = getFirestore(app, firestoreDatabaseId);
+
+export async function loginWithEmailAndPassword(email: string, password: string) {
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+
+  if (!credential.user.emailVerified) {
+    await firebaseSignOut(auth);
+    throw new Error('EMAIL_NOT_VERIFIED');
   }
+
+  return credential;
 }
 
 export async function logoutLeader() {
@@ -82,16 +77,12 @@ export function subscribeToAuth(onUserChange: (user: User | null) => void) {
   return onAuthStateChanged(auth, onUserChange);
 }
 
-// Initialize Firestore with specific database ID from config
-export const db = getFirestore(app, resolvedFirebaseConfig.firestoreDatabaseId);
-
 export interface FirestoreErrorInfo {
   error: string;
   operationType: string;
   path: string | null;
   authInfo: {
     userId?: string | null;
-    email?: string | null;
   };
 }
 
@@ -100,124 +91,127 @@ export function handleFirestoreError(error: unknown, operationType: string, path
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
       userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
     },
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+
+  console.error('Firestore error:', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Connection test on app load
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'members', '_test_connection_doc_'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase Firestore está offline ou incompletamente configurado.');
-    }
-  }
-}
-testConnection();
-
-// Seed initial members into Firestore if the collection is empty
-export async function seedInitialMembersIfEmpty() {
+export function subscribeToMembers(
+  onData: (members: TeamMember[]) => void,
+  onError?: (error: unknown) => void,
+) {
   const membersRef = collection(db, 'members');
-  try {
-    const snapshot = await getDocs(membersRef);
-    if (snapshot.empty) {
-      console.log('Seeding initial members to Firestore...');
-      for (const m of INITIAL_TEAM_MEMBERS) {
-        await setDoc(doc(db, 'members', m.id), m);
-      }
-    }
-  } catch (err) {
-    handleFirestoreError(err, 'write', 'members');
-  }
-}
-
-// Subscribe to real-time members list from Firestore
-export function subscribeToMembers(onData: (members: TeamMember[]) => void) {
-  const membersRef = collection(db, 'members');
-  const q = query(membersRef, orderBy('score', 'desc'));
+  const membersQuery = query(membersRef, orderBy('score', 'desc'));
 
   return onSnapshot(
-    q,
+    membersQuery,
     (snapshot) => {
-      if (snapshot.empty) {
-        // Seed if empty on snapshot
-        seedInitialMembersIfEmpty();
-        onData(INITIAL_TEAM_MEMBERS);
-        return;
-      }
-      const list: TeamMember[] = [];
-      snapshot.forEach((docSnap) => {
-        list.push(docSnap.data() as TeamMember);
+      const members: TeamMember[] = [];
+
+      snapshot.forEach((memberSnapshot) => {
+        members.push(memberSnapshot.data() as TeamMember);
       });
-      // Re-rank dynamically based on score order
-      const rankedList = list.map((m, idx) => ({
-        ...m,
-        rank: idx + 1,
+
+      const rankedMembers = members.map((member, index) => ({
+        ...member,
+        rank: index + 1,
       }));
-      onData(rankedList);
+
+      onData(rankedMembers);
     },
     (error) => {
-      console.warn('Fallback to local state due to Firestore snapshot error:', error);
-      onData(INITIAL_TEAM_MEMBERS);
-    }
+      onError?.(error);
+    },
   );
 }
 
-// Add a new member to Firestore
 export async function addMemberToFirestore(newMember: TeamMember) {
   try {
-    const docRef = doc(db, 'members', newMember.id);
-    await setDoc(docRef, newMember);
+    await setDoc(doc(db, 'members', newMember.id), newMember);
   } catch (error) {
-    handleFirestoreError(error, 'create', `members/${newMember.id}`);
+    handleFirestoreError(error, OperationType.CREATE, `members/${newMember.id}`);
   }
 }
 
-// Update a member score/data in Firestore
 export async function updateMemberInFirestore(updatedMember: TeamMember) {
   try {
-    const docRef = doc(db, 'members', updatedMember.id);
-    await setDoc(docRef, updatedMember, { merge: true });
+    await setDoc(doc(db, 'members', updatedMember.id), {
+      ...updatedMember,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, 'write', `members/${updatedMember.id}`);
+    handleFirestoreError(error, OperationType.UPDATE, `members/${updatedMember.id}`);
   }
 }
 
-// Delete a member from Firestore
 export async function deleteMemberFromFirestore(memberId: string) {
   try {
-    const docRef = doc(db, 'members', memberId);
-    await deleteDoc(docRef);
+    await deleteDoc(doc(db, 'members', memberId));
   } catch (error) {
-    handleFirestoreError(error, 'delete', `members/${memberId}`);
+    handleFirestoreError(error, OperationType.DELETE, `members/${memberId}`);
   }
 }
 
-// Save evaluation form in Firestore
-export async function saveEvaluationInFirestore(evaluationData: {
+export interface EvaluationPayload {
   id: string;
   memberId: string;
   memberName: string;
   leaderName: string;
   score: number;
   status: string;
-  updatedAt: string;
-  cycle?: string;
-  comments?: string;
-  pdiGoals?: any[];
-  criteriaScores?: Record<string, number>;
-  selfScores?: Record<string, number>;
-}) {
+  cycle: string;
+  comments: string;
+  pdiGoals: PdiGoal[];
+  criteriaScores: Record<string, number>;
+  updatedAt?: string;
+}
+
+export async function saveEvaluationInFirestore(evaluationData: EvaluationPayload) {
   try {
-    const docRef = doc(db, 'evaluations', evaluationData.id);
-    await setDoc(docRef, evaluationData, { merge: true });
+    await setDoc(doc(db, 'evaluations', evaluationData.id), {
+      ...evaluationData,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, 'write', `evaluations/${evaluationData.id}`);
+    handleFirestoreError(error, OperationType.UPDATE, `evaluations/${evaluationData.id}`);
+  }
+}
+
+export async function saveEvaluationAndMemberInFirestore({
+  member,
+  evaluation,
+}: {
+  member: TeamMember;
+  evaluation: EvaluationPayload;
+}) {
+  const memberRef = doc(db, 'members', member.id);
+  const evaluationRef = doc(db, 'evaluations', evaluation.id);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const existingMember = await transaction.get(memberRef);
+      if (!existingMember.exists()) {
+        throw new Error(`Membro ${member.id} não encontrado`);
+      }
+
+      transaction.set(memberRef, {
+        ...member,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      transaction.set(evaluationRef, {
+        ...evaluation,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    });
+  } catch (error) {
+    handleFirestoreError(
+      error,
+      OperationType.WRITE,
+      `members/${member.id} + evaluations/${evaluation.id}`,
+    );
   }
 }

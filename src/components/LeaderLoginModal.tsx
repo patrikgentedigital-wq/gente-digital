@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Lock, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
-import { TEAMS } from '../data/initialData';
-import { loginWithEmailAndPassword, loginDemoLeader } from '../lib/firebase';
+import { loginWithEmailAndPassword } from '../lib/firebase';
 
 interface LeaderLoginModalProps {
   isOpen: boolean;
@@ -14,36 +13,31 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
-  const [email, setEmail] = useState('lider@gentedigital.com.br');
-  const [password, setPassword] = useState('123456');
-  const [selectedLeader, setSelectedLeader] = useState('Djemerson');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setIsLoading(true);
     setErrorMsg(null);
 
     try {
-      if (email.trim() && password.trim()) {
-        await loginWithEmailAndPassword(email.trim(), password.trim());
-      } else {
-        await loginDemoLeader();
-      }
-      onLoginSuccess(selectedLeader);
+      const credential = await loginWithEmailAndPassword(email.trim(), password);
+      const leaderName = credential.user.displayName || credential.user.email || 'Líder';
+      onLoginSuccess(leaderName);
       onClose();
-    } catch (err: any) {
-      console.error('Login error:', err);
-      // Fallback for seamless demo experience if Firebase Auth throws network/config error
-      try {
-        await loginDemoLeader();
-        onLoginSuccess(selectedLeader);
-        onClose();
-      } catch (fallbackErr) {
-        setErrorMsg('Erro ao realizar autenticação. Verifique o e-mail e senha informados.');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error?.message === 'EMAIL_NOT_VERIFIED') {
+        setErrorMsg('Confirme o e-mail da conta antes de acessar a área do líder.');
+      } else if (error?.code === 'auth/invalid-credential') {
+        setErrorMsg('E-mail ou senha inválidos.');
+      } else {
+        setErrorMsg('Não foi possível autenticar. Verifique a conexão e as credenciais.');
       }
     } finally {
       setIsLoading(false);
@@ -51,85 +45,82 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA]">
-        {/* Header */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-[#0F1E38] border border-[#22365C] w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leader-login-title"
+      >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#E3A73B]/10 border border-[#E3A73B]/30 flex items-center justify-center text-[#E3A73B]">
-              <Lock className="w-5 h-5" />
+              <Lock className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-xl text-white">Área do Líder</h3>
-              <p className="text-xs text-[#A9B7CE]">Autenticação segura via Firebase</p>
+              <h3 id="leader-login-title" className="font-display font-bold text-xl text-white">Área do Líder</h3>
+              <p className="text-xs text-[#A9B7CE]">Autenticação via Firebase</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Fechar autenticação"
             className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         <p className="text-xs text-[#A9B7CE] leading-relaxed">
-          Acesso autenticado reservado para líderes lançarem a avaliação final do time, após a conversa de feedback com o colaborador.
+          Acesso reservado a líderes provisionados no Firebase Authentication.
         </p>
 
         {errorMsg && (
-          <div className="bg-[#3A1620] border border-[#e2687a]/40 text-[#e2687a] text-xs p-3 rounded-xl flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="bg-[#3A1620] border border-[#e2687a]/40 text-[#e2687a] text-xs p-3 rounded-xl flex items-center gap-2" role="alert">
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
-          {/* Email */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-[#A9B7CE]">E-mail corporativo</label>
+            <label htmlFor="leader-email" className="block text-xs font-semibold text-[#A9B7CE]">E-mail corporativo</label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" aria-hidden="true" />
               <input
+                id="leader-email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="lider@gentedigital.com.br"
+                autoComplete="username"
                 className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
                 required
               />
             </div>
           </div>
 
-          {/* Password */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-[#A9B7CE]">Senha de acesso</label>
+            <label htmlFor="leader-password" className="block text-xs font-semibold text-[#A9B7CE]">Senha de acesso</label>
             <div className="relative">
-              <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
+              <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" aria-hidden="true" />
               <input
+                id="leader-password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
                 className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
                 required
               />
             </div>
-          </div>
-
-          {/* Select leader profile */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-[#A9B7CE]">Selecione seu perfil (Líder)</label>
-            <select
-              value={selectedLeader}
-              onChange={(e) => setSelectedLeader(e.target.value)}
-              className="w-full bg-[#14294A] border border-[#22365C] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
-            >
-              {TEAMS.map((t) => (
-                <option key={t.leader} value={t.leader}>
-                  {t.leader} (Time {t.leader} - {t.members.length} colaboradores)
-                </option>
-              ))}
-            </select>
           </div>
 
           <button
@@ -139,21 +130,21 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 Autenticando...
               </>
             ) : (
               <>
-                Autenticar e Entrar como Líder
-                <ArrowRight className="w-4 h-4" />
+                Autenticar e entrar
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </>
             )}
           </button>
         </form>
 
         <div className="text-[11px] text-[#6C7C99] leading-relaxed bg-[#14294A] p-3 rounded-xl border border-[#22365C] flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#4fb579] shrink-0" />
-          <span>Sessão autenticada protegida com token seguro do Firebase Auth.</span>
+          <ShieldCheck className="w-4 h-4 text-[#4fb579] shrink-0" aria-hidden="true" />
+          <span>A sessão é autorizada pelo token do Firebase Auth e pelas Rules do Firestore.</span>
         </div>
       </div>
     </div>

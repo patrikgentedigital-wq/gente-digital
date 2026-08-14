@@ -272,7 +272,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </div>
                 )}
                 <button
-                  onClick={() => onOpenImageModal(top3[1])}
+                  onClick={() => onOpenImageModal(top3[1]!)}
                   className="absolute -bottom-1 -right-1 bg-[#14294A] border border-[#22365C] text-[#E3A73B] p-1 rounded-full hover:scale-110 transition-all shadow-md"
                   title="Editar Foto"
                 >
@@ -281,7 +281,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               </div>
 
               <button
-                onClick={() => onSelectMemberForDetail?.(top3[1])}
+                onClick={() => onSelectMemberForDetail?.(top3[1]!)}
                 className="font-display font-semibold text-base text-[#F2F5FA] my-0.5 truncate hover:text-[#E3A73B] hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >
@@ -321,7 +321,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </div>
                 )}
                 <button
-                  onClick={() => onOpenImageModal(top3[0])}
+                  onClick={() => onOpenImageModal(top3[0]!)}
                   className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full hover:scale-110 transition-all shadow-md font-bold"
                   title="Editar Foto"
                 >
@@ -330,7 +330,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               </div>
 
               <button
-                onClick={() => onSelectMemberForDetail?.(top3[0])}
+                onClick={() => onSelectMemberForDetail?.(top3[0]!)}
                 className="font-display font-bold text-lg text-white my-0.5 truncate hover:text-[#E3A73B] hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >
@@ -370,7 +370,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </div>
                 )}
                 <button
-                  onClick={() => onOpenImageModal(top3[2])}
+                  onClick={() => onOpenImageModal(top3[2]!)}
                   className="absolute -bottom-1 -right-1 bg-[#14294A] border border-[#22365C] text-[#E3A73B] p-1 rounded-full hover:scale-110 transition-all shadow-md"
                   title="Editar Foto"
                 >
@@ -379,7 +379,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               </div>
 
               <button
-                onClick={() => onSelectMemberForDetail?.(top3[2])}
+                onClick={() => onSelectMemberForDetail?.(top3[2]!)}
                 className="font-display font-semibold text-base text-[#F2F5FA] my-0.5 truncate hover:text-[#E3A73B] hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >

@@ -1,53 +1,104 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Prototype data model:
+    // members/{memberId}: member summary, score and status.
+    // evaluations/{evaluationId}: one persisted evaluation per member/cycle.
+    // PII such as email is currently present in members and therefore all
+    // member reads require an authorized, verified leader or administrator.
 
-    // Default deny all
+    function isVerifiedUser() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isLeader() {
+      return isVerifiedUser() && request.auth.token.role == 'leader';
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && request.auth.token.role == 'admin';
+    }
+
+    function isLeaderOrAdmin() {
+      return isLeader() || isAdmin();
+    }
+
+    function validId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 &&
+        id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function validMember(data, memberId) {
+      return data.keys().hasOnly([
+          'id', 'name', 'role', 'team', 'teamColor', 'rank', 'previousRank',
+          'score', 'maxScore', 'status', 'avatarUrl', 'evaluationStatus',
+          'email', 'currentRating', 'history', 'pdiGoals',
+          'selfEvaluationScores', 'evaluationHistory', 'updatedAt'
+        ]) &&
+        data.keys().hasAll(['id', 'name', 'team', 'score', 'rank']) &&
+        data.id == memberId && validId(data.id) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.role is string && data.role.size() <= 120 &&
+        data.team is string && data.team.size() <= 100 &&
+        data.score is number && data.score >= 0 && data.score <= 155 &&
+        data.rank is number && data.rank >= 1 && data.rank <= 10000 &&
+        data.maxScore is number && data.maxScore == 155 &&
+        data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
+        data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
+        (!('teamColor' in data) || (data.teamColor is string && data.teamColor.size() <= 32)) &&
+        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 254)) &&
+        (!('currentRating' in data) || (data.currentRating is number && data.currentRating >= 0 && data.currentRating <= 5)) &&
+        (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
+        (!('selfEvaluationScores' in data) || data.selfEvaluationScores is map) &&
+        (!('evaluationHistory' in data) || (data.evaluationHistory is list && data.evaluationHistory.size() <= 100)) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function validEvaluation(data, evaluationId) {
+      return data.keys().hasOnly([
+          'id', 'memberId', 'memberName', 'leaderName', 'score', 'status',
+          'cycle', 'comments', 'pdiGoals', 'criteriaScores', 'selfScores',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasAll(['id', 'memberId', 'score', 'status', 'cycle', 'comments', 'criteriaScores']) &&
+        data.id == evaluationId && validId(data.id) &&
+        data.memberId is string && validId(data.memberId) &&
+        exists(/databases/$(database)/documents/members/$(data.memberId)) &&
+        data.score is number && data.score >= 0 && data.score <= 155 &&
+        data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
+        data.cycle is string && data.cycle.size() > 0 && data.cycle.size() <= 64 &&
+        data.comments is string && data.comments.size() <= 5000 &&
+        data.criteriaScores is map && data.criteriaScores.keys().size() <= 31 &&
+        (!('memberName' in data) || (data.memberName is string && data.memberName.size() <= 100)) &&
+        (!('leaderName' in data) || (data.leaderName is string && data.leaderName.size() <= 100)) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
+        (!('selfScores' in data) || data.selfScores is map) &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    match /members/{memberId} {
+      allow read: if isLeaderOrAdmin();
+      allow create: if isAdmin() && validMember(request.resource.data, memberId);
+      allow update: if isAdmin() && validMember(request.resource.data, memberId);
+      allow delete: if isAdmin() && validId(memberId);
+    }
+
+    match /evaluations/{evaluationId} {
+      allow read: if isLeaderOrAdmin();
+      allow create: if isLeaderOrAdmin() && validEvaluation(request.resource.data, evaluationId);
+      allow update: if isLeaderOrAdmin() &&
+        validEvaluation(request.resource.data, evaluationId) &&
+        request.resource.data.memberId == resource.data.memberId &&
+        (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isAdmin() && validId(evaluationId);
+    }
+
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    // Helper functions
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function isValidMember(data) {
-      return data.keys().hasAll(['id', 'name', 'team', 'score', 'rank']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.name is string && data.name.size() <= 100 &&
-             data.team is string && data.team.size() <= 100 &&
-             data.score is number && data.score >= 0 && data.score <= 300 &&
-             data.rank is number && data.rank >= 1;
-    }
-
-    function isValidEvaluation(data) {
-      return data.keys().hasAll(['id', 'memberId', 'score']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.memberId is string && data.memberId.size() <= 128 &&
-             data.score is number && data.score >= 0 && data.score <= 300;
-    }
-
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Members collection
-    match /members/{memberId} {
-      allow read: if true;
-      allow create, update: if isValidId(memberId) && isValidMember(incoming()) && (isAuthenticated() || resource == null);
-      allow delete: if isValidId(memberId) && isAuthenticated();
-    }
-
-    // Evaluations collection
-    match /evaluations/{evaluationId} {
-      allow read: if true;
-      allow create, update: if isValidId(evaluationId) && isValidEvaluation(incoming()) && isAuthenticated();
-      allow delete: if isValidId(evaluationId) && isAuthenticated();
     }
   }
 }

@@ -8,7 +8,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
 
   const prevScore =
     member.history && member.history.length >= 2
-      ? member.history[member.history.length - 2].score
+      ? member.history[member.history.length - 2]?.score ?? member.score
       : member.score - 5;
   const isGrowth =
     (member.previousRank && member.rank < member.previousRank) ||

@@ -54,7 +54,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         : 0;
     const topMember =
       count > 0
-        ? [...teamMembers].sort((a, b) => b.score - a.score)[0]
+         ? [...teamMembers].sort((a, b) => b.score - a.score)[0] || null
         : null;
 
     return {
@@ -143,7 +143,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
 
     if (monthScores.length === 0) {
-      return { month, avg: 130, max: 145, min: 115 };
+       return { month, avg: 0, max: 0, min: 0 };
     }
 
     const monthAvg = Math.round(

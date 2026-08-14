@@ -16,7 +16,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   isOpen,
   onClose,
   criteriaScores,
-  leaderComments = 'Demonstra excelente postura profissional e precisão técnica nas entregas. Recomendado para o próximo ciclo de aceleração.',
+  leaderComments = '',
 }) => {
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -31,12 +31,12 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
     const cat = CRITERIA_CATEGORIES.find((c) => c.id === catId);
     if (!cat) return { sum: 0, max: 25 };
     const max = cat.items.length * 5;
-    if (!criteriaScores) return { sum: Math.round((member.score / 155) * max), max };
+    if (!criteriaScores) return { sum: 0, max };
 
     let sum = 0;
     cat.items.forEach((_, idx) => {
       const key = `${catId}-${idx}`;
-      sum += criteriaScores[key] ?? 5;
+      sum += criteriaScores[key] ?? 0;
     });
     return { sum, max };
   };

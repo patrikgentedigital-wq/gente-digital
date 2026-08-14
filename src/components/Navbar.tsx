@@ -9,6 +9,8 @@ interface NavbarProps {
   onOpenMemberForm?: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  isAuthenticated?: boolean;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,6 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLeaderModal,
   onOpenKioskMode,
   onOpenMemberForm,
+  isAuthenticated = false,
+  onLogout,
 }) => {
   return (
     <header className="border-b border-[#22365C] bg-[#0A1424] relative overflow-hidden">
@@ -67,7 +71,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           <button
-            onClick={onOpenLeaderModal}
+            onClick={() => {
+              if (isAuthenticated) setActiveTab('leader');
+              else onOpenLeaderModal();
+            }}
             className="bg-[#14294A] hover:border-[#E3A73B] hover:text-[#E3A73B] border border-[#22365C] text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
           >
             <Lock className="w-3.5 h-3.5 text-[#E3A73B]" />
@@ -116,7 +123,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('leader')}
+            onClick={() => {
+              if (isAuthenticated) setActiveTab('leader');
+              else onOpenLeaderModal();
+            }}
             className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'leader'
                 ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'

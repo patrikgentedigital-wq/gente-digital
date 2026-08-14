@@ -68,7 +68,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       name: name.trim(),
       role: role.trim(),
       team,
-      teamColor: selectedTeamData.color,
+      teamColor: selectedTeamData?.color || '#3B6FE0',
       rank: memberToEdit?.rank || 99,
       previousRank: memberToEdit?.previousRank,
       score,

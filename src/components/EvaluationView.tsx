@@ -40,7 +40,7 @@ interface EvaluationViewProps {
     comments: string,
     cycle?: string,
     pdiGoals?: PdiGoal[]
-  ) => void;
+  ) => Promise<void>;
   onOpenImageModal: (member: TeamMember) => void;
   onOpenReportModal: (member: TeamMember) => void;
 }
@@ -56,15 +56,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [cycle, setCycle] = useState<string>('Agosto/2026');
 
   // Initialize scores (0..5 for each category item)
-  const [scores, setScores] = useState<Record<string, number>>(() => {
-    const initial: Record<string, number> = {};
-    CRITERIA_CATEGORIES.forEach((cat) => {
-      cat.items.forEach((_, idx) => {
-        initial[`${cat.id}-${idx}`] = 5;
-      });
-    });
-    return initial;
-  });
+  const [scores, setScores] = useState<Record<string, number | undefined>>({});
 
   const [openCategories, setOpenCategories] = useState<Record<number, boolean>>({
     1: true,
@@ -87,18 +79,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   // Reset scores, comments and PDI when selected member changes
   useEffect(() => {
-    const defaultScores: Record<string, number> = {};
-    CRITERIA_CATEGORIES.forEach((cat) => {
-      cat.items.forEach((_, idx) => {
-        defaultScores[`${cat.id}-${idx}`] = 5;
-      });
-    });
-    setScores(defaultScores);
-    setLeaderComments(
-      `Avaliação oficial de ${selectedMember.name} (Time ${selectedMember.team}). Observações validadas pela liderança.`
-    );
+    setScores({});
+    setLeaderComments('');
     setPdiGoals(selectedMember.pdiGoals || []);
   }, [selectedMember.id]);
+
 
   const toggleCategory = (catId: number) => {
     setOpenCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
@@ -106,7 +91,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   const updateScore = (key: string, delta: number) => {
     setScores((prev) => {
-      const current = prev[key] ?? 5;
+      const current = prev[key] ?? 0;
       const next = Math.max(0, Math.min(5, current + delta));
       return { ...prev, [key]: next };
     });
@@ -116,24 +101,22 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const getCategorySum = (catId: number) => {
     const cat = CRITERIA_CATEGORIES.find((c) => c.id === catId);
     if (!cat) return 0;
-    return cat.items.reduce((acc, _, idx) => acc + (scores[`${catId}-${idx}`] ?? 5), 0);
+    return cat.items.reduce((acc, _, idx) => acc + (scores[`${catId}-${idx}`] ?? 0), 0);
   };
 
-  const grandTotal = (Object.values(scores) as number[]).reduce((a: number, b: number) => a + b, 0);
+  const scoreKeys = CRITERIA_CATEGORIES.flatMap((cat) => cat.items.map((_, idx) => `${cat.id}-${idx}`));
+  const hasAllScores = scoreKeys.every((key) => typeof scores[key] === 'number');
+  const grandTotal = scoreKeys.reduce((total, key) => total + (scores[key] ?? 0), 0);
 
   // Radar chart data comparing category percentages
   const radarData = CRITERIA_CATEGORIES.map((cat) => {
     const catSum = getCategorySum(cat.id);
     const catMax = cat.items.length * 5;
     const leaderPct = Math.round((catSum / catMax) * 100);
-    // Simulated self-eval (or slightly varied for insightful comparison)
-    const selfPct = Math.min(100, Math.max(60, leaderPct + (cat.id % 2 === 0 ? 5 : -4)));
-
     return {
       category: cat.name.split(' ')[0], // Short category name for radar axis
       fullName: cat.name,
       lider: leaderPct,
-      autoavaliacao: selfPct,
     };
   });
 
@@ -170,12 +153,32 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setPdiGoals((prev) => prev.filter((g) => g.id !== goalId));
   };
 
-  const handleSave = () => {
-    onSaveEvaluation(selectedMember.id, grandTotal, scores, leaderComments, cycle, pdiGoals);
+  const handleSave = async () => {
+    if (!hasAllScores) {
+      toast.error('Preencha todos os critérios antes de salvar.');
+      return;
+    }
+    if (!leaderComments.trim()) {
+      toast.error('Informe o parecer da liderança antes de salvar.');
+      return;
+    }
+
+    try {
+      await onSaveEvaluation(
+        selectedMember.id,
+        grandTotal,
+        Object.fromEntries(scoreKeys.map((key) => [key, scores[key] as number])),
+        leaderComments.trim(),
+        cycle,
+        pdiGoals,
+      );
     toast.success(
       `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
       'Avaliação Concluída'
     );
+    } catch {
+      // The parent reports persistence errors and keeps the draft in memory.
+    }
   };
 
   return (
@@ -262,7 +265,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-[#E3A73B]" />
             <h3 className="font-display font-bold text-sm text-white">
-              Teia de Competências (Líder vs Autoavaliação)
+              Teia de Competências da Liderança
             </h3>
           </div>
           <span className="font-mono text-xs text-[#A9B7CE]">Aderência por Categoria (%)</span>
@@ -285,7 +288,6 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               />
               <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
               <Radar name="Avaliação do Líder" dataKey="lider" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
-              <Radar name="Autoavaliação" dataKey="autoavaliacao" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.2} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
@@ -329,7 +331,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 <div className="px-4 pb-4 border-t border-[#22365C] divide-y divide-[#22365C]">
                   {cat.items.map((label, idx) => {
                     const key = `${cat.id}-${idx}`;
-                    const score = scores[key] ?? 5;
+                    const score = scores[key] ?? 0;
 
                     return (
                       <div key={idx} className="flex items-center justify-between gap-4 py-3">

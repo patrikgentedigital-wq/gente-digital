@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll(['id', 'name', 'team', 'score', 'rank']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.team is string && data.team.size() <= 100 &&
+             data.score is number && data.score >= 0 && data.score <= 300 &&
+             data.rank is number && data.rank >= 1;
+    }
+
+    function isValidEvaluation(data) {
+      return data.keys().hasAll(['id', 'memberId', 'score']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.memberId is string && data.memberId.size() <= 128 &&
+             data.score is number && data.score >= 0 && data.score <= 300;
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Members collection
+    match /members/{memberId} {
+      allow read: if true;
+      allow create, update: if isValidId(memberId) && isValidMember(incoming()) && (isAuthenticated() || resource == null);
+      allow delete: if isValidId(memberId) && isAuthenticated();
+    }
+
+    // Evaluations collection
+    match /evaluations/{evaluationId} {
+      allow read: if true;
+      allow create, update: if isValidId(evaluationId) && isValidEvaluation(incoming()) && isAuthenticated();
+      allow delete: if isValidId(evaluationId) && isAuthenticated();
+    }
+  }
+}

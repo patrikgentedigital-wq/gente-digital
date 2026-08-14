@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "TeamMember": {
+      "title": "Team Member",
+      "description": "Collaborator performance record, team assignment, and ranking data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "team": { "type": "string", "maxLength": 100 },
+        "score": { "type": "number" },
+        "rank": { "type": "number" },
+        "previousRank": { "type": "number" },
+        "avatarUrl": { "type": "string" },
+        "proofImageUrl": { "type": "string" },
+        "evaluationStatus": { "type": "string" },
+        "isLeader": { "type": "boolean" },
+        "summary": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "name", "team", "score", "rank"]
+    },
+    "Evaluation": {
+      "title": "Evaluation",
+      "description": "Detailed evaluation form responses submitted for a member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "memberId": { "type": "string" },
+        "memberName": { "type": "string", "maxLength": 100 },
+        "leaderName": { "type": "string", "maxLength": 100 },
+        "score": { "type": "number" },
+        "status": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "memberId", "score"]
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/TeamMember" },
+      "description": "Collection of evaluated team members and rankings"
+    },
+    "/evaluations/{evaluationId}": {
+      "schema": { "$ref": "#/entities/Evaluation" },
+      "description": "Completed performance evaluation forms"
+    }
+  }
+}

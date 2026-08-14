@@ -10,6 +10,7 @@ interface NavbarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   isAuthenticated?: boolean;
+  role?: 'leader' | 'admin' | null;
   onLogout?: () => void;
 }
 
@@ -20,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenKioskMode,
   onOpenMemberForm,
   isAuthenticated = false,
+  role = null,
   onLogout,
 }) => {
   return (
@@ -78,8 +80,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="bg-[#14294A] hover:border-[#E3A73B] hover:text-[#E3A73B] border border-[#22365C] text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
           >
             <Lock className="w-3.5 h-3.5 text-[#E3A73B]" />
-            Área do Líder
+            {isAuthenticated ? `Sessão do ${role === 'admin' ? 'Admin' : 'Líder'}` : 'Área do Líder'}
           </button>
+          {isAuthenticated && onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-xs text-[#A9B7CE] hover:text-white px-2 py-2 rounded-lg"
+            >
+              Sair
+            </button>
+          )}
         </div>
       </div>
 

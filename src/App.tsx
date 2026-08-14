@@ -1,37 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
   subscribeToAuth,
   subscribeToMembers,
+  getCurrentUserRole,
+  getEvaluationFromFirestore,
   updateMemberInFirestore,
   addMemberToFirestore,
   deleteMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
   logoutLeader,
+  EvaluationPayload,
 } from './lib/firebase';
 import { Navbar } from './components/Navbar';
-import { LeaderboardView } from './components/LeaderboardView';
-import { DashboardView } from './components/DashboardView';
-import { TeamsView } from './components/TeamsView';
-import { EvaluationView } from './components/EvaluationView';
-import { ImageLinkModal } from './components/ImageLinkModal';
-import { EmployeeDetailModal } from './components/EmployeeDetailModal';
+const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((module) => ({ default: module.LeaderboardView })));
+const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
+const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
+const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
+const ImageLinkModal = lazy(() => import('./components/ImageLinkModal').then((module) => ({ default: module.ImageLinkModal })));
+const EmployeeDetailModal = lazy(() => import('./components/EmployeeDetailModal').then((module) => ({ default: module.EmployeeDetailModal })));
 import { LeaderLoginModal } from './components/LeaderLoginModal';
-import { ReportExportModal } from './components/ReportExportModal';
-import { MemberFormModal } from './components/MemberFormModal';
-import { KioskModeModal } from './components/KioskModeModal';
+const ReportExportModal = lazy(() => import('./components/ReportExportModal').then((module) => ({ default: module.ReportExportModal })));
+const MemberFormModal = lazy(() => import('./components/MemberFormModal').then((module) => ({ default: module.MemberFormModal })));
+const KioskModeModal = lazy(() => import('./components/KioskModeModal').then((module) => ({ default: module.KioskModeModal })));
 import { ToastContainer } from './components/ToastContainer';
 import { toast } from './utils/toastUtils';
+import {
+  DEFAULT_EVALUATION_CYCLE,
+  getPerformanceStatus,
+  makeEvaluationId,
+  normalizeCriteriaScores,
+  rankMembers,
+} from './lib/evaluation';
 
-function rankMembers(members: TeamMember[]) {
-  return [...members]
-    .sort((a, b) => b.score - a.score)
-    .map((member, index) => ({
-      ...member,
-      previousRank: member.rank,
-      rank: index + 1,
-    }));
+interface ReportModalState {
+  member: TeamMember;
+  criteriaScores?: Record<string, number>;
+  leaderComments?: string;
+  cycle?: string;
 }
 
 export default function App() {
@@ -40,11 +47,14 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [authRole, setAuthRole] = useState<'leader' | 'admin' | null>(null);
+  const [authRoleReady, setAuthRoleReady] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
   const [detailModalMember, setDetailModalMember] = useState<TeamMember | null>(null);
-  const [reportModalMember, setReportModalMember] = useState<TeamMember | null>(null);
+  const [reportModal, setReportModal] = useState<ReportModalState | null>(null);
+  const [detailEvaluation, setDetailEvaluation] = useState<EvaluationPayload | null>(null);
   const [isLeaderModalOpen, setIsLeaderModalOpen] = useState(false);
   const [currentLeader, setCurrentLeader] = useState<string | null>(null);
   const [isMemberFormOpen, setIsMemberFormOpen] = useState(false);
@@ -55,14 +65,40 @@ export default function App() {
     setAuthUser(user);
     setAuthReady(true);
     if (!user) {
+      setAuthRole(null);
+      setAuthRoleReady(true);
       setMembers([]);
       setCurrentLeader(null);
       setSelectedEvaluationMember(null);
+    } else {
+      setAuthRole(null);
+      setAuthRoleReady(false);
     }
   }), []);
 
   useEffect(() => {
     if (!authUser) return undefined;
+
+    let active = true;
+    getCurrentUserRole(authUser)
+      .then((role) => {
+        if (active) setAuthRole(role);
+      })
+      .catch((error) => {
+        console.error('Unable to resolve Firebase role:', error);
+        if (active) setAuthRole(null);
+      })
+      .finally(() => {
+        if (active) setAuthRoleReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser || !authRole) return undefined;
 
     setMembersError(null);
     return subscribeToMembers(
@@ -73,7 +109,56 @@ export default function App() {
         setMembersError('Não foi possível carregar os dados do Firestore. Verifique sua autorização.');
       },
     );
-  }, [authUser]);
+  }, [authRole, authUser]);
+
+  const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
+    return getEvaluationFromFirestore(makeEvaluationId(memberId, cycle));
+  }, []);
+
+  useEffect(() => {
+    if (!detailModalMember) {
+      setDetailEvaluation(null);
+      return undefined;
+    }
+
+    let active = true;
+    setDetailEvaluation(null);
+    loadEvaluation(detailModalMember.id, DEFAULT_EVALUATION_CYCLE)
+      .then((evaluation) => {
+        if (active) setDetailEvaluation(evaluation || null);
+      })
+      .catch((error) => {
+        console.error('Unable to load member evaluation:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [detailModalMember, loadEvaluation]);
+
+  const openReportModal = async (
+    member: TeamMember,
+    context?: Pick<ReportModalState, 'criteriaScores' | 'leaderComments' | 'cycle'>,
+  ) => {
+    if (context) {
+      setReportModal({ member, ...context });
+      return;
+    }
+
+    try {
+      const evaluation = await loadEvaluation(member.id, DEFAULT_EVALUATION_CYCLE);
+      setReportModal({
+        member,
+        criteriaScores: normalizeCriteriaScores(evaluation?.criteriaScores),
+        leaderComments: evaluation?.comments,
+        cycle: evaluation?.cycle || DEFAULT_EVALUATION_CYCLE,
+      });
+    } catch (error) {
+      console.error('Unable to load report data:', error);
+      setReportModal({ member, cycle: DEFAULT_EVALUATION_CYCLE });
+      toast.error('Não foi possível carregar os detalhes da avaliação.');
+    }
+  };
 
   useEffect(() => {
     if (members.length === 0) {
@@ -119,6 +204,7 @@ export default function App() {
       toast.success(isExisting ? 'Dados do colaborador atualizados.' : 'Colaborador cadastrado.');
     } catch {
       toast.error('Não foi possível persistir os dados do colaborador.');
+      throw new Error('member-save-failed');
     }
   };
 
@@ -140,16 +226,13 @@ export default function App() {
     newTotalScore: number,
     criteriaScores: Record<string, number>,
     comments: string,
-    cycle = 'Agosto/2026',
+    cycle = DEFAULT_EVALUATION_CYCLE,
     pdiGoals: PdiGoal[] = [],
   ) => {
     const targetMember = members.find((member) => member.id === memberId);
     if (!targetMember || !authUser) return;
 
-    let newStatus: PerformanceStatus = 'Alarme';
-    if (newTotalScore > 140) newStatus = 'Voando';
-    else if (newTotalScore > 130) newStatus = 'Caminho Certo';
-    else if (newTotalScore >= 120) newStatus = 'Atenção';
+    const newStatus: PerformanceStatus = getPerformanceStatus(newTotalScore);
 
     const updatedMember: TeamMember = {
       ...targetMember,
@@ -162,13 +245,11 @@ export default function App() {
         { month: cycle, score: newTotalScore },
       ],
     };
-    const cycleId = cycle.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-
     try {
       await saveEvaluationAndMemberInFirestore({
         member: updatedMember,
         evaluation: {
-          id: `evaluation_${memberId}_${cycleId}`,
+          id: makeEvaluationId(memberId, cycle),
           memberId,
           memberName: targetMember.name,
           leaderName: currentLeader || authUser.email || 'Líder',
@@ -197,24 +278,24 @@ export default function App() {
         <div className="mx-auto mt-4 max-w-[1040px] rounded-xl border border-[#e2687a]/40 bg-[#3A1620] p-3 text-xs text-[#ffb4c0]" role="alert">
           {membersError}
         </div>
-      )}
+        )}
       <main className="flex-1 p-4 md:p-6 max-w-[1040px] w-full mx-auto">
-        {activeTab === 'ranking' && (
+         {activeTab === 'ranking' && (
           <LeaderboardView
             members={members}
-            onOpenImageModal={setImageModalMember}
+            onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
             onSelectMemberForEvaluation={(member) => {
               setSelectedEvaluationMember(member);
               setActiveTab('leader');
             }}
-            onOpenReportModal={setReportModalMember}
+            onOpenReportModal={openReportModal}
             onSelectMemberForDetail={setDetailModalMember}
-            onOpenMemberForm={(member) => {
+            onOpenMemberForm={authRole === 'admin' ? (member) => {
               setMemberToEdit(member || null);
               setIsMemberFormOpen(true);
-            }}
+            } : undefined}
             searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
+           setSearchQuery={setSearchQuery}
           />
         )}
         {activeTab === 'dashboard' && (
@@ -230,7 +311,7 @@ export default function App() {
         {activeTab === 'teams' && (
           <TeamsView
             members={members}
-            onOpenImageModal={setImageModalMember}
+            onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
             onSelectMemberForDetail={setDetailModalMember}
             onSelectTeamFilter={(team) => {
               setSearchQuery(team);
@@ -244,8 +325,9 @@ export default function App() {
             selectedMember={selectedEvaluationMember}
             onSelectMember={setSelectedEvaluationMember}
             onSaveEvaluation={handleSaveEvaluation}
-            onOpenImageModal={setImageModalMember}
-            onOpenReportModal={setReportModalMember}
+            onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
+            onOpenReportModal={openReportModal}
+            onLoadEvaluation={loadEvaluation}
           />
         )}
       </main>
@@ -259,20 +341,39 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenLeaderModal={() => setIsLeaderModalOpen(true)}
-        onOpenKioskMode={authUser ? () => setIsKioskOpen(true) : undefined}
-        onOpenMemberForm={authUser ? () => {
+        onOpenKioskMode={authRole ? () => setIsKioskOpen(true) : undefined}
+        onOpenMemberForm={authRole === 'admin' ? () => {
           setMemberToEdit(null);
           setIsMemberFormOpen(true);
         } : undefined}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        isAuthenticated={Boolean(authUser)}
+        isAuthenticated={Boolean(authUser && authRole)}
+        role={authRole}
         onLogout={authUser ? () => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.')) : undefined}
       />
 
-      {!authReady ? (
+      {!authReady || (authUser && !authRoleReady) ? (
         <main className="flex-1 flex items-center justify-center p-8 text-sm text-[#A9B7CE]">Verificando sessão...</main>
-      ) : authUser ? authenticatedContent : (
+      ) : authUser && !authRole ? (
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-md rounded-2xl border border-[#22365C] bg-[#0F1E38] p-6 text-center">
+            <h2 className="text-xl font-bold text-white">Acesso sem autorização</h2>
+            <p className="mt-2 text-sm text-[#A9B7CE]">Sua conta está autenticada, mas ainda não possui uma role autorizada para esta plataforma.</p>
+            <button
+              type="button"
+              onClick={() => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.'))}
+              className="mt-5 rounded-xl bg-[#E3A73B] px-4 py-2 text-xs font-bold text-[#1a1200]"
+            >
+              Encerrar sessão
+            </button>
+          </div>
+        </main>
+      ) : authUser ? (
+        <Suspense fallback={<main className="flex-1 flex items-center justify-center p-8 text-sm text-[#A9B7CE]">Carregando plataforma...</main>}>
+          {authenticatedContent}
+        </Suspense>
+      ) : (
         <main className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-md rounded-2xl border border-[#22365C] bg-[#0F1E38] p-6 text-center">
             <h2 className="text-xl font-bold text-white">Acesso autenticado necessário</h2>
@@ -298,20 +399,24 @@ export default function App() {
         }}
       />
 
-      {authUser && (
-        <>
-          <MemberFormModal
-            isOpen={isMemberFormOpen}
-            onClose={() => {
-              setIsMemberFormOpen(false);
-              setMemberToEdit(null);
-            }}
-            memberToEdit={memberToEdit}
-            onSaveMember={handleSaveMember}
-            onDeleteMember={handleDeleteMember}
-          />
-          <KioskModeModal isOpen={isKioskOpen} onClose={() => setIsKioskOpen(false)} members={members} />
-          {imageModalMember && (
+         <Suspense fallback={null}>
+         {authUser && authRole && (
+         <>
+           {authRole === 'admin' && (
+             isMemberFormOpen && (
+             <MemberFormModal
+               isOpen={isMemberFormOpen}
+               onClose={() => {
+                 setIsMemberFormOpen(false);
+                 setMemberToEdit(null);
+               }}
+               memberToEdit={memberToEdit}
+               onSaveMember={handleSaveMember}
+               onDeleteMember={handleDeleteMember}
+              />
+              ))}
+           {isKioskOpen && <KioskModeModal isOpen onClose={() => setIsKioskOpen(false)} members={members} />}
+           {authRole === 'admin' && imageModalMember && (
             <ImageLinkModal
               isOpen
               onClose={() => setImageModalMember(null)}
@@ -320,12 +425,13 @@ export default function App() {
               onSaveAvatar={handleSaveAvatarUrl}
             />
           )}
-          {detailModalMember && (
-            <EmployeeDetailModal
-              member={detailModalMember}
-              allMembers={members}
-              onClose={() => setDetailModalMember(null)}
-              onOpenImageModal={setImageModalMember}
+           {detailModalMember && (
+             <EmployeeDetailModal
+               member={detailModalMember}
+               allMembers={members}
+               evaluation={detailEvaluation}
+               onClose={() => setDetailModalMember(null)}
+               onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
               onSelectForEvaluation={(member) => {
                 setSelectedEvaluationMember(member);
                 setDetailModalMember(null);
@@ -333,15 +439,19 @@ export default function App() {
               }}
             />
           )}
-          {reportModalMember && (
-            <ReportExportModal
-              member={reportModalMember}
-              isOpen
-              onClose={() => setReportModalMember(null)}
-            />
+           {reportModal && (
+             <ReportExportModal
+               member={reportModal.member}
+               isOpen
+               onClose={() => setReportModal(null)}
+               criteriaScores={reportModal.criteriaScores}
+               leaderComments={reportModal.leaderComments}
+               cycle={reportModal.cycle}
+             />
           )}
-        </>
-      )}
+         </>
+       )}
+         </Suspense>
 
       <footer className="border-t border-[#22365C] bg-[#0A1424] py-6 px-6 mt-auto">
         <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 font-mono text-xs text-[#6C7C99]">

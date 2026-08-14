@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TeamMember, LeaderName, PerformanceStatus } from '../types';
-import { TEAMS } from '../data/initialData';
+import { TEAMS } from '../data/catalogData';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
@@ -20,9 +20,12 @@ import {
 
 interface LeaderboardViewProps {
   members: TeamMember[];
-  onOpenImageModal: (member: TeamMember) => void;
+  onOpenImageModal?: (member: TeamMember) => void;
   onSelectMemberForEvaluation: (member: TeamMember) => void;
-  onOpenReportModal: (member: TeamMember) => void;
+  onOpenReportModal: (
+    member: TeamMember,
+    context?: { criteriaScores?: Record<string, number>; leaderComments?: string; cycle?: string },
+  ) => void | Promise<void>;
   onSelectMemberForDetail?: (member: TeamMember) => void;
   onOpenMemberForm?: (member?: TeamMember) => void;
   searchQuery: string;
@@ -186,7 +189,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             >
               {TEAMS.map((t) => (
                 <option key={t.leader} value={t.leader}>
-                  Time {t.leader} ({t.members.length} membros)
+                  Time {t.leader} ({members.filter((member) => member.team === t.leader).length} membros)
                 </option>
               ))}
             </select>
@@ -271,13 +274,16 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     {getInitials(top3[1].name)}
                   </div>
                 )}
-                <button
-                  onClick={() => onOpenImageModal(top3[1]!)}
-                  className="absolute -bottom-1 -right-1 bg-[#14294A] border border-[#22365C] text-[#E3A73B] p-1 rounded-full hover:scale-110 transition-all shadow-md"
-                  title="Editar Foto"
-                >
-                  <ImageIcon className="w-3 h-3" />
-                </button>
+                {onOpenImageModal && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenImageModal(top3[1]!)}
+                    className="absolute -bottom-1 -right-1 bg-[#14294A] border border-[#22365C] text-[#E3A73B] p-1 rounded-full hover:scale-110 transition-all shadow-md"
+                    title="Editar Foto"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                  </button>
+                )}
               </div>
 
               <button
@@ -320,13 +326,16 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     {getInitials(top3[0].name)}
                   </div>
                 )}
-                <button
-                  onClick={() => onOpenImageModal(top3[0]!)}
-                  className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full hover:scale-110 transition-all shadow-md font-bold"
-                  title="Editar Foto"
-                >
-                  <ImageIcon className="w-3.5 h-3.5" />
-                </button>
+                {onOpenImageModal && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenImageModal(top3[0]!)}
+                    className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full hover:scale-110 transition-all shadow-md font-bold"
+                    title="Editar Foto"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               <button
@@ -369,13 +378,16 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     {getInitials(top3[2].name)}
                   </div>
                 )}
-                <button
-                  onClick={() => onOpenImageModal(top3[2]!)}
-                  className="absolute -bottom-1 -right-1 bg-[#14294A] border border-[#22365C] text-[#E3A73B] p-1 rounded-full hover:scale-110 transition-all shadow-md"
-                  title="Editar Foto"
-                >
-                  <ImageIcon className="w-3 h-3" />
-                </button>
+                {onOpenImageModal && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenImageModal(top3[2]!)}
+                    className="absolute -bottom-1 -right-1 bg-[#14294A] border border-[#22365C] text-[#E3A73B] p-1 rounded-full hover:scale-110 transition-all shadow-md"
+                    title="Editar Foto"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                  </button>
+                )}
               </div>
 
               <button
@@ -452,13 +464,16 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                       {getInitials(person.name)}
                     </div>
                   )}
-                  <button
-                    onClick={() => onOpenImageModal(person)}
-                    className="absolute -bottom-1 -right-1 bg-[#0F1E38] border border-[#22365C] text-[#E3A73B] p-0.5 rounded-full opacity-0 group-hover/avatar:opacity-100 hover:scale-110 transition-all shadow-sm"
-                    title="Editar Link da Imagem"
-                  >
-                    <ImageIcon className="w-2.5 h-2.5" />
-                  </button>
+                  {onOpenImageModal && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenImageModal(person)}
+                      className="absolute -bottom-1 -right-1 bg-[#0F1E38] border border-[#22365C] text-[#E3A73B] p-0.5 rounded-full opacity-0 group-hover/avatar:opacity-100 hover:scale-110 transition-all shadow-sm"
+                      title="Editar Link da Imagem"
+                    >
+                      <ImageIcon className="w-2.5 h-2.5" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Meta */}

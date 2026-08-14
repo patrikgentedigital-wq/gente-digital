@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Image as ImageIcon, Check, AlertCircle, RefreshCw, Link as LinkIcon, Sparkles } from 'lucide-react';
-import { AVATAR_PRESETS } from '../data/initialData';
+import { AVATAR_PRESETS } from '../data/catalogData';
 
 interface ImageLinkModalProps {
   isOpen: boolean;
@@ -108,13 +108,14 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
           </label>
           <div className="flex gap-2">
             <input
-              type="text"
+              type="url"
               value={urlInput}
               onChange={(e) => {
                 setUrlInput(e.target.value);
                 setTestStatus('idle');
               }}
               placeholder="https://exemplo.com/minha-foto.jpg"
+              maxLength={2048}
               className="flex-1 bg-[#0A1424] border border-[#22365C] rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#E3A73B] transition-colors"
             />
             <button
@@ -184,4 +185,3 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
     </div>
   );
 };
-

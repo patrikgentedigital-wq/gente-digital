@@ -10,6 +10,7 @@ import {
   getFirestore,
   doc,
   collection,
+  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -19,7 +20,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { TeamMember, PdiGoal } from '../types';
+import { PerformanceStatus, TeamMember, PdiGoal } from '../types';
 
 export enum OperationType {
   CREATE = 'create',
@@ -67,6 +68,15 @@ export async function loginWithEmailAndPassword(email: string, password: string)
   }
 
   return credential;
+}
+
+export type AppRole = 'leader' | 'admin';
+
+export async function getCurrentUserRole(user: User): Promise<AppRole | null> {
+  if (!user.emailVerified) return null;
+  const tokenResult = await user.getIdTokenResult(true);
+  const role = tokenResult.claims.role;
+  return role === 'leader' || role === 'admin' ? role : null;
 }
 
 export async function logoutLeader() {
@@ -162,12 +172,22 @@ export interface EvaluationPayload {
   memberName: string;
   leaderName: string;
   score: number;
-  status: string;
+  status: PerformanceStatus;
   cycle: string;
   comments: string;
   pdiGoals: PdiGoal[];
   criteriaScores: Record<string, number>;
-  updatedAt?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
+export async function getEvaluationFromFirestore(evaluationId: string) {
+  try {
+    const snapshot = await getDoc(doc(db, 'evaluations', evaluationId));
+    return snapshot.exists() ? (snapshot.data() as EvaluationPayload) : null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `evaluations/${evaluationId}`);
+  }
 }
 
 export async function saveEvaluationInFirestore(evaluationData: EvaluationPayload) {
@@ -199,7 +219,11 @@ export async function saveEvaluationAndMemberInFirestore({
       }
 
       transaction.set(memberRef, {
-        ...member,
+        score: member.score,
+        status: member.status,
+        evaluationStatus: member.evaluationStatus,
+        pdiGoals: member.pdiGoals,
+        history: member.history,
         updatedAt: serverTimestamp(),
       }, { merge: true });
       transaction.set(evaluationRef, {

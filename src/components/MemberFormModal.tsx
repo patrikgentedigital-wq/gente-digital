@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember, LeaderName } from '../types';
-import { TEAMS } from '../data/initialData';
+import { TEAMS } from '../data/catalogData';
 import { X, UserPlus, Edit3, Trash2, Mail, Briefcase, Users, Link as LinkIcon, AlertTriangle, Check } from 'lucide-react';
 
 interface MemberFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   memberToEdit?: TeamMember | null;
-  onSaveMember: (memberData: TeamMember) => void;
+  onSaveMember: (memberData: TeamMember) => Promise<void> | void;
   onDeleteMember?: (memberId: string) => void;
 }
 
@@ -35,14 +35,14 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       setTeam(memberToEdit.team);
       setEmail(memberToEdit.email || '');
       setAvatarUrl(memberToEdit.avatarUrl || '');
-      setScore(memberToEdit.score || 135);
+       setScore(memberToEdit.score ?? 0);
     } else {
       setName('');
       setRole('');
       setTeam('Djemerson');
       setEmail('');
       setAvatarUrl('');
-      setScore(135);
+       setScore(0);
     }
     setShowDeleteConfirm(false);
   }, [memberToEdit, isOpen]);
@@ -51,7 +51,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
 
   const selectedTeamData = TEAMS.find((t) => t.leader === team) || TEAMS[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !role.trim()) return;
 
@@ -85,8 +85,12 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       ],
     };
 
-    onSaveMember(memberData);
-    onClose();
+    try {
+      await onSaveMember(memberData);
+      onClose();
+    } catch {
+      // Keep the form open so the user can correct or retry after a persistence error.
+    }
   };
 
   const handleDelete = () => {
@@ -181,6 +185,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     value={avatarUrl}
                     onChange={(e) => setAvatarUrl(e.target.value)}
                     placeholder="https://exemplo.com/foto.jpg (ou gerador automático)"
+                    maxLength={2048}
                     className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
                   />
                 </div>
@@ -195,6 +200,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: João da Silva"
+                maxLength={100}
                 className="w-full bg-[#14294A] border border-[#22365C] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
                 required
               />
@@ -211,6 +217,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     placeholder="Ex: Suporte IXC N1"
+                    maxLength={120}
                     className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
                     required
                   />
@@ -226,6 +233,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="nome@gentedigital.com.br"
+                    maxLength={254}
                     className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
                   />
                 </div>
@@ -259,7 +267,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               </div>
               <input
                 type="range"
-                min="60"
+                min="0"
                 max="155"
                 value={score}
                 onChange={(e) => setScore(Number(e.target.value))}

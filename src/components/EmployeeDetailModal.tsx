@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { TeamMember, Badge, PdiGoal } from '../types';
+import { EvaluationPayload } from '../lib/firebase';
+import { CRITERIA_CATEGORIES } from '../data/catalogData';
+import { getCategoryScorePercent } from '../lib/evaluation';
 import { getMemberBadges } from '../utils/badgeUtils';
-import { CRITERIA_CATEGORIES } from '../data/initialData';
 import {
   X,
   Award,
@@ -42,8 +44,9 @@ interface EmployeeDetailModalProps {
   member: TeamMember | null;
   allMembers?: TeamMember[];
   onClose: () => void;
-  onOpenImageModal: (member: TeamMember) => void;
+  onOpenImageModal?: (member: TeamMember) => void;
   onSelectForEvaluation: (member: TeamMember) => void;
+  evaluation?: EvaluationPayload | null;
 }
 
 // Render Badge Icon Helper
@@ -95,20 +98,13 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   onClose,
   onOpenImageModal,
   onSelectForEvaluation,
+  evaluation,
 }) => {
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
 
   if (!member) return null;
 
-  const historyData =
-    member.history && member.history.length > 0
-      ? member.history
-      : [
-          { month: 'Mai', score: Math.max(100, member.score - 12) },
-          { month: 'Jun', score: Math.max(100, member.score - 8) },
-          { month: 'Jul', score: Math.max(100, member.score - 3) },
-          { month: 'Ago', score: member.score },
-        ];
+  const historyData = member.history || [];
 
   const badges = getMemberBadges(member, allMembers);
   const unlockedCount = badges.filter((b) => b.unlocked).length;
@@ -119,13 +115,14 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     return true;
   });
 
-  // Radar competencies data
-  const basePct = Math.round((member.score / member.maxScore) * 100);
-  const radarData = CRITERIA_CATEGORIES.map((cat, idx) => ({
-    category: cat.name.split(' ')[0],
-    fullName: cat.name,
-    score: Math.min(100, Math.max(40, basePct + (idx % 2 === 0 ? 4 : -3))),
-  }));
+  const radarData = evaluation
+    ? CRITERIA_CATEGORIES.flatMap((category) => {
+        const score = getCategoryScorePercent(evaluation.criteriaScores, category.id);
+        return score === null
+          ? []
+          : [{ category: category.name.split(' ')[0], fullName: category.name, score }];
+      })
+    : [];
 
   const pdiGoals = member.pdiGoals || [];
   const completedGoalsCount = pdiGoals.filter((g) => g.status === 'completed').length;
@@ -143,16 +140,19 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 referrerPolicy="no-referrer"
                 className="w-16 h-16 rounded-full object-cover border-2 border-[#E3A73B] bg-[#0A1424]"
               />
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenImageModal(member);
-                }}
-                className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1.5 rounded-full shadow-lg hover:scale-110 transition-all font-bold cursor-pointer"
-                title="Editar Link Direto da Imagem"
-              >
-                <ImageIcon className="w-3.5 h-3.5" />
-              </button>
+              {onOpenImageModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenImageModal(member);
+                  }}
+                  className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1.5 rounded-full shadow-lg hover:scale-110 transition-all font-bold cursor-pointer"
+                  title="Editar Link Direto da Imagem"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <div>
@@ -211,23 +211,29 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           </div>
 
           <div className="w-full h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} outerRadius="70%">
-                <PolarGrid stroke="#1F3356" />
-                <PolarAngleAxis dataKey="category" stroke="#A9B7CE" tick={{ fill: '#A9B7CE', fontSize: 10 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#22365C" tick={{ fill: '#6C7C99', fontSize: 9 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F1E38',
-                    borderColor: '#22365C',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '11px',
-                  }}
-                />
-                <Radar name="Aderência" dataKey="score" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
-              </RadarChart>
-            </ResponsiveContainer>
+            {radarData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-[#6C7C99]">
+                Nenhuma avaliação detalhada encontrada no ciclo atual.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData} outerRadius="70%">
+                  <PolarGrid stroke="#1F3356" />
+                  <PolarAngleAxis dataKey="category" stroke="#A9B7CE" tick={{ fill: '#A9B7CE', fontSize: 10 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#22365C" tick={{ fill: '#6C7C99', fontSize: 9 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0F1E38',
+                      borderColor: '#22365C',
+                      borderRadius: '10px',
+                      color: '#fff',
+                      fontSize: '11px',
+                    }}
+                  />
+                  <Radar name="Aderência" dataKey="score" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
+                </RadarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -489,16 +495,19 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               {member.avatarUrl}
             </p>
           </div>
-          <button
-            onClick={() => {
-              onClose();
-              onOpenImageModal(member);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-[#14294A] hover:bg-[#E3A73B] hover:text-[#1a1200] text-xs font-bold text-white border border-[#22365C] transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            Alterar URL
-          </button>
+          {onOpenImageModal && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenImageModal(member);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-[#14294A] hover:bg-[#E3A73B] hover:text-[#1a1200] text-xs font-bold text-white border border-[#22365C] transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              Alterar URL
+            </button>
+          )}
         </div>
 
         {/* Actions */}

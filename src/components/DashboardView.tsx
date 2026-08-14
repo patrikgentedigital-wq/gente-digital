@@ -1,6 +1,6 @@
 import React from 'react';
 import { TeamMember } from '../types';
-import { TEAMS } from '../data/initialData';
+import { TEAMS } from '../data/catalogData';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
 import { BarChart3, Filter, Download } from 'lucide-react';

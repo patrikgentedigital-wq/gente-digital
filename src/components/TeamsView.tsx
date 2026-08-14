@@ -1,11 +1,11 @@
 import React from 'react';
 import { TeamMember } from '../types';
-import { TEAMS } from '../data/initialData';
+import { TEAMS } from '../data/catalogData';
 import { Users, Award, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 interface TeamsViewProps {
   members: TeamMember[];
-  onOpenImageModal: (member: TeamMember) => void;
+  onOpenImageModal?: (member: TeamMember) => void;
   onSelectTeamFilter: (team: string) => void;
   onSelectMemberForDetail?: (member: TeamMember) => void;
 }
@@ -72,13 +72,16 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                         referrerPolicy="no-referrer"
                         className="w-10 h-10 rounded-full object-cover border-2 border-[#E3A73B] bg-[#14294A]"
                       />
-                      <button
-                        onClick={() => onOpenImageModal(topPerformer)}
-                        className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full shadow hover:scale-110 transition-all font-bold"
-                        title="Link da Foto"
-                      >
-                        <ImageIcon className="w-2.5 h-2.5" />
-                      </button>
+                      {onOpenImageModal && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenImageModal(topPerformer)}
+                          className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full shadow hover:scale-110 transition-all font-bold"
+                          title="Link da Foto"
+                        >
+                          <ImageIcon className="w-2.5 h-2.5" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">

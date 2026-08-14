@@ -1,9 +1,12 @@
 node_modules/
 build/
 dist/
+functions/lib/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
 .firebase/
+firebase-debug.log
+dataconnect/.dataconnect/pgliteData/

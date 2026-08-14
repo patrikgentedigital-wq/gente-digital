@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember } from '../types';
-import { TEAMS } from '../data/initialData';
+import { TEAMS } from '../data/catalogData';
 import {
   X,
   Trophy,
@@ -272,8 +272,8 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto w-full pt-4">
-              {(growthLeaders.length > 0 ? growthLeaders : sortedMembers.slice(0, 6)).map((m) => {
-                const diff = (m.previousRank || m.rank + 1) - m.rank;
+              {growthLeaders.map((m) => {
+                const diff = (m.previousRank ?? m.rank) - m.rank;
                 return (
                   <div
                     key={m.id}
@@ -283,7 +283,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                       <img src={m.avatarUrl} alt={m.name} className="w-16 h-16 rounded-2xl object-cover border border-[#22365C]" />
                       <div className="absolute -bottom-2 -right-2 bg-[#132a1c] border border-[#4fb579]/50 text-[#4fb579] font-mono font-bold text-xs px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
                         <TrendingUp className="w-3 h-3" />
-                        <span>+{diff > 0 ? diff : 1}</span>
+                        <span>+{diff}</span>
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -360,7 +360,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       <footer className="px-8 py-3 bg-[#0A1424] border-t border-[#22365C] flex justify-between items-center font-mono text-xs text-[#6C7C99]">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#4fb579]" />
-          <span>Dados sincronizados em tempo real com o Firestore</span>
+          <span>Dados carregados do Firestore</span>
         </div>
         <div className="flex items-center gap-3">
           <span>Pressione <strong className="text-white">ESC</strong> para sair</span>

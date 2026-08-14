@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember, PdiGoal } from '../types';
-import { CRITERIA_CATEGORIES } from '../data/initialData';
+import { EvaluationPayload } from '../lib/firebase';
+import { CRITERIA_CATEGORIES } from '../data/catalogData';
 import {
   FileText,
   Save,
@@ -28,6 +29,11 @@ import {
   Tooltip,
 } from 'recharts';
 import { toast } from '../utils/toastUtils';
+import {
+  DEFAULT_EVALUATION_CYCLE,
+  hasCompleteCriteriaScores,
+  normalizeCriteriaScores,
+} from '../lib/evaluation';
 
 interface EvaluationViewProps {
   members: TeamMember[];
@@ -41,8 +47,12 @@ interface EvaluationViewProps {
     cycle?: string,
     pdiGoals?: PdiGoal[]
   ) => Promise<void>;
-  onOpenImageModal: (member: TeamMember) => void;
-  onOpenReportModal: (member: TeamMember) => void;
+  onOpenImageModal?: (member: TeamMember) => void;
+  onOpenReportModal: (
+    member: TeamMember,
+    context?: { criteriaScores?: Record<string, number>; leaderComments?: string; cycle?: string },
+  ) => void | Promise<void>;
+  onLoadEvaluation: (memberId: string, cycle: string) => Promise<EvaluationPayload | null | undefined>;
 }
 
 export const EvaluationView: React.FC<EvaluationViewProps> = ({
@@ -52,8 +62,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   onSaveEvaluation,
   onOpenImageModal,
   onOpenReportModal,
+  onLoadEvaluation,
 }) => {
-  const [cycle, setCycle] = useState<string>('Agosto/2026');
+  const [cycle, setCycle] = useState<string>(DEFAULT_EVALUATION_CYCLE);
 
   // Initialize scores (0..5 for each category item)
   const [scores, setScores] = useState<Record<string, number | undefined>>({});
@@ -76,13 +87,35 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [newGoalDeadline, setNewGoalDeadline] = useState('');
   const [showAddGoal, setShowAddGoal] = useState(false);
+  const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
 
-  // Reset scores, comments and PDI when selected member changes
+  // Load the persisted evaluation whenever the member or cycle changes.
   useEffect(() => {
+    let active = true;
     setScores({});
     setLeaderComments('');
-    setPdiGoals(selectedMember.pdiGoals || []);
-  }, [selectedMember.id]);
+    setPdiGoals([]);
+    setIsLoadingEvaluation(true);
+
+    onLoadEvaluation(selectedMember.id, cycle)
+      .then((evaluation) => {
+        if (!active) return;
+        setScores(normalizeCriteriaScores(evaluation?.criteriaScores));
+        setLeaderComments(evaluation?.comments || '');
+        setPdiGoals(evaluation?.pdiGoals || selectedMember.pdiGoals || []);
+      })
+      .catch((error) => {
+        console.error('Unable to load evaluation:', error);
+        if (active) toast.error('Não foi possível carregar a avaliação salva.');
+      })
+      .finally(() => {
+        if (active) setIsLoadingEvaluation(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [cycle, onLoadEvaluation, selectedMember.id, selectedMember.pdiGoals]);
 
 
   const toggleCategory = (catId: number) => {
@@ -105,7 +138,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   const scoreKeys = CRITERIA_CATEGORIES.flatMap((cat) => cat.items.map((_, idx) => `${cat.id}-${idx}`));
-  const hasAllScores = scoreKeys.every((key) => typeof scores[key] === 'number');
+  const hasAllScores = hasCompleteCriteriaScores(scores);
   const grandTotal = scoreKeys.reduce((total, key) => total + (scores[key] ?? 0), 0);
 
   // Radar chart data comparing category percentages
@@ -124,6 +157,14 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const handleAddGoal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGoalTitle.trim()) return;
+    if (pdiGoals.length >= 50) {
+      toast.error('O limite de 50 metas de PDI foi atingido.');
+      return;
+    }
+    if (newGoalTitle.trim().length > 200 || newGoalDeadline.trim().length > 100) {
+      toast.error('Reduza o tamanho do título ou prazo da meta.');
+      return;
+    }
 
     const newGoal: PdiGoal = {
       id: `pdi_${Date.now()}`,
@@ -198,7 +239,13 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => onOpenReportModal(selectedMember)}
+             onClick={() => onOpenReportModal(selectedMember, {
+               criteriaScores: Object.fromEntries(
+                 Object.entries(scores).filter(([, score]) => typeof score === 'number'),
+               ) as Record<string, number>,
+               leaderComments: leaderComments.trim(),
+               cycle,
+             })}
             className="bg-[#14294A] hover:bg-[#22365C] border border-[#22365C] text-[#E3A73B] font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
           >
             <FileText className="w-4 h-4" />
@@ -228,13 +275,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => onOpenImageModal(selectedMember)}
-              className="bg-[#14294A] hover:border-[#E3A73B] text-xs font-bold text-[#F2F5FA] border border-[#22365C] px-3.5 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0"
-              title="Alterar foto do perfil"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-[#E3A73B]" />
-            </button>
+            {onOpenImageModal && (
+              <button
+                type="button"
+                onClick={() => onOpenImageModal(selectedMember)}
+                className="bg-[#14294A] hover:border-[#E3A73B] text-xs font-bold text-[#F2F5FA] border border-[#22365C] px-3.5 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0"
+                title="Alterar foto do perfil"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-[#E3A73B]" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -268,7 +318,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               Teia de Competências da Liderança
             </h3>
           </div>
-          <span className="font-mono text-xs text-[#A9B7CE]">Aderência por Categoria (%)</span>
+           <span className="font-mono text-xs text-[#A9B7CE]">
+             {isLoadingEvaluation ? 'Carregando avaliação...' : 'Aderência por Categoria (%)'}
+           </span>
         </div>
 
         <div className="h-64 w-full">
@@ -331,7 +383,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 <div className="px-4 pb-4 border-t border-[#22365C] divide-y divide-[#22365C]">
                   {cat.items.map((label, idx) => {
                     const key = `${cat.id}-${idx}`;
-                    const score = scores[key] ?? 0;
+                    const score = scores[key];
 
                     return (
                       <div key={idx} className="flex items-center justify-between gap-4 py-3">
@@ -347,7 +399,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                             −
                           </button>
                           <span className="font-mono font-bold text-sm text-[#F2F5FA] w-5 text-center">
-                            {score}
+                            {score ?? '—'}
                           </span>
                           <button
                             onClick={() => updateScore(key, 1)}
@@ -397,6 +449,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   value={newGoalTitle}
                   onChange={(e) => setNewGoalTitle(e.target.value)}
                   placeholder="Ex: Realizar certificação IXC Avançado e reduzir tempo de resposta"
+                  maxLength={200}
                   className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4fb579]"
                   required
                 />
@@ -407,6 +460,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   value={newGoalDeadline}
                   onChange={(e) => setNewGoalDeadline(e.target.value)}
                   placeholder="Prazo (Ex: 30 dias)"
+                  maxLength={100}
                   className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4fb579]"
                 />
               </div>
@@ -487,6 +541,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         <textarea
           value={leaderComments}
           onChange={(e) => setLeaderComments(e.target.value)}
+          maxLength={5000}
           rows={3}
           placeholder="Insira as principais considerações do feedback..."
           className="w-full bg-[#0A1424] border border-[#22365C] rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#E3A73B] resize-none"
@@ -504,6 +559,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
         <button
           onClick={handleSave}
+          disabled={isLoadingEvaluation || !hasAllScores || !leaderComments.trim()}
           className="bg-[#E3A73B] hover:bg-[#eeb64f] text-[#1a1200] font-bold font-sans text-sm px-6 py-2.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center gap-2"
         >
           <Save className="w-4 h-4" />

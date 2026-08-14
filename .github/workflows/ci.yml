@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -26,5 +29,20 @@ jobs:
       - name: TypeScript Type Check
         run: npm run lint
 
+      - name: Unit Tests
+        run: npm test
+
       - name: Build Production Bundle
         run: npm run build
+
+      - name: Install Functions dependencies
+        run: cd functions && npm ci
+
+      - name: Functions TypeScript Type Check
+        run: cd functions && npm run lint
+
+      - name: Functions Unit Tests
+        run: cd functions && npm test
+
+      - name: Build Functions
+        run: cd functions && npm run build

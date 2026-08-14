@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Printer, Download, Award, CheckCircle2, Calendar, User, ShieldCheck, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { TeamMember, EvaluationCriterion } from '../types';
-import { CRITERIA_CATEGORIES } from '../data/initialData';
+import { CRITERIA_CATEGORIES } from '../data/catalogData';
 
 interface ReportExportModalProps {
   member: TeamMember;
@@ -9,6 +9,7 @@ interface ReportExportModalProps {
   onClose: () => void;
   criteriaScores?: Record<string, number>;
   leaderComments?: string;
+  cycle?: string;
 }
 
 export const ReportExportModal: React.FC<ReportExportModalProps> = ({
@@ -17,6 +18,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   onClose,
   criteriaScores,
   leaderComments = '',
+  cycle = 'Ciclo atual',
 }) => {
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -27,18 +29,15 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   };
 
   // Helper to calculate category score
-  const getCategoryScore = (catId: number) => {
+  const getCategoryScore = (catId: number): { sum: number | null; max: number } => {
     const cat = CRITERIA_CATEGORIES.find((c) => c.id === catId);
-    if (!cat) return { sum: 0, max: 25 };
+    if (!cat) return { sum: null, max: 25 };
     const max = cat.items.length * 5;
-    if (!criteriaScores) return { sum: 0, max };
+    if (!criteriaScores) return { sum: null, max };
 
-    let sum = 0;
-    cat.items.forEach((_, idx) => {
-      const key = `${catId}-${idx}`;
-      sum += criteriaScores[key] ?? 0;
-    });
-    return { sum, max };
+    const values = cat.items.map((_, idx) => criteriaScores[`${catId}-${idx}`]);
+    if (values.every((value) => typeof value !== 'number')) return { sum: null, max };
+    return { sum: values.reduce((total, value) => total + (value ?? 0), 0), max };
   };
 
   return (
@@ -117,13 +116,15 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {CRITERIA_CATEGORIES.map((cat) => {
                 const { sum, max } = getCategoryScore(cat.id);
-                const percent = Math.round((sum / max) * 100);
+                const percent = sum === null ? 0 : Math.round((sum / max) * 100);
 
                 return (
                   <div key={cat.id} className="bg-[#14294A]/60 border border-[#22365C] p-3.5 rounded-xl flex flex-col justify-between">
                     <div className="flex justify-between items-center text-xs mb-2">
                       <span className="font-semibold text-white">{cat.id}. {cat.name}</span>
-                      <span className="font-mono text-[#E3A73B] font-bold">{sum}/{max}</span>
+                      <span className="font-mono text-[#E3A73B] font-bold">
+                        {sum === null ? '—' : `${sum}/${max}`}
+                      </span>
                     </div>
 
                     <div className="w-full h-2 bg-[#0A1424] rounded-full overflow-hidden border border-[#22365C]">
@@ -144,7 +145,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
               Parecer Final da Liderança
             </span>
             <p className="text-xs text-[#A9B7CE] italic leading-relaxed">
-              "{leaderComments}"
+              "{leaderComments || 'Parecer não informado.'}"
             </p>
           </div>
 
@@ -169,7 +170,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
 
           {/* Footer watermark */}
           <div className="text-center font-mono text-[10px] text-[#6C7C99] pt-2">
-            Documento gerado em {new Date().toLocaleDateString('pt-BR')} via Plataforma Gente Digital
+             Ciclo: {cycle} · Documento gerado em {new Date().toLocaleDateString('pt-BR')} via Plataforma Gente Digital
           </div>
         </div>
       </div>

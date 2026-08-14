@@ -3,12 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "npm@10",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000 --host=127.0.0.1",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rimraf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "provision": "node scripts/provision-admin.mjs",
+    "test": "vitest run --config vitest.config.ts --configLoader runner",
+    "test:watch": "vitest --config vitest.config.ts --configLoader runner"
   },
   "dependencies": {
     "@dataconnect/generated": "file:src/dataconnect-generated",
@@ -30,6 +37,7 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -1,11 +1,28 @@
 {
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+  "firestore": [
+    {
+      "database": "ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
   },
   "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
     "dataconnect": {
       "dataDir": "dataconnect/.dataconnect/pgliteData"
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
     }
   },
   "dataconnect": {

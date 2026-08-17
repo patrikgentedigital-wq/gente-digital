@@ -61,7 +61,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
     else if (score >= 120) status = 'Atenção';
     else status = 'Alarme';
 
-    const memberId = memberToEdit?.id || `member_${Date.now()}`;
+    const memberId = memberToEdit?.id || `member_${crypto.randomUUID()}`;
 
     const memberData: TeamMember = {
       id: memberId,

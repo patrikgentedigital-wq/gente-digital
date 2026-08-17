@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { exportMembersToCSV } from '../utils/exportUtils';
@@ -22,138 +22,151 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectTeamFilter,
   onSelectMemberForDetail,
 }) => {
-  // --- Aggregate Computations ---
-  const totalMembers = members.length;
-  const avgScore =
-    totalMembers > 0
-      ? Math.round(members.reduce((acc, m) => acc + m.score, 0) / totalMembers)
-      : 0;
-
-  // Real calculation of evaluations completed
-  const completedEvaluationsCount = members.filter(
-    (m) => m.evaluationStatus === 'Concluído'
-  ).length;
-
-  // Status breakdown count
-  const statusCounts = {
-    Voando: members.filter((m) => m.score > 140).length,
-    'Caminho Certo': members.filter((m) => m.score > 130 && m.score <= 140).length,
-    Atenção: members.filter((m) => m.score >= 120 && m.score <= 130).length,
-    Alarme: members.filter((m) => m.score < 120).length,
-  };
-
-  const voandoPercent = Math.round((statusCounts.Voando / (totalMembers || 1)) * 100);
-
-  // Department / Team averages
-  const teamStats = TEAMS.map((t) => {
-    const teamMembers = members.filter((m) => m.team === t.leader);
-    const count = teamMembers.length;
-    const teamAvg =
-      count > 0
-        ? Math.round(teamMembers.reduce((acc, m) => acc + m.score, 0) / count)
+  // --- Memoized Computations ---
+  const {
+    totalMembers,
+    avgScore,
+    completedEvaluationsCount,
+    statusCounts,
+    voandoPercent,
+    teamStats,
+    bestTeam,
+    pieData,
+    scoreBuckets,
+    timelineData,
+  } = useMemo(() => {
+    const total = members.length;
+    const average =
+      total > 0
+        ? Math.round(members.reduce((acc, m) => acc + m.score, 0) / total)
         : 0;
-    const topMember =
-      count > 0
-         ? [...teamMembers].sort((a, b) => b.score - a.score)[0] || null
-        : null;
 
-    return {
-      leader: t.leader,
-      color: t.color,
-      count,
-      avgScore: teamAvg,
-      topMember,
-      voandoCount: teamMembers.filter((m) => m.score > 140).length,
+    const completedCount = members.filter((m) => m.evaluationStatus === 'Concluído').length;
+
+    const counts = {
+      Voando: members.filter((m) => m.score > 140).length,
+      'Caminho Certo': members.filter((m) => m.score > 130 && m.score <= 140).length,
+      Atenção: members.filter((m) => m.score >= 120 && m.score <= 130).length,
+      Alarme: members.filter((m) => m.score < 120).length,
     };
-  }).filter((t) => t.count > 0);
 
-  // Sort teams by average score descending
-  const sortedTeamStats = [...teamStats].sort((a, b) => b.avgScore - a.avgScore);
-  const bestTeam = sortedTeamStats[0] || null;
+    const voandoPct = Math.round((counts.Voando / (total || 1)) * 100);
 
-  // Pie chart data for status distribution
-  const pieData = [
-    {
-      name: 'Voando (>140 pts)',
-      shortName: 'Voando',
-      value: statusCounts.Voando,
-      color: '#E3A73B',
-      pct: Math.round((statusCounts.Voando / (totalMembers || 1)) * 100),
-    },
-    {
-      name: 'Caminho Certo (131-140 pts)',
-      shortName: 'Caminho Certo',
-      value: statusCounts['Caminho Certo'],
-      color: '#4fb579',
-      pct: Math.round((statusCounts['Caminho Certo'] / (totalMembers || 1)) * 100),
-    },
-    {
-      name: 'Atenção (120-130 pts)',
-      shortName: 'Atenção',
-      value: statusCounts.Atenção,
-      color: '#d99a3d',
-      pct: Math.round((statusCounts.Atenção / (totalMembers || 1)) * 100),
-    },
-    {
-      name: 'Alarme (<120 pts)',
-      shortName: 'Alarme',
-      value: statusCounts.Alarme,
-      color: '#e2687a',
-      pct: Math.round((statusCounts.Alarme / (totalMembers || 1)) * 100),
-    },
-  ].filter((item) => item.value > 0);
+    const teams = TEAMS.map((t) => {
+      const teamMembers = members.filter((m) => m.team === t.leader);
+      const count = teamMembers.length;
+      const teamAvg =
+        count > 0
+          ? Math.round(teamMembers.reduce((acc, m) => acc + m.score, 0) / count)
+          : 0;
+      const topMember =
+        count > 0
+          ? [...teamMembers].sort((a, b) => b.score - a.score)[0] || null
+          : null;
 
-  // Score Bucket Distribution Data
-  const scoreBuckets = [
-    {
-      range: '145 - 155 pts',
-      label: 'Excelência',
-      count: members.filter((m) => m.score >= 145).length,
-      color: '#E3A73B',
-    },
-    {
-      range: '135 - 144 pts',
-      label: 'Alto Desempenho',
-      count: members.filter((m) => m.score >= 135 && m.score < 145).length,
-      color: '#4fb579',
-    },
-    {
-      range: '125 - 134 pts',
-      label: 'Em Desenvolvimento',
-      count: members.filter((m) => m.score >= 125 && m.score < 135).length,
-      color: '#d99a3d',
-    },
-    {
-      range: '< 125 pts',
-      label: 'Atenção Especial',
-      count: members.filter((m) => m.score < 125).length,
-      color: '#e2687a',
-    },
-  ];
+      return {
+        leader: t.leader,
+        color: t.color,
+        count,
+        avgScore: teamAvg,
+        topMember,
+        voandoCount: teamMembers.filter((m) => m.score > 140).length,
+      };
+    }).filter((t) => t.count > 0);
 
-  // Historical Timeline Evolution Data
-  const monthsList = ['Mai', 'Jun', 'Jul', 'Ago'];
-  const timelineData = monthsList.map((month) => {
-    let monthScores: number[] = [];
-    members.forEach((m) => {
-      if (m.history) {
-        const item = m.history.find((h) => h.month === month);
-        if (item) monthScores.push(item.score);
-      }
+    const sortedTeams = [...teams].sort((a, b) => b.avgScore - a.avgScore);
+    const topTeam = sortedTeams[0] || null;
+
+    const pie = [
+      {
+        name: 'Voando (>140 pts)',
+        shortName: 'Voando',
+        value: counts.Voando,
+        color: '#E3A73B',
+        pct: Math.round((counts.Voando / (total || 1)) * 100),
+      },
+      {
+        name: 'Caminho Certo (131-140 pts)',
+        shortName: 'Caminho Certo',
+        value: counts['Caminho Certo'],
+        color: '#4fb579',
+        pct: Math.round((counts['Caminho Certo'] / (total || 1)) * 100),
+      },
+      {
+        name: 'Atenção (120-130 pts)',
+        shortName: 'Atenção',
+        value: counts.Atenção,
+        color: '#d99a3d',
+        pct: Math.round((counts.Atenção / (total || 1)) * 100),
+      },
+      {
+        name: 'Alarme (<120 pts)',
+        shortName: 'Alarme',
+        value: counts.Alarme,
+        color: '#e2687a',
+        pct: Math.round((counts.Alarme / (total || 1)) * 100),
+      },
+    ].filter((item) => item.value > 0);
+
+    const buckets = [
+      {
+        range: '145 - 155 pts',
+        label: 'Excelência',
+        count: members.filter((m) => m.score >= 145).length,
+        color: '#E3A73B',
+      },
+      {
+        range: '135 - 144 pts',
+        label: 'Alto Desempenho',
+        count: members.filter((m) => m.score >= 135 && m.score < 145).length,
+        color: '#4fb579',
+      },
+      {
+        range: '125 - 134 pts',
+        label: 'Em Desenvolvimento',
+        count: members.filter((m) => m.score >= 125 && m.score < 135).length,
+        color: '#d99a3d',
+      },
+      {
+        range: '< 125 pts',
+        label: 'Atenção Especial',
+        count: members.filter((m) => m.score < 125).length,
+        color: '#e2687a',
+      },
+    ];
+
+    const months = ['Mai', 'Jun', 'Jul', 'Ago'];
+    const trend = months.map((month) => {
+      const monthScores = members
+        .map((m) => m.history?.find((h) => h.month === month)?.score)
+        .filter((s): s is number => typeof s === 'number');
+
+      const monthAvg =
+        monthScores.length > 0
+          ? Math.round(monthScores.reduce((acc, s) => acc + s, 0) / monthScores.length)
+          : average;
+
+      return {
+        month,
+        avg: monthAvg,
+        max: monthScores.length > 0 ? Math.max(...monthScores) : 0,
+        min: monthScores.length > 0 ? Math.min(...monthScores) : 0,
+      };
     });
 
-    if (monthScores.length === 0) {
-       return { month, avg: 0, max: 0, min: 0 };
-    }
-
-    const monthAvg = Math.round(
-      monthScores.reduce((a, b) => a + b, 0) / monthScores.length
-    );
-    const monthMax = Math.max(...monthScores);
-    const monthMin = Math.min(...monthScores);
-
-    return { month, avg: monthAvg, max: monthMax, min: monthMin };
-  });
+    return {
+      totalMembers: total,
+      avgScore: average,
+      completedEvaluationsCount: completedCount,
+      statusCounts: counts,
+      voandoPercent: voandoPct,
+      teamStats: sortedTeams,
+      bestTeam: topTeam,
+      pieData: pie,
+      scoreBuckets: buckets,
+      timelineData: trend,
+    };
+  }, [members]);
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans space-y-6">
@@ -213,7 +226,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Detailed Team Breakdown Grid */}
       <TeamAnalyticSummary
-        sortedTeamStats={sortedTeamStats}
+        sortedTeamStats={teamStats}
         onSelectTeamFilter={onSelectTeamFilter}
         onSelectMemberForDetail={onSelectMemberForDetail}
       />

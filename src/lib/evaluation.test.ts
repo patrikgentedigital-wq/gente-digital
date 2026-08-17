@@ -10,10 +10,22 @@ import {
 } from './evaluation';
 
 describe('evaluation domain rules', () => {
-  it('maps score thresholds without inventing a pending score', () => {
+  it('maps score thresholds exactly on all boundary values', () => {
+    // Voando: score > 140
     expect(getPerformanceStatus(155)).toBe('Voando');
+    expect(getPerformanceStatus(141)).toBe('Voando');
+
+    // Caminho Certo: score > 130 and <= 140
     expect(getPerformanceStatus(140)).toBe('Caminho Certo');
+    expect(getPerformanceStatus(131)).toBe('Caminho Certo');
+
+    // Atenção: score >= 120 and <= 130
+    expect(getPerformanceStatus(130)).toBe('Atenção');
     expect(getPerformanceStatus(120)).toBe('Atenção');
+
+    // Alarme: score < 120
+    expect(getPerformanceStatus(119)).toBe('Alarme');
+    expect(getPerformanceStatus(50)).toBe('Alarme');
     expect(getPerformanceStatus(0)).toBe('Alarme');
   });
 

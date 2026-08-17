@@ -36,6 +36,13 @@ service cloud.firestore {
       ];
     }
 
+    function validStatusForScore(score, status) {
+      return (score > 140 && status == 'Voando') ||
+        (score > 130 && score <= 140 && status == 'Caminho Certo') ||
+        (score >= 120 && score <= 130 && status == 'Atenção') ||
+        (score < 120 && status == 'Alarme');
+    }
+
     function validCriteriaScore(scores, key) {
       return !(key in scores) ||
         (scores[key] is number && scores[key] >= 0 && scores[key] <= 5);
@@ -84,7 +91,7 @@ service cloud.firestore {
           'email', 'currentRating', 'history', 'pdiGoals',
           'selfEvaluationScores', 'evaluationHistory', 'updatedAt'
         ]) &&
-        data.keys().hasAll(['id', 'name', 'team', 'score', 'rank']) &&
+        data.keys().hasAll(['id', 'name', 'role', 'team', 'score', 'rank', 'maxScore', 'status', 'evaluationStatus']) &&
         data.id == memberId && validId(data.id) &&
         data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
         data.role is string && data.role.size() > 0 && data.role.size() <= 120 &&
@@ -93,9 +100,10 @@ service cloud.firestore {
         data.rank is number && data.rank >= 1 && data.rank <= 10000 &&
         data.maxScore is number && data.maxScore == 155 &&
         data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
+        validStatusForScore(data.score, data.status) &&
         data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
         (!('teamColor' in data) || (data.teamColor is string && data.teamColor.size() <= 32)) &&
-        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048)) &&
+        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048 && data.avatarUrl.matches('^https://.+'))) &&
         (!('email' in data) || (data.email is string && data.email.size() <= 254)) &&
         (!('currentRating' in data) || (data.currentRating is number && data.currentRating >= 0 && data.currentRating <= 5)) &&
         (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
@@ -112,6 +120,7 @@ service cloud.firestore {
         ]) &&
         data.score is number && data.score >= 0 && data.score <= 155 &&
         data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
+        validStatusForScore(data.score, data.status) &&
         data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
         (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
         (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
@@ -130,6 +139,7 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/members/$(data.memberId)) &&
         data.score is number && data.score >= 0 && data.score <= 155 &&
         data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
+        validStatusForScore(data.score, data.status) &&
         data.cycle is string && data.cycle.size() > 0 && data.cycle.size() <= 64 &&
         data.comments is string && data.comments.size() <= 5000 &&
         validCriteriaScores(data.criteriaScores, true) &&

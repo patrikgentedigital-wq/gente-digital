@@ -18,12 +18,13 @@ const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
-const ImageLinkModal = lazy(() => import('./components/ImageLinkModal').then((module) => ({ default: module.ImageLinkModal })));
-const EmployeeDetailModal = lazy(() => import('./components/EmployeeDetailModal').then((module) => ({ default: module.EmployeeDetailModal })));
+import { ImageLinkModal } from './components/ImageLinkModal';
+import { EmployeeDetailModal } from './components/EmployeeDetailModal';
 import { LeaderLoginModal } from './components/LeaderLoginModal';
 const ReportExportModal = lazy(() => import('./components/ReportExportModal').then((module) => ({ default: module.ReportExportModal })));
-const MemberFormModal = lazy(() => import('./components/MemberFormModal').then((module) => ({ default: module.MemberFormModal })));
-const KioskModeModal = lazy(() => import('./components/KioskModeModal').then((module) => ({ default: module.KioskModeModal })));
+import { MemberFormModal } from './components/MemberFormModal';
+import { KioskModeModal } from './components/KioskModeModal';
+import { InfoModal, InfoModalType } from './components/InfoModal';
 import { ToastContainer } from './components/ToastContainer';
 import { toast } from './utils/toastUtils';
 import {
@@ -60,6 +61,7 @@ export default function App() {
   const [isMemberFormOpen, setIsMemberFormOpen] = useState(false);
   const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
+  const [infoModal, setInfoModal] = useState<InfoModalType>(null);
 
   useEffect(() => subscribeToAuth((user) => {
     setAuthUser(user);
@@ -328,6 +330,7 @@ export default function App() {
             onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
             onOpenReportModal={openReportModal}
             onLoadEvaluation={loadEvaluation}
+            currentLeader={currentLeader}
           />
         )}
       </main>
@@ -449,16 +452,34 @@ export default function App() {
                cycle={reportModal.cycle}
              />
           )}
-         </>
-       )}
-         </Suspense>
+          </>
+        )}
+      </Suspense>
+
+      <InfoModal
+        type={infoModal}
+        isOpen={Boolean(infoModal)}
+        onClose={() => setInfoModal(null)}
+      />
 
       <footer className="border-t border-[#22365C] bg-[#0A1424] py-6 px-6 mt-auto">
         <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 font-mono text-xs text-[#6C7C99]">
           <div>© 2026 <strong className="text-[#E3A73B]">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
           <div className="flex gap-4">
-            <button type="button" className="hover:text-[#E3A73B] transition-colors">Privacidade</button>
-            <button type="button" className="hover:text-[#E3A73B] transition-colors">Suporte</button>
+            <button
+              type="button"
+              onClick={() => setInfoModal('privacy')}
+              className="hover:text-[#E3A73B] transition-colors cursor-pointer"
+            >
+              Privacidade
+            </button>
+            <button
+              type="button"
+              onClick={() => setInfoModal('support')}
+              className="hover:text-[#E3A73B] transition-colors cursor-pointer"
+            >
+              Suporte
+            </button>
           </div>
         </div>
       </footer>

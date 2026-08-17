@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember, PdiGoal } from '../types';
 import { EvaluationPayload } from '../lib/firebase';
-import { CRITERIA_CATEGORIES } from '../data/catalogData';
+import { CRITERIA_CATEGORIES, TEAMS } from '../data/catalogData';
 import {
   FileText,
   Save,
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Clock,
   Compass,
+  Filter,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -30,6 +31,7 @@ import {
 } from 'recharts';
 import { toast } from '../utils/toastUtils';
 import {
+  AVAILABLE_EVALUATION_CYCLES,
   DEFAULT_EVALUATION_CYCLE,
   hasCompleteCriteriaScores,
   normalizeCriteriaScores,
@@ -53,6 +55,7 @@ interface EvaluationViewProps {
     context?: { criteriaScores?: Record<string, number>; leaderComments?: string; cycle?: string },
   ) => void | Promise<void>;
   onLoadEvaluation: (memberId: string, cycle: string) => Promise<EvaluationPayload | null | undefined>;
+  currentLeader?: string | null;
 }
 
 export const EvaluationView: React.FC<EvaluationViewProps> = ({
@@ -63,8 +66,15 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   onOpenImageModal,
   onOpenReportModal,
   onLoadEvaluation,
+  currentLeader,
 }) => {
   const [cycle, setCycle] = useState<string>(DEFAULT_EVALUATION_CYCLE);
+  const [teamFilter, setTeamFilter] = useState<string>(() => {
+    if (currentLeader && TEAMS.some((t) => t.leader.toLowerCase() === currentLeader.toLowerCase())) {
+      return currentLeader;
+    }
+    return 'all';
+  });
 
   // Initialize scores (0..5 for each category item)
   const [scores, setScores] = useState<Record<string, number | undefined>>({});
@@ -78,9 +88,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     6: true,
   });
 
-  const [leaderComments, setLeaderComments] = useState<string>(
-    'Demonstra excelente capacidade técnica e atendimento focado na resolução do cliente. Cumpre todas as normas e prazos do IXCSoft.'
-  );
+  const [leaderComments, setLeaderComments] = useState<string>('');
+  const [isDirty, setIsDirty] = useState<boolean>(false);
 
   // PDI Goals state
   const [pdiGoals, setPdiGoals] = useState<PdiGoal[]>([]);
@@ -89,12 +98,25 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
 
+  // Warn if closing window with unsaved draft
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
   // Load the persisted evaluation whenever the member or cycle changes.
   useEffect(() => {
     let active = true;
     setScores({});
     setLeaderComments('');
     setPdiGoals([]);
+    setIsDirty(false);
     setIsLoadingEvaluation(true);
 
     onLoadEvaluation(selectedMember.id, cycle)
@@ -123,6 +145,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   const updateScore = (key: string, delta: number) => {
+    setIsDirty(true);
     setScores((prev) => {
       const current = prev[key] ?? 0;
       const next = Math.max(0, Math.min(5, current + delta));
@@ -167,12 +190,13 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     }
 
     const newGoal: PdiGoal = {
-      id: `pdi_${Date.now()}`,
+      id: `pdi_${crypto.randomUUID()}`,
       title: newGoalTitle.trim(),
       deadline: newGoalDeadline || 'Próximo Ciclo',
       status: 'pending',
     };
 
+    setIsDirty(true);
     setPdiGoals((prev) => [...prev, newGoal]);
     setNewGoalTitle('');
     setNewGoalDeadline('');
@@ -181,6 +205,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   const toggleGoalStatus = (goalId: string) => {
+    setIsDirty(true);
     setPdiGoals((prev) =>
       prev.map((g) =>
         g.id === goalId
@@ -191,6 +216,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   const handleDeleteGoal = (goalId: string) => {
+    setIsDirty(true);
     setPdiGoals((prev) => prev.filter((g) => g.id !== goalId));
   };
 
@@ -213,10 +239,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         cycle,
         pdiGoals,
       );
-    toast.success(
-      `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
-      'Avaliação Concluída'
-    );
+      setIsDirty(false);
+      toast.success(
+        `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
+        'Avaliação Concluída'
+      );
     } catch {
       // The parent reports persistence errors and keeps the draft in memory.
     }
@@ -254,9 +281,45 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         </div>
       </div>
 
-      {/* Selectors Bar: Colaborador & Ciclo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#0F1E38] border border-[#22365C] p-4 rounded-xl mb-6">
-        <div className="md:col-span-2">
+      {/* Selectors Bar: Filtro por Time, Colaborador & Ciclo */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-[#0F1E38] border border-[#22365C] p-4 rounded-xl mb-6 shadow-lg">
+        {/* Team Filter */}
+        <div className="md:col-span-3">
+          <label className="block text-xs font-mono font-semibold text-[#A9B7CE] mb-2 uppercase flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-[#E3A73B]" />
+            Filtrar Time
+          </label>
+          <select
+            value={teamFilter}
+            onChange={(e) => {
+              if (isDirty && !window.confirm('Você possui alterações não salvas nesta avaliação. Deseja descartá-las?')) {
+                return;
+              }
+              const newFilter = e.target.value;
+              setTeamFilter(newFilter);
+              const filtered = newFilter === 'all'
+                ? members
+                : members.filter((m) => m.team.toLowerCase() === newFilter.toLowerCase());
+              if (filtered.length > 0 && !filtered.some((m) => m.id === selectedMember.id)) {
+                onSelectMember(filtered[0]);
+              }
+            }}
+            className="w-full bg-[#14294A] border border-[#22365C] text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
+          >
+            <option value="all">Todos os Times ({members.length})</option>
+            {TEAMS.map((t) => {
+              const count = members.filter((m) => m.team.toLowerCase() === t.leader.toLowerCase()).length;
+              return (
+                <option key={t.leader} value={t.leader}>
+                  Time {t.leader} ({count})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {/* Selected Member */}
+        <div className="md:col-span-5">
           <label className="block text-xs font-mono font-semibold text-[#A9B7CE] mb-2 uppercase">
             Colaborador Avaliado
           </label>
@@ -264,12 +327,18 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             <select
               value={selectedMember.id}
               onChange={(e) => {
+                if (isDirty && !window.confirm('Você possui alterações não salvas nesta avaliação. Deseja descartá-las?')) {
+                  return;
+                }
                 const m = members.find((x) => x.id === e.target.value);
                 if (m) onSelectMember(m);
               }}
               className="flex-1 bg-[#14294A] border border-[#22365C] text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
             >
-              {members.map((m) => (
+              {(teamFilter === 'all'
+                ? members
+                : members.filter((m) => m.team.toLowerCase() === teamFilter.toLowerCase())
+              ).map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.role} • Time {m.team})
                 </option>
@@ -288,7 +357,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           </div>
         </div>
 
-        <div>
+        {/* Cycle */}
+        <div className="md:col-span-4">
           <label className="block text-xs font-mono font-semibold text-[#A9B7CE] mb-2 uppercase">
             Ciclo de Avaliação
           </label>
@@ -296,14 +366,19 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" />
             <select
               value={cycle}
-              onChange={(e) => setCycle(e.target.value)}
+              onChange={(e) => {
+                if (isDirty && !window.confirm('Você possui alterações não salvas nesta avaliação. Deseja descartá-las?')) {
+                  return;
+                }
+                setCycle(e.target.value);
+              }}
               className="w-full bg-[#14294A] border border-[#22365C] text-white font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
             >
-              <option value="Agosto/2026">Agosto / 2026 (Atual)</option>
-              <option value="Julho/2026">Julho / 2026</option>
-              <option value="Junho/2026">Junho / 2026</option>
-              <option value="Ciclo Q2 2026">Ciclo Q2 2026</option>
-              <option value="Ciclo Q1 2026">Ciclo Q1 2026</option>
+              {AVAILABLE_EVALUATION_CYCLES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -540,7 +615,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         </label>
         <textarea
           value={leaderComments}
-          onChange={(e) => setLeaderComments(e.target.value)}
+          onChange={(e) => {
+            setIsDirty(true);
+            setLeaderComments(e.target.value);
+          }}
           maxLength={5000}
           rows={3}
           placeholder="Insira as principais considerações do feedback..."

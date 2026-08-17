@@ -103,27 +103,32 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       .toUpperCase();
   };
 
-  // Filter members
-  let data = members;
-  if (view === 'equipe') {
-    data = members.filter((m) => m.team === selectedTeamLeader);
-  }
+  // Filter members with useMemo
+  const { sortedData, top3 } = React.useMemo(() => {
+    let filtered = members;
+    if (view === 'equipe') {
+      filtered = members.filter((m) => m.team === selectedTeamLeader);
+    }
 
-  if (statusFilter !== 'all') {
-    data = data.filter((m) => m.status === statusFilter);
-  }
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((m) => m.status === statusFilter);
+    }
 
-  if (searchQuery.trim()) {
-    data = data.filter(
-      (m) =>
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.team.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.role.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          m.team.toLowerCase().includes(q) ||
+          m.role.toLowerCase().includes(q)
+      );
+    }
 
-  const sortedData = [...data].sort((a, b) => b.score - a.score);
-  const top3 = statusFilter === 'all' && !searchQuery.trim() ? sortedData.slice(0, 3) : [];
+    const sorted = [...filtered].sort((a, b) => b.score - a.score);
+    const podium = statusFilter === 'all' && !searchQuery.trim() ? sorted.slice(0, 3) : [];
+
+    return { sortedData: sorted, top3: podium };
+  }, [members, view, selectedTeamLeader, statusFilter, searchQuery]);
 
   // CSV Export Handler
   const handleExportCSV = () => {

@@ -11,17 +11,16 @@ deste repositório (`functions/`).
 - `role=admin`: gerencia membros (CRUD completo) e exclui avaliações.
 - Sem claim `role`: nenhum acesso (nem leitura) a `members`/`evaluations`.
 
-## Funcões publicadas
+## Requisitos de Permissão no Google Cloud (IAM)
 
-| Função | Gatilho | Responsabilidade |
-|---|---|---|
-| `bootstrapFirstAdmin` | callable | Promove o primeiro admin (uso único) |
-| `setUserRole` | callable | Atribui/remove `leader`/`admin` (só admin chamador) |
-| `onMemberDeleted` | Firestore `members/{memberId}` | Apaga `evaluations/*` órfãs do membro removido |
+Para executar o provisionamento direto (`npm run roles` via `gcloud auth print-access-token`), a conta Google autenticada no `gcloud` precisa ter pelo menos um dos seguintes papéis (roles) atribuídos no projeto GCP `gen-lang-client-0169317507`:
 
-> Não há auto-atribuição de role no `onCreate` de usuário: isso permitiria
-> escalada de privilégio para qualquer um que criar conta. O papel é sempre
-> atribuído por um admin (ou pelo bootstrap único).
+- `roles/firebaseauth.admin` (**Firebase Authentication Admin**) — Permissão recomendada e de menor privilégio para gerenciar usuários e custom claims;
+- `roles/identitytoolkit.admin` (**Identity Platform Admin**) — Controle completo do Identity Platform;
+- `roles/owner` ou `roles/editor` (**Project Owner / Editor**).
+
+> ⚠️ Contas com apenas permissão de visualizador (`roles/viewer`) receberão erro `403 PERMISSION_DENIED` ao tentar alterar custom claims.
+
 
 ## 1. Deploy das funções
 

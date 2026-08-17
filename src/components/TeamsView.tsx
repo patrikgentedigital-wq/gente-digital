@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { Users, Award, ChevronRight, Image as ImageIcon } from 'lucide-react';
@@ -16,6 +16,25 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   onSelectTeamFilter,
   onSelectMemberForDetail,
 }) => {
+  const activeTeams = useMemo(() => {
+    return TEAMS.map((teamStruct) => {
+      const teamMembers = members.filter((m) => m.team === teamStruct.leader);
+      if (teamMembers.length === 0) return null;
+
+      const avgScore = Math.round(
+        teamMembers.reduce((acc, m) => acc + m.score, 0) / teamMembers.length
+      );
+
+      const topPerformer = [...teamMembers].sort((a, b) => b.score - a.score)[0];
+
+      return {
+        ...teamStruct,
+        teamMembers,
+        avgScore,
+        topPerformer,
+      };
+    }).filter((t): t is NonNullable<typeof t> => t !== null);
+  }, [members]);
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
       {/* Header */}
@@ -28,19 +47,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {TEAMS.map((teamStruct) => {
-          const teamMembers = members.filter((m) => m.team === teamStruct.leader);
-          if (teamMembers.length === 0) return null;
-
-          const avgScore = Math.round(
-            teamMembers.reduce((acc, m) => acc + m.score, 0) / teamMembers.length
-          );
-
-          const topPerformer = [...teamMembers].sort((a, b) => b.score - a.score)[0];
+        {activeTeams.map((teamStruct) => {
+          const { leader, color, teamMembers, avgScore, topPerformer } = teamStruct;
 
           return (
             <div
-              key={teamStruct.leader}
+              key={leader}
               className="bg-[#0F1E38] border border-[#22365C] rounded-2xl p-5 flex flex-col justify-between gap-5 hover:border-[#E3A73B]/50 transition-all shadow-xl group"
             >
               <div>
@@ -48,7 +60,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-display font-bold text-white group-hover:text-[#E3A73B] transition-colors">
-                      Time {teamStruct.leader}
+                      Time {leader}
                     </h3>
                     <p className="text-xs text-[#A9B7CE] flex items-center gap-1 mt-0.5">
                       <Users className="w-3.5 h-3.5 text-[#E3A73B]" />
@@ -118,7 +130,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 </div>
 
                 <button
-                  onClick={() => onSelectTeamFilter(teamStruct.leader)}
+                  onClick={() => onSelectTeamFilter(leader)}
                   className="text-xs font-bold font-mono text-[#E3A73B] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   Filtrar <ChevronRight className="w-3.5 h-3.5" />

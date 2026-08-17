@@ -7,6 +7,9 @@ coverage/
 *.log
 .env*
 !.env.example
+*.pem
+*.key
+*serviceAccount*.json
+*credential*.json
 .firebase/
 firebase-debug.log
-dataconnect/.dataconnect/pgliteData/

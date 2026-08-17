@@ -99,9 +99,13 @@ export const bootstrapFirstAdmin = onCall(async (request) => {
   return result;
 });
 
-export const onMemberDeleted = onDocumentDeleted('members/{memberId}', async (event) => {
-  const memberId = event.params.memberId;
-  const db = getFirestore();
+const FIRESTORE_DATABASE_ID = 'ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93';
+
+export const onMemberDeleted = onDocumentDeleted(
+  { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID },
+  async (event) => {
+    const memberId = event.params.memberId;
+    const db = getFirestore(FIRESTORE_DATABASE_ID);
 
   let deletedCount = 0;
   for (;;) {

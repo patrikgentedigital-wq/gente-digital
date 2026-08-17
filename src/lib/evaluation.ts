@@ -1,7 +1,40 @@
 import { PerformanceStatus, TeamMember } from '../types';
 import { CRITERIA_CATEGORIES } from '../data/catalogData';
 
-export const DEFAULT_EVALUATION_CYCLE = 'Agosto/2026';
+export interface EvaluationCycleOption {
+  id: string;
+  label: string;
+}
+
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+export function generateEvaluationCycles(referenceDate = new Date()): EvaluationCycleOption[] {
+  const currentMonth = referenceDate.getMonth();
+  const currentYear = referenceDate.getFullYear();
+  const cycles: EvaluationCycleOption[] = [];
+
+  for (let i = 0; i < 6; i++) {
+    let m = currentMonth - i;
+    let y = currentYear;
+    if (m < 0) {
+      m += 12;
+      y -= 1;
+    }
+    const name = MONTH_NAMES[m];
+    const id = `${name}/${y}`;
+    cycles.push({
+      id,
+      label: i === 0 ? `${name} / ${y} (Atual)` : `${name} / ${y}`,
+    });
+  }
+  return cycles;
+}
+
+export const AVAILABLE_EVALUATION_CYCLES: EvaluationCycleOption[] = generateEvaluationCycles();
+export const DEFAULT_EVALUATION_CYCLE: string = AVAILABLE_EVALUATION_CYCLES[0]?.id || 'Agosto/2026';
 
 export const CRITERIA_SCORE_KEYS = CRITERIA_CATEGORIES.flatMap((category) =>
   category.items.map((_, index) => `${category.id}-${index}`),

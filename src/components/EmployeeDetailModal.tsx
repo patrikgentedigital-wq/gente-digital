@@ -74,7 +74,13 @@ const renderBadgeIcon = (iconName: string, className: string) => {
 };
 
 // Custom Tooltip component for Recharts
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+}
+
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
@@ -475,9 +481,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           </div>
 
           {/* Monthly summary badges */}
-          <div className="grid grid-cols-4 gap-2 pt-2 border-t border-[#1F3356]">
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-[#1F3356]">
             {historyData.map((h, idx) => (
-              <div key={idx} className="bg-[#0F1E38] border border-[#22365C] p-2 rounded-lg text-center">
+              <div key={idx} className="flex-1 min-w-[70px] bg-[#0F1E38] border border-[#22365C] p-2 rounded-lg text-center">
                 <span className="text-[10px] font-mono text-[#6C7C99] block">{h.month}</span>
                 <span className="text-xs font-bold font-mono text-white">{h.score} pts</span>
               </div>

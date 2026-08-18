@@ -23,11 +23,16 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
   if (!isOpen) return null;
 
   const handleTestUrl = () => {
-    if (!urlInput.trim()) return;
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('https://')) {
+      setTestStatus('error');
+      return;
+    }
     setTestStatus('testing');
     
     const img = new Image();
-    img.src = urlInput;
+    img.src = trimmed;
     img.onload = () => setTestStatus('success');
     img.onerror = () => setTestStatus('error');
   };
@@ -38,9 +43,12 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
   };
 
   const handleSave = () => {
-    if (urlInput.trim()) {
-      onSaveAvatar(urlInput.trim());
+    const trimmed = urlInput.trim();
+    if (trimmed && trimmed.startsWith('https://')) {
+      onSaveAvatar(trimmed);
       onClose();
+    } else {
+      setTestStatus('error');
     }
   };
 
@@ -135,7 +143,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
           )}
           {testStatus === 'error' && (
             <div className="flex items-center gap-1.5 text-xs text-[#C43B4E] font-medium mt-1">
-              <AlertCircle className="w-4 h-4" /> Não foi possível carregar a imagem deste link. Verifique a URL.
+              <AlertCircle className="w-4 h-4" /> Não foi possível carregar a imagem deste link. Certifique-se de que é uma URL pública HTTPS (https://...).
             </div>
           )}
         </div>

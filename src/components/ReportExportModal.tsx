@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { X, Printer, Download, Award, CheckCircle2, Calendar, User, ShieldCheck, Sparkles, Image as ImageIcon } from 'lucide-react';
-import { TeamMember, EvaluationCriterion } from '../types';
+import { TeamMember } from '../types';
 import { CRITERIA_CATEGORIES } from '../data/catalogData';
 
 interface ReportExportModalProps {

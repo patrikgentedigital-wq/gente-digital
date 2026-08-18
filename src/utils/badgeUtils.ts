@@ -11,7 +11,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       ? member.history[member.history.length - 2]?.score ?? member.score
       : member.score - 5;
   const isGrowth =
-    (member.previousRank && member.rank < member.previousRank) ||
+    (member.previousRank !== undefined && member.rank < member.previousRank) ||
     member.score > prevScore;
 
   const historyConsistent =

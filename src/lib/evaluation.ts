@@ -57,19 +57,19 @@ export function normalizeCriteriaScores(scores: unknown): Record<string, number>
 export function getCategoryScorePercent(
   criteriaScores: Record<string, number> | undefined,
   categoryId: number,
-) {
+): number | null {
   const category = CRITERIA_CATEGORIES.find((item) => item.id === categoryId);
   if (!category || !criteriaScores) return null;
 
   const scores = category.items.map((_, index) => criteriaScores[`${categoryId}-${index}`]);
   if (scores.some((score) => typeof score !== 'number' || !Number.isFinite(score))) return null;
 
-  const total = scores.reduce((sum, score) => sum + score, 0);
+  const total = (scores as number[]).reduce((sum, score) => sum + score, 0);
   return Math.round((total / (category.items.length * 5)) * 100);
 }
 
-export function hasCompleteCriteriaScores(scores: Record<string, number | undefined>) {
-  return CRITERIA_SCORE_KEYS.every((key) => typeof scores[key] === 'number');
+export function hasCompleteCriteriaScores(scores: Record<string, number | undefined>): boolean {
+  return CRITERIA_SCORE_KEYS.every((key) => typeof scores[key] === 'number' && Number.isFinite(scores[key]));
 }
 
 export function getPerformanceStatus(score: number): PerformanceStatus {

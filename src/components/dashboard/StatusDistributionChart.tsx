@@ -19,7 +19,19 @@ interface StatusDistributionChartProps {
   totalMembers: number;
 }
 
-const StatusPieTooltip = ({ active, payload }: any) => {
+interface StatusPieTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: {
+      name: string;
+      value: number;
+      color: string;
+      pct: number;
+    };
+  }>;
+}
+
+const StatusPieTooltip: React.FC<StatusPieTooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (

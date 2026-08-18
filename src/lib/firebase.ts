@@ -96,7 +96,7 @@ export interface FirestoreErrorInfo {
   };
 }
 
-export function handleFirestoreError(error: unknown, operationType: string, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: string, path: string | null): never {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -181,7 +181,7 @@ export interface EvaluationPayload {
   updatedAt?: unknown;
 }
 
-export async function getEvaluationFromFirestore(evaluationId: string) {
+export async function getEvaluationFromFirestore(evaluationId: string): Promise<EvaluationPayload | null> {
   try {
     const snapshot = await getDoc(doc(db, 'evaluations', evaluationId));
     return snapshot.exists() ? (snapshot.data() as EvaluationPayload) : null;

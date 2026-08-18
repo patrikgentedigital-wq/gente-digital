@@ -135,10 +135,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       },
     ];
 
-    const months = ['Mai', 'Jun', 'Jul', 'Ago'];
-    const trend = months.map((month) => {
+    const months = [
+      { label: 'Mai', searchTerms: ['mai', 'maio', '05/'] },
+      { label: 'Jun', searchTerms: ['jun', 'junho', '06/'] },
+      { label: 'Jul', searchTerms: ['jul', 'julho', '07/'] },
+      { label: 'Ago', searchTerms: ['ago', 'agosto', '08/'] },
+    ];
+    const trend = months.map(({ label, searchTerms }) => {
       const monthScores = members
-        .map((m) => m.history?.find((h) => h.month === month)?.score)
+        .map((m) =>
+          m.history?.find((h) =>
+            searchTerms.some((term) => h.month.toLowerCase().includes(term))
+          )?.score
+        )
         .filter((s): s is number => typeof s === 'number');
 
       const monthAvg =
@@ -147,7 +156,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           : average;
 
       return {
-        month,
+        month: label,
         avg: monthAvg,
         max: monthScores.length > 0 ? Math.max(...monthScores) : 0,
         min: monthScores.length > 0 ? Math.min(...monthScores) : 0,

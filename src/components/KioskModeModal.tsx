@@ -173,18 +173,26 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
 
       {/* Main Slide Content */}
       <main className="flex-1 p-8 flex flex-col justify-center max-w-7xl w-full mx-auto overflow-hidden">
-        {/* SLIDE 0: PODIUM & TOP PERFORMERS */}
-        {currentSlide === 0 && (
-          <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 bg-[#E3A73B]/10 text-[#E3A73B] px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-[#E3A73B]/20 mb-2">
-                <Trophy className="w-3.5 h-3.5" /> Pódio de Honra do Ciclo
-              </div>
-              <h2 className="text-3xl font-display font-black text-white">Top Destaques Gerais</h2>
-            </div>
+        {members.length === 0 ? (
+          <div className="text-center p-8 bg-[#0F1E38] rounded-3xl border border-[#22365C] max-w-md mx-auto">
+            <Trophy className="w-12 h-12 text-[#E3A73B] mx-auto mb-3 opacity-60" />
+            <h3 className="text-lg font-bold text-white mb-1">Nenhum dado carregado</h3>
+            <p className="text-xs text-[#A9B7CE]">Aguardando dados dos colaboradores para exibição no telão.</p>
+          </div>
+        ) : (
+          <>
+            {/* SLIDE 0: PODIUM & TOP PERFORMERS */}
+            {currentSlide === 0 && (
+              <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-2 bg-[#E3A73B]/10 text-[#E3A73B] px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-[#E3A73B]/20 mb-2">
+                    <Trophy className="w-3.5 h-3.5" /> Pódio de Honra do Ciclo
+                  </div>
+                  <h2 className="text-3xl font-display font-black text-white">Top Destaques Gerais</h2>
+                </div>
 
-            {/* Podium 3 cards */}
-            <div className="grid grid-cols-3 gap-6 items-end max-w-4xl mx-auto w-full pt-4">
+                {/* Podium 3 cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end max-w-4xl mx-auto w-full pt-4">
               {/* 2nd Place */}
               {top2 && (
                 <div className="bg-[#0F1E38] border-2 border-[#A9B7CE]/40 rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl relative order-1 transform hover:-translate-y-1 transition-transform">
@@ -353,6 +361,8 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
 

@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { BarChart3 } from 'lucide-react';
+import { TeamMember } from '../../types';
 
 interface TeamComparisonChartProps {
   teamStats: Array<{
@@ -18,12 +19,26 @@ interface TeamComparisonChartProps {
     color: string;
     count: number;
     avgScore: number;
-    topMember: any;
+    topMember: TeamMember | null;
     voandoCount: number;
   }>;
 }
 
-const TeamBarTooltip = ({ active, payload }: any) => {
+interface TeamBarTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: {
+      leader: string;
+      color: string;
+      avgScore: number;
+      count: number;
+      voandoCount: number;
+      topMember: TeamMember | null;
+    };
+  }>;
+}
+
+const TeamBarTooltip: React.FC<TeamBarTooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (

@@ -30,11 +30,12 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
       const leaderName = credential.user.displayName || credential.user.email || 'Líder';
       onLoginSuccess(leaderName);
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      if (error?.message === 'EMAIL_NOT_VERIFIED') {
+      const err = error as { message?: string; code?: string };
+      if (err?.message === 'EMAIL_NOT_VERIFIED') {
         setErrorMsg('Confirme o e-mail da conta antes de acessar a área do líder.');
-      } else if (error?.code === 'auth/invalid-credential') {
+      } else if (err?.code === 'auth/invalid-credential') {
         setErrorMsg('E-mail ou senha inválidos.');
       } else {
         setErrorMsg('Não foi possível autenticar. Verifique a conexão e as credenciais.');

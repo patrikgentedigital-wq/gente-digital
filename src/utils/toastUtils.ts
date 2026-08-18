@@ -29,7 +29,7 @@ class ToastManager {
   }
 
   show(message: string, type: ToastType = 'info', title?: string, duration = 3500) {
-    const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const id = `toast_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const newToast: ToastItem = { id, message, type, title, duration };
     this.toasts = [...this.toasts, newToast];
     this.notify();

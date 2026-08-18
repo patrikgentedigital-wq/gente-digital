@@ -19,6 +19,26 @@ interface HistoricalTrendChartProps {
   }>;
 }
 
+interface TrendTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+}
+
+const TrendTooltip: React.FC<TrendTooltipProps> = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[#0F1E38] border border-[#22365C] p-3 rounded-xl shadow-xl text-xs space-y-1">
+        <p className="font-mono font-bold text-[#E3A73B]">{label} / 2026</p>
+        <p className="text-white">
+          Média Geral: <strong className="font-mono">{payload[0].value} pts</strong>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ timelineData }) => {
   return (
     <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl space-y-3">
@@ -44,21 +64,7 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
             <CartesianGrid stroke="#1F3356" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" stroke="#6C7C99" fontSize={11} tickLine={false} />
             <YAxis domain={[110, 155]} stroke="#6C7C99" fontSize={11} tickLine={false} />
-            <Tooltip
-              content={({ active, payload, label }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="bg-[#0F1E38] border border-[#22365C] p-3 rounded-xl shadow-xl text-xs space-y-1">
-                      <p className="font-mono font-bold text-[#E3A73B]">{label} / 2026</p>
-                      <p className="text-white">
-                        Média Geral: <strong className="font-mono">{payload[0].value} pts</strong>
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
+            <Tooltip content={<TrendTooltip />} />
             <Area
               type="monotone"
               dataKey="avg"

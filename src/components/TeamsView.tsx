@@ -35,6 +35,17 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
       };
     }).filter((t): t is NonNullable<typeof t> => t !== null);
   }, [members]);
+
+  // Helper for initials
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+  };
+
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
       {/* Header */}
@@ -78,17 +89,26 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 {topPerformer && (
                   <div className="bg-[#0A1424] border border-[#22365C] rounded-xl p-3 flex items-center gap-3">
                     <div className="relative group/avatar shrink-0">
-                      <img
-                        src={topPerformer.avatarUrl}
-                        alt={topPerformer.name}
-                        referrerPolicy="no-referrer"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-[#E3A73B] bg-[#14294A]"
-                      />
+                      {topPerformer.avatarUrl ? (
+                        <img
+                          src={topPerformer.avatarUrl}
+                          alt={topPerformer.name}
+                          referrerPolicy="no-referrer"
+                          className="w-10 h-10 rounded-full object-cover border-2 border-[#E3A73B] bg-[#14294A]"
+                        />
+                      ) : (
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-xs text-white border-2 border-[#E3A73B]"
+                          style={{ backgroundColor: topPerformer.teamColor || color || '#3B6FE0' }}
+                        >
+                          {getInitials(topPerformer.name)}
+                        </div>
+                      )}
                       {onOpenImageModal && (
                         <button
                           type="button"
                           onClick={() => onOpenImageModal(topPerformer)}
-                          className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full shadow hover:scale-110 transition-all font-bold"
+                          className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1 rounded-full shadow hover:scale-110 transition-all font-bold cursor-pointer"
                           title="Link da Foto"
                         >
                           <ImageIcon className="w-2.5 h-2.5" />
@@ -116,17 +136,29 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
               {/* Members Avatars Row */}
               <div className="flex items-center justify-between border-t border-[#22365C] pt-3.5">
                 <div className="flex -space-x-2">
-                  {teamMembers.map((m) => (
-                    <img
-                      key={m.id}
-                      src={m.avatarUrl}
-                      alt={m.name}
-                      referrerPolicy="no-referrer"
-                      title={`${m.name} (${m.score} pts) - Clique para ver o gráfico`}
-                      onClick={() => onSelectMemberForDetail?.(m)}
-                      className="w-7 h-7 rounded-full border-2 border-[#0F1E38] object-cover bg-[#0A1424] hover:scale-110 hover:z-10 transition-transform cursor-pointer"
-                    />
-                  ))}
+                  {teamMembers.map((m) =>
+                    m.avatarUrl ? (
+                      <img
+                        key={m.id}
+                        src={m.avatarUrl}
+                        alt={m.name}
+                        referrerPolicy="no-referrer"
+                        title={`${m.name} (${m.score} pts) - Clique para ver o gráfico`}
+                        onClick={() => onSelectMemberForDetail?.(m)}
+                        className="w-7 h-7 rounded-full border-2 border-[#0F1E38] object-cover bg-[#0A1424] hover:scale-110 hover:z-10 transition-transform cursor-pointer"
+                      />
+                    ) : (
+                      <div
+                        key={m.id}
+                        title={`${m.name} (${m.score} pts) - Clique para ver o gráfico`}
+                        onClick={() => onSelectMemberForDetail?.(m)}
+                        className="w-7 h-7 rounded-full border-2 border-[#0F1E38] flex items-center justify-center font-display font-bold text-[9px] text-white hover:scale-110 hover:z-10 transition-transform cursor-pointer"
+                        style={{ backgroundColor: m.teamColor || color || '#3B6FE0' }}
+                      >
+                        {getInitials(m.name)}
+                      </div>
+                    )
+                  )}
                 </div>
 
                 <button

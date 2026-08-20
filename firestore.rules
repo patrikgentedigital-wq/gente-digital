@@ -103,7 +103,7 @@ service cloud.firestore {
         validStatusForScore(data.score, data.status) &&
         data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
         (!('teamColor' in data) || (data.teamColor is string && data.teamColor.size() <= 32)) &&
-        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048 && data.avatarUrl.matches('^https://.+'))) &&
+        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048 && (data.avatarUrl == '' || data.avatarUrl.matches('^https://.+')))) &&
         (!('email' in data) || (data.email is string && data.email.size() <= 254)) &&
         (!('currentRating' in data) || (data.currentRating is number && data.currentRating >= 0 && data.currentRating <= 5)) &&
         (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&

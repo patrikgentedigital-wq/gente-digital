@@ -13,23 +13,27 @@ import { TrendingUp } from 'lucide-react';
 interface HistoricalTrendChartProps {
   timelineData: Array<{
     month: string;
-    avg: number;
-    max: number;
-    min: number;
+    year: number;
+    avg: number | null;
+    max: number | null;
+    min: number | null;
   }>;
 }
 
 interface TrendTooltipProps {
   active?: boolean;
-  payload?: Array<{ value: number }>;
+  payload?: Array<{ value: number; payload?: { year?: number } }>;
   label?: string;
 }
 
 const TrendTooltip: React.FC<TrendTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
+    const entry = payload[0].payload;
     return (
       <div className="bg-[#0F1E38] border border-[#22365C] p-3 rounded-xl shadow-xl text-xs space-y-1">
-        <p className="font-mono font-bold text-[#E3A73B]">{label} / 2026</p>
+        <p className="font-mono font-bold text-[#E3A73B]">
+          {label}{entry?.year ? ` / ${entry.year}` : ''}
+        </p>
         <p className="text-white">
           Média Geral: <strong className="font-mono">{payload[0].value} pts</strong>
         </p>
@@ -40,12 +44,16 @@ const TrendTooltip: React.FC<TrendTooltipProps> = ({ active, payload, label }) =
 };
 
 export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ timelineData }) => {
+  const firstMonth = timelineData[0]?.month;
+  const lastMonth = timelineData[timelineData.length - 1]?.month;
+  const hasWindow = Boolean(firstMonth && lastMonth);
+
   return (
     <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl space-y-3">
       <div>
         <h3 className="font-display font-bold text-base text-[#F2F5FA] flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-[#E3A73B]" />
-          Evolução da Média Geral (Mai a Ago)
+          Evolução da Média Geral{hasWindow ? ` (${firstMonth} a ${lastMonth})` : ''}
         </h3>
         <p className="text-xs text-[#A9B7CE] mt-0.5">
           Trajetória do desempenho médio da equipe nos últimos meses.
@@ -63,11 +71,17 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
             </defs>
             <CartesianGrid stroke="#1F3356" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" stroke="#6C7C99" fontSize={11} tickLine={false} />
-            <YAxis domain={[110, 155]} stroke="#6C7C99" fontSize={11} tickLine={false} />
+            <YAxis
+              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
+              stroke="#6C7C99"
+              fontSize={11}
+              tickLine={false}
+            />
             <Tooltip content={<TrendTooltip />} />
             <Area
               type="monotone"
               dataKey="avg"
+              connectNulls
               stroke="#E3A73B"
               strokeWidth={3}
               fillOpacity={1}

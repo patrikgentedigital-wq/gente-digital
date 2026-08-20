@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
+import { DEFAULT_EVALUATION_CYCLE } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
 import { BarChart3, Filter, Download } from 'lucide-react';
@@ -135,13 +136,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       },
     ];
 
-    const months = [
-      { label: 'Mai', searchTerms: ['mai', 'maio', '05/'] },
-      { label: 'Jun', searchTerms: ['jun', 'junho', '06/'] },
-      { label: 'Jul', searchTerms: ['jul', 'julho', '07/'] },
-      { label: 'Ago', searchTerms: ['ago', 'agosto', '08/'] },
-    ];
-    const trend = months.map(({ label, searchTerms }) => {
+    const reference = new Date();
+    const months = Array.from({ length: 4 }, (_, i) => {
+      const date = new Date(reference.getFullYear(), reference.getMonth() - (3 - i), 1);
+      const shortName = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+      const fullName = date.toLocaleDateString('pt-BR', { month: 'long' });
+      return {
+        label: shortName.charAt(0).toUpperCase() + shortName.slice(1),
+        year: date.getFullYear(),
+        searchTerms: [shortName.toLowerCase(), fullName.toLowerCase()],
+      };
+    });
+    const trend = months.map(({ label, year, searchTerms }) => {
       const monthScores = members
         .map((m) =>
           m.history?.find((h) =>
@@ -153,13 +159,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       const monthAvg =
         monthScores.length > 0
           ? Math.round(monthScores.reduce((acc, s) => acc + s, 0) / monthScores.length)
-          : average;
+          : null;
 
       return {
         month: label,
+        year,
         avg: monthAvg,
-        max: monthScores.length > 0 ? Math.max(...monthScores) : 0,
-        min: monthScores.length > 0 ? Math.min(...monthScores) : 0,
+        max: monthScores.length > 0 ? Math.max(...monthScores) : null,
+        min: monthScores.length > 0 ? Math.min(...monthScores) : null,
       };
     });
 
@@ -206,7 +213,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center gap-2 bg-[#0F1E38] border border-[#22365C] rounded-xl px-3 py-1.5">
             <Filter className="w-3.5 h-3.5 text-[#E3A73B]" />
             <span className="text-xs font-mono font-bold text-[#A9B7CE]">Período:</span>
-            <span className="text-xs font-mono font-bold text-[#E3A73B]">Agosto / 2026</span>
+            <span className="text-xs font-mono font-bold text-[#E3A73B]">Ciclo {DEFAULT_EVALUATION_CYCLE}</span>
           </div>
         </div>
       </div>

@@ -109,7 +109,7 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamSt
               textAnchor="end"
             />
             <YAxis
-              domain={[100, 155]}
+              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
               stroke="#6C7C99"
               fontSize={11}
               tickLine={false}

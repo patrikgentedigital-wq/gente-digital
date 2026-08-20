@@ -97,7 +97,9 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       avgScore: Math.round(avgScore * 10) / 10,
       flyingCount,
     };
-  }).sort((a, b) => b.avgScore - a.avgScore);
+  })
+    .filter((team) => team.count > 0)
+    .sort((a, b) => b.avgScore - a.avgScore);
 
   return (
     <div className="fixed inset-0 z-50 bg-[#060D1A] text-[#F2F5FA] flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-300">

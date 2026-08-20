@@ -36,7 +36,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
     if (!criteriaScores) return { sum: null, max };
 
     const values = cat.items.map((_, idx) => criteriaScores[`${catId}-${idx}`]);
-    if (values.every((value) => typeof value !== 'number')) return { sum: null, max };
+    if (values.some((value) => typeof value !== 'number')) return { sum: null, max };
     return { sum: values.reduce((total, value) => total + (value ?? 0), 0), max };
   };
 

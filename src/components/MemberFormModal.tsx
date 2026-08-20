@@ -25,7 +25,8 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   const [team, setTeam] = useState<LeaderName>('Djemerson');
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [score, setScore] = useState(135);
+  const [avatarError, setAvatarError] = useState(false);
+  const [score, setScore] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
        setScore(0);
     }
     setShowDeleteConfirm(false);
+    setAvatarError(false);
   }, [memberToEdit, isOpen]);
 
   if (!isOpen) return null;
@@ -78,11 +80,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       evaluationStatus: memberToEdit?.evaluationStatus || 'Pendente',
       email: email.trim() || `${name.trim().toLowerCase().replace(/\s+/g, '.')}@gentedigital.com.br`,
       pdiGoals: memberToEdit?.pdiGoals || [],
-      history: memberToEdit?.history || [
-        { month: 'Jun', score: Math.max(100, score - 6) },
-        { month: 'Jul', score: Math.max(100, score - 3) },
-        { month: 'Ago', score },
-      ],
+      history: memberToEdit?.history || [],
     };
 
     try {
@@ -159,14 +157,12 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             {/* Live Avatar Preview */}
             <div className="flex items-center gap-4 bg-[#14294A] p-3.5 rounded-xl border border-[#22365C]">
               <div className="w-14 h-14 rounded-full overflow-hidden bg-[#0A1424] border-2 border-[#E3A73B]/50 shrink-0 flex items-center justify-center">
-                {avatarUrl ? (
+                {avatarUrl && !avatarError ? (
                   <img
                     src={avatarUrl}
                     alt="Avatar"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
+                    onError={() => setAvatarError(true)}
                   />
                 ) : (
                   <div className="font-bold text-sm text-[#E3A73B]">
@@ -183,7 +179,10 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                   <input
                     type="url"
                     value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    onChange={(e) => {
+                      setAvatarUrl(e.target.value);
+                      setAvatarError(false);
+                    }}
                     placeholder="https://exemplo.com/foto.jpg (ou gerador automático)"
                     maxLength={2048}
                     className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#E3A73B]"

@@ -587,7 +587,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           </div>
           <div className="flex items-center gap-2 text-xs text-[#6C7C99]">
             <span className="w-2 h-2 rounded-xs bg-[#d99a3d]" />
-            <span>Atenção (&lt;130 pts)</span>
+            <span>Atenção (120-130 pts)</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-[#6C7C99]">
             <span className="w-2 h-2 rounded-xs bg-[#e2687a]" />

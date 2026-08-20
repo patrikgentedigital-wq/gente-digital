@@ -111,6 +111,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   }, [isDirty]);
 
   // Load the persisted evaluation whenever the member or cycle changes.
+  // Note: we intentionally depend only on selectedMember.id (not the object/array
+  // identities) so Firestore snapshots do not wipe in-progress drafts.
+  const memberId = selectedMember.id;
+  const memberPdiGoals = selectedMember.pdiGoals;
   useEffect(() => {
     let active = true;
     setScores({});
@@ -119,12 +123,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setIsDirty(false);
     setIsLoadingEvaluation(true);
 
-    onLoadEvaluation(selectedMember.id, cycle)
+    onLoadEvaluation(memberId, cycle)
       .then((evaluation) => {
         if (!active) return;
         setScores(normalizeCriteriaScores(evaluation?.criteriaScores));
         setLeaderComments(evaluation?.comments || '');
-        setPdiGoals(evaluation?.pdiGoals || selectedMember.pdiGoals || []);
+        setPdiGoals(evaluation?.pdiGoals || memberPdiGoals || []);
       })
       .catch((error) => {
         console.error('Unable to load evaluation:', error);
@@ -137,7 +141,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     return () => {
       active = false;
     };
-  }, [cycle, onLoadEvaluation, selectedMember.id, selectedMember.pdiGoals]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cycle, memberId, onLoadEvaluation]);
 
 
   const toggleCategory = (catId: number) => {

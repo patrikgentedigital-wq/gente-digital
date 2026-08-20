@@ -16,13 +16,13 @@ export const ScoreBucketHistogram: React.FC<ScoreBucketHistogramProps> = ({
   totalMembers,
 }) => {
   return (
-    <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl space-y-4 flex flex-col justify-between">
+    <div className="bg-surface border border-line p-5 rounded-2xl space-y-4 flex flex-col justify-between">
       <div>
-        <h3 className="font-display font-bold text-base text-[#F2F5FA] flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#4fb579]" />
+        <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-success" />
           Concentração por Faixa de Pontuação
         </h3>
-        <p className="text-xs text-[#A9B7CE] mt-0.5">
+        <p className="text-xs text-muted mt-0.5">
           Quantidade de colaboradores dentro de cada intervalo de pontos.
         </p>
       </div>
@@ -33,12 +33,12 @@ export const ScoreBucketHistogram: React.FC<ScoreBucketHistogramProps> = ({
           return (
             <div key={idx} className="space-y-1">
               <div className="flex justify-between text-xs font-mono">
-                <span className="text-[#F2F5FA] font-bold">{bucket.range} ({bucket.label})</span>
-                <span className="text-[#A9B7CE]">
+                <span className="text-ink font-bold">{bucket.range} ({bucket.label})</span>
+                <span className="text-muted">
                   <strong className="text-white">{bucket.count}</strong> ({pct}%)
                 </span>
               </div>
-              <div className="w-full h-2.5 bg-[#0A1424] rounded-full overflow-hidden border border-[#22365C]">
+              <div className="w-full h-2.5 bg-app rounded-full overflow-hidden border border-line">
                 <div
                   className="h-full transition-all duration-500 rounded-full"
                   style={{ width: `${pct}%`, backgroundColor: bucket.color }}
@@ -49,7 +49,7 @@ export const ScoreBucketHistogram: React.FC<ScoreBucketHistogramProps> = ({
         })}
       </div>
 
-      <div className="text-[11px] text-[#6C7C99] pt-2 border-t border-[#22365C]">
+      <div className="text-[11px] text-faint pt-2 border-t border-line">
         * Pontuação máxima atingível no ciclo de avaliação: <strong>155 pontos</strong>.
       </div>
     </div>

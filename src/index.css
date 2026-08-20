@@ -4,6 +4,52 @@
   --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-app: #0A1424;
+  --color-surface: #0F1E38;
+  --color-surface-2: #14294A;
+  --color-line: #22365C;
+  --color-line-soft: #1F3356;
+  --color-ink: #F2F5FA;
+  --color-muted: #A9B7CE;
+  --color-faint: #6C7C99;
+  --color-accent: #E3A73B;
+  --color-accent-ink: #1a1200;
+  --color-accent-hover: #eeb64f;
+  --color-primary: #3B6FE0;
+  --color-primary-hover: #1c3966;
+  --color-success: #4fb579;
+  --color-success-hover: #5fc78a;
+  --color-success-ink: #062412;
+  --color-success-soft: #132a1c;
+  --color-danger: #e2687a;
+  --color-danger-soft: #3A1620;
+  --color-danger-ink: #ffb4c0;
+  --color-warn: #d99a3d;
+  --color-warn-soft: #332715;
+  --color-gold-soft: #3A2E14;
+  --color-info: #38BDF8;
+  --color-overlay: #050912;
+  --color-overlay-2: #060D1A;
+  --color-bronze: #cd7f32;
+  --color-gold-deep: #1c3057;
+  --color-app-deep: #080E1A;
+  --color-line-deep: #18263E;
+  --color-sky-deep: #0369a1;
+  --color-silver: #94a3b8;
+  --color-slate-deep: #334155;
+  --color-slate-ink: #e2e8f0;
+  --color-amber-deep: #d97706;
+  --color-amber-bg: #78350f;
+  --color-amber-ink: #fbbf24;
+  --color-slate-faint: #8293B0;
+  --color-success-strong: #2E9E52;
+  --color-danger-strong: #C43B4E;
+  --color-danger-pale: #ffebee;
+  --color-danger-hover: #c95062;
+  --color-danger-light: #ff8597;
+  --color-success-pale: #e6f8ee;
+  --color-warn-pale: #fef3c7;
 }
 
 @layer utilities {
@@ -83,12 +129,29 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A1424; 
+  background: var(--color-app);
 }
 ::-webkit-scrollbar-thumb {
-  background: #22365C; 
+  background: var(--color-line);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #E3A73B; 
+  background: var(--color-accent);
+}
+
+@keyframes slide-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer utilities {
+  .animate-slide-fade {
+    animation: slide-fade 0.45s ease;
+  }
 }

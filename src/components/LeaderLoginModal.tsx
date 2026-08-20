@@ -50,7 +50,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -58,7 +58,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
     >
       <div
         ref={dialogRef}
-        className="bg-[#0F1E38] border border-[#22365C] w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA]"
+        className="bg-surface border border-line w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="leader-login-title"
@@ -66,30 +66,30 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#E3A73B]/10 border border-[#E3A73B]/30 flex items-center justify-center text-[#E3A73B]">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
               <Lock className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
               <h3 id="leader-login-title" className="font-display font-bold text-xl text-white">Área do Líder</h3>
-              <p className="text-xs text-[#A9B7CE]">Autenticação via Firebase</p>
+              <p className="text-xs text-muted">Autenticação via Firebase</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar autenticação"
-            className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors"
+            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors"
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        <p className="text-xs text-[#A9B7CE] leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           Acesso reservado a líderes provisionados no Firebase Authentication.
         </p>
 
         {errorMsg && (
-          <div className="bg-[#3A1620] border border-[#e2687a]/40 text-[#e2687a] text-xs p-3 rounded-xl flex items-center gap-2" role="alert">
+          <div className="bg-danger-soft border border-danger/40 text-danger text-xs p-3 rounded-xl flex items-center gap-2" role="alert">
             <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
@@ -97,9 +97,9 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="leader-email" className="block text-xs font-semibold text-[#A9B7CE]">E-mail corporativo</label>
+            <label htmlFor="leader-email" className="block text-xs font-semibold text-muted">E-mail corporativo</label>
             <div className="relative">
-              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" aria-hidden="true" />
+              <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-faint" aria-hidden="true" />
               <input
                 id="leader-email"
                 type="email"
@@ -107,23 +107,23 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="lider@gentedigital.com.br"
                 autoComplete="username"
-                className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="leader-password" className="block text-xs font-semibold text-[#A9B7CE]">Senha de acesso</label>
+            <label htmlFor="leader-password" className="block text-xs font-semibold text-muted">Senha de acesso</label>
             <div className="relative">
-              <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6C7C99]" aria-hidden="true" />
+              <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-faint" aria-hidden="true" />
               <input
                 id="leader-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
-                className="w-full bg-[#14294A] border border-[#22365C] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#E3A73B]"
+                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
                 required
               />
             </div>
@@ -132,7 +132,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[#E3A73B] hover:bg-[#eeb64f] disabled:opacity-50 text-[#1a1200] font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer mt-2"
+            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-ink font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer mt-2"
           >
             {isLoading ? (
               <>
@@ -148,8 +148,8 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
           </button>
         </form>
 
-        <div className="text-[11px] text-[#6C7C99] leading-relaxed bg-[#14294A] p-3 rounded-xl border border-[#22365C] flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#4fb579] shrink-0" aria-hidden="true" />
+        <div className="text-[11px] text-faint leading-relaxed bg-surface-2 p-3 rounded-xl border border-line flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
           <span>A sessão é autorizada pelo token do Firebase Auth e pelas Rules do Firestore.</span>
         </div>
       </div>

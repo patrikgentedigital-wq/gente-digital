@@ -5,6 +5,7 @@ import { CRITERIA_CATEGORIES } from '../data/catalogData';
 import { getCategoryScorePercent, isPdiGoalOverdue } from '../lib/evaluation';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { useDialog } from '../hooks/useDialog';
+import { Avatar } from './Avatar';
 import {
   X,
   Award,
@@ -85,13 +86,13 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div className="bg-[#0F1E38] border border-[#22365C] p-3 rounded-xl shadow-xl font-sans">
-        <p className="text-[11px] font-mono font-semibold text-[#A9B7CE] uppercase mb-1">
+      <div className="bg-surface border border-line p-3 rounded-xl shadow-xl font-sans">
+        <p className="text-[11px] font-mono font-semibold text-muted uppercase mb-1">
           Mês: {label}
         </p>
-        <p className="text-sm font-mono font-bold text-[#E3A73B] flex items-center gap-1">
+        <p className="text-sm font-mono font-bold text-accent flex items-center gap-1">
           <span>{data.value}</span>
-          <span className="text-[11px] text-[#6C7C99] font-normal">/ 155 pts</span>
+          <span className="text-[11px] text-faint font-normal">/ 155 pts</span>
         </p>
       </div>
     );
@@ -136,24 +137,26 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   const completedGoalsCount = pdiGoals.filter((g) => g.status === 'completed').length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
       <div
         ref={dialogRef}
-        className="bg-[#0F1E38] border border-[#22365C] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto"
+        className="bg-surface border border-line w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="employee-detail-title"
         tabIndex={-1}
       >
         {/* Header */}
-        <div className="flex justify-between items-start border-b border-[#22365C] pb-4">
+        <div className="flex justify-between items-start border-b border-line pb-4">
           <div className="flex items-center gap-4">
             <div className="relative group">
-              <img
+              <Avatar
+                name={member.name}
                 src={member.avatarUrl}
-                alt={member.name}
-                referrerPolicy="no-referrer"
-                className="w-16 h-16 rounded-full object-cover border-2 border-[#E3A73B] bg-[#0A1424]"
+                teamColor={member.teamColor}
+                size="xl"
+                shape="circle"
+                className="border-2 border-accent bg-app"
               />
               {onOpenImageModal && (
                 <button
@@ -162,7 +165,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                     onClose();
                     onOpenImageModal(member);
                   }}
-                  className="absolute -bottom-1 -right-1 bg-[#E3A73B] text-[#1a1200] p-1.5 rounded-full shadow-lg hover:scale-110 transition-all font-bold cursor-pointer"
+                  className="absolute -bottom-1 -right-1 bg-accent text-accent-ink p-1.5 rounded-full shadow-lg hover:scale-110 transition-all font-bold cursor-pointer"
                   title="Editar Link Direto da Imagem"
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
@@ -172,12 +175,12 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
             <div>
               <h3 id="employee-detail-title" className="text-xl font-display font-bold text-white">{member.name}</h3>
-              <p className="text-xs text-[#A9B7CE]">{member.role}</p>
+              <p className="text-xs text-muted">{member.role}</p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] font-mono text-[#E3A73B] bg-[#3A2E14] px-2 py-0.5 rounded border border-[#E3A73B]/30 font-bold">
+                <span className="text-[10px] font-mono text-accent bg-gold-soft px-2 py-0.5 rounded border border-accent/30 font-bold">
                   Time {member.team}
                 </span>
-                <span className="text-[10px] font-mono text-[#6C7C99]">
+                <span className="text-[10px] font-mono text-faint">
                   Rank #{member.rank}
                 </span>
               </div>
@@ -188,7 +191,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Fechar detalhes do colaborador"
-            className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors cursor-pointer"
+            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -196,40 +199,40 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-[#0A1424] border border-[#22365C] p-3.5 rounded-xl text-center">
-            <span className="text-[10px] font-mono text-[#6C7C99] uppercase block mb-1">PONTUAÇÃO ATUAL</span>
-            <span className="text-2xl font-bold text-[#E3A73B] font-mono">{member.score}</span>
-            <span className="text-xs text-[#6C7C99] font-mono"> / {member.maxScore}</span>
+          <div className="bg-app border border-line p-3.5 rounded-xl text-center">
+            <span className="text-[10px] font-mono text-faint uppercase block mb-1">PONTUAÇÃO ATUAL</span>
+            <span className="text-2xl font-bold text-accent font-mono">{member.score}</span>
+            <span className="text-xs text-faint font-mono"> / {member.maxScore}</span>
           </div>
 
-          <div className="bg-[#0A1424] border border-[#22365C] p-3.5 rounded-xl text-center">
-            <span className="text-[10px] font-mono text-[#6C7C99] uppercase block mb-1">APROVEITAMENTO</span>
+          <div className="bg-app border border-line p-3.5 rounded-xl text-center">
+            <span className="text-[10px] font-mono text-faint uppercase block mb-1">APROVEITAMENTO</span>
             <span className="text-2xl font-bold text-white font-mono">
               {Math.round((member.score / member.maxScore) * 100)}%
             </span>
           </div>
 
-          <div className="bg-[#0A1424] border border-[#22365C] p-3.5 rounded-xl text-center flex flex-col justify-center items-center">
-            <span className="text-[10px] font-mono text-[#6C7C99] uppercase block mb-1">STATUS</span>
-            <span className="text-xs font-mono font-bold text-[#E3A73B]">
+          <div className="bg-app border border-line p-3.5 rounded-xl text-center flex flex-col justify-center items-center">
+            <span className="text-[10px] font-mono text-faint uppercase block mb-1">STATUS</span>
+            <span className="text-xs font-mono font-bold text-accent">
               {member.status}
             </span>
           </div>
         </div>
 
         {/* Competencies Radar Chart */}
-        <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-2">
+        <div className="bg-app border border-line p-4.5 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-[#E3A73B] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-xs font-mono font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5" />
               Teia de Competências & Dimensões
             </span>
-            <span className="text-[10px] font-mono text-[#6C7C99]">Aderência (%)</span>
+            <span className="text-[10px] font-mono text-faint">Aderência (%)</span>
           </div>
 
           <div className="w-full h-52">
             {radarData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-[#6C7C99]">
+              <div className="h-full flex items-center justify-center text-xs text-faint">
                 Nenhuma avaliação detalhada encontrada no ciclo atual.
               </div>
             ) : (
@@ -255,21 +258,21 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         </div>
 
         {/* PDI / Plano de Desenvolvimento Individual */}
-        <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-3">
-          <div className="flex items-center justify-between border-b border-[#1F3356] pb-2">
+        <div className="bg-app border border-line p-4.5 rounded-xl space-y-3">
+          <div className="flex items-center justify-between border-b border-line-soft pb-2">
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-[#4fb579]" />
+              <Target className="w-4 h-4 text-success" />
               <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
                 Plano de Desenvolvimento Individual (PDI)
               </span>
             </div>
-            <span className="text-[10px] font-mono text-[#A9B7CE] bg-[#14294A] px-2 py-0.5 rounded border border-[#22365C]">
+            <span className="text-[10px] font-mono text-muted bg-surface-2 px-2 py-0.5 rounded border border-line">
               {completedGoalsCount} de {pdiGoals.length} Metas Concluídas
             </span>
           </div>
 
           {pdiGoals.length === 0 ? (
-            <div className="text-xs text-[#6C7C99] py-2 text-center">
+            <div className="text-xs text-faint py-2 text-center">
               Nenhuma meta cadastrada no ciclo atual.
             </div>
           ) : (
@@ -277,17 +280,17 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               {pdiGoals.map((g) => (
                 <div
                   key={g.id}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-[#0F1E38] border border-[#22365C] text-xs gap-2"
+                  className="flex items-center justify-between p-2.5 rounded-lg bg-surface border border-line text-xs gap-2"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     {g.status === 'completed' ? (
-                      <CheckCircle2 className="w-4 h-4 text-[#4fb579] shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                     ) : (
-                      <Clock className="w-4 h-4 text-[#E3A73B] shrink-0" />
+                      <Clock className="w-4 h-4 text-accent shrink-0" />
                     )}
                     <span
                       className={`truncate ${
-                        g.status === 'completed' ? 'line-through text-[#6C7C99]' : 'text-white'
+                        g.status === 'completed' ? 'line-through text-faint' : 'text-white'
                       }`}
                     >
                       {g.title}
@@ -295,11 +298,11 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                   {isPdiGoalOverdue(g) && (
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#ffb4c0] bg-[#3A1620] border border-[#e2687a]/40 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-danger-ink bg-danger-soft border border-danger/40 px-2 py-0.5 rounded">
                       Vencida
                     </span>
                   )}
-                  <span className="text-[10px] font-mono text-[#6C7C99] shrink-0">{g.deadline}</span>
+                  <span className="text-[10px] font-mono text-faint shrink-0">{g.deadline}</span>
                 </div>
                 </div>
               ))}
@@ -308,26 +311,26 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         </div>
 
         {/* Badges & Achievements Section */}
-        <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1F3356] pb-3">
+        <div className="bg-app border border-line p-4.5 rounded-xl space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line-soft pb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#E3A73B]" />
-              <span className="text-xs font-mono font-bold text-[#F2F5FA] uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-accent" />
+              <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider">
                 Badges & Conquistas
               </span>
-              <span className="text-[10px] font-mono font-bold text-[#E3A73B] bg-[#3A2E14] px-2 py-0.5 rounded border border-[#E3A73B]/40">
+              <span className="text-[10px] font-mono font-bold text-accent bg-gold-soft px-2 py-0.5 rounded border border-accent/40">
                 {unlockedCount} / {badges.length} Concluídas
               </span>
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 bg-[#0F1E38] p-1 rounded-lg border border-[#22365C] self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-line self-start sm:self-auto">
               <button
                 onClick={() => setBadgeFilter('all')}
                 className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-md transition-colors cursor-pointer ${
                   badgeFilter === 'all'
-                    ? 'bg-[#E3A73B] text-[#1a1200]'
-                    : 'text-[#A9B7CE] hover:text-white'
+                    ? 'bg-accent text-accent-ink'
+                    : 'text-muted hover:text-white'
                 }`}
               >
                 Todas ({badges.length})
@@ -336,8 +339,8 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 onClick={() => setBadgeFilter('unlocked')}
                 className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-md transition-colors cursor-pointer ${
                   badgeFilter === 'unlocked'
-                    ? 'bg-[#E3A73B] text-[#1a1200]'
-                    : 'text-[#A9B7CE] hover:text-white'
+                    ? 'bg-accent text-accent-ink'
+                    : 'text-muted hover:text-white'
                 }`}
               >
                 Desbloqueadas ({unlockedCount})
@@ -346,8 +349,8 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 onClick={() => setBadgeFilter('locked')}
                 className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-md transition-colors cursor-pointer ${
                   badgeFilter === 'locked'
-                    ? 'bg-[#E3A73B] text-[#1a1200]'
-                    : 'text-[#A9B7CE] hover:text-white'
+                    ? 'bg-accent text-accent-ink'
+                    : 'text-muted hover:text-white'
                 }`}
               >
                 Bloqueadas ({badges.length - unlockedCount})
@@ -361,21 +364,21 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               const isUnlocked = badge.unlocked;
 
               let cardBg = isUnlocked
-                ? 'bg-[#0F1E38] border-[#22365C] hover:border-[#E3A73B]/60'
-                : 'bg-[#080E1A] border-[#18263E] opacity-60';
+                ? 'bg-surface border-line hover:border-accent/60'
+                : 'bg-app-deep border-line-deep opacity-60';
 
-              let iconRing = 'border-[#22365C] bg-[#0A1424] text-[#6C7C99]';
+              let iconRing = 'border-line bg-app text-faint';
               if (isUnlocked) {
                 if (badge.rarity === 'diamond') {
                   iconRing =
-                    'border-[#38bdf8] bg-[#0369a1]/20 text-[#38bdf8] shadow-[0_0_12px_rgba(56,189,248,0.3)]';
+                    'border-info bg-sky-deep/20 text-info shadow-[0_0_12px_rgba(56,189,248,0.3)]';
                 } else if (badge.rarity === 'gold') {
                   iconRing =
-                    'border-[#E3A73B] bg-[#3A2E14] text-[#E3A73B] shadow-[0_0_12px_rgba(227,167,59,0.2)]';
+                    'border-accent bg-gold-soft text-accent shadow-[0_0_12px_rgba(227,167,59,0.2)]';
                 } else if (badge.rarity === 'silver') {
-                  iconRing = 'border-[#94a3b8] bg-[#334155]/30 text-[#e2e8f0]';
+                  iconRing = 'border-silver bg-slate-deep/30 text-slate-ink';
                 } else {
-                  iconRing = 'border-[#d97706] bg-[#78350f]/20 text-[#fbbf24]';
+                  iconRing = 'border-amber-deep bg-amber-bg/20 text-amber-ink';
                 }
               }
 
@@ -394,37 +397,37 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                     <div className="flex items-center justify-between gap-1">
                       <span
                         className={`font-bold text-xs truncate ${
-                          isUnlocked ? 'text-white' : 'text-[#8293B0]'
+                          isUnlocked ? 'text-white' : 'text-slate-faint'
                         }`}
                       >
                         {badge.name}
                       </span>
                       {isUnlocked ? (
-                        <span className="text-[10px] font-mono font-bold text-[#4fb579] bg-[#132a1c] px-1.5 py-0.5 rounded border border-[#4fb579]/30 flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] font-mono font-bold text-success bg-success-soft px-1.5 py-0.5 rounded border border-success/30 flex items-center gap-1 shrink-0">
                           <Check className="w-2.5 h-2.5 stroke-[3]" /> Conquistado
                         </span>
                       ) : (
-                        <span className="text-[10px] font-mono text-[#6C7C99] flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] font-mono text-faint flex items-center gap-1 shrink-0">
                           <Lock className="w-2.5 h-2.5" /> Em breve
                         </span>
                       )}
                     </div>
 
-                    <p className="text-[11px] text-[#A9B7CE] leading-snug">
+                    <p className="text-[11px] text-muted leading-snug">
                       {badge.description}
                     </p>
 
                     {!isUnlocked && badge.progress && (
                       <div className="pt-1.5 space-y-1">
-                        <div className="flex justify-between text-[10px] font-mono text-[#6C7C99]">
+                        <div className="flex justify-between text-[10px] font-mono text-faint">
                           <span>Progresso</span>
                           <span>
                             {badge.progress.current} / {badge.progress.max} pts
                           </span>
                         </div>
-                        <div className="w-full h-1.5 bg-[#0A1424] rounded-full overflow-hidden border border-[#18263E]">
+                        <div className="w-full h-1.5 bg-app rounded-full overflow-hidden border border-line-deep">
                           <div
-                            className="h-full bg-[#E3A73B]/70 rounded-full"
+                            className="h-full bg-accent/70 rounded-full"
                             style={{
                               width: `${Math.min(
                                 100,
@@ -439,7 +442,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                     )}
 
                     {isUnlocked && badge.unlockedAt && (
-                      <p className="text-[10px] font-mono text-[#E3A73B] pt-0.5">
+                      <p className="text-[10px] font-mono text-accent pt-0.5">
                         Em: {badge.unlockedAt}
                       </p>
                     )}
@@ -451,13 +454,13 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         </div>
 
         {/* Performance Line Chart (Recharts) */}
-        <div className="bg-[#0A1424] border border-[#22365C] p-4.5 rounded-xl space-y-3">
+        <div className="bg-app border border-line p-4.5 rounded-xl space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-[#E3A73B] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-xs font-mono font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
               <ChartIcon className="w-3.5 h-3.5" />
               Histórico de Desempenho ao Longo do Tempo
             </span>
-            <span className="text-[10px] font-mono text-[#6C7C99]">Meta: 140 pts</span>
+            <span className="text-[10px] font-mono text-faint">Meta: 140 pts</span>
           </div>
 
           <div className="w-full h-48 pt-2">
@@ -499,10 +502,10 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           </div>
 
           {/* Monthly summary badges */}
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-[#1F3356]">
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-line-soft">
             {historyData.map((h, idx) => (
-              <div key={idx} className="flex-1 min-w-[70px] bg-[#0F1E38] border border-[#22365C] p-2 rounded-lg text-center">
-                <span className="text-[10px] font-mono text-[#6C7C99] block">{h.month}</span>
+              <div key={idx} className="flex-1 min-w-[70px] bg-surface border border-line p-2 rounded-lg text-center">
+                <span className="text-[10px] font-mono text-faint block">{h.month}</span>
                 <span className="text-xs font-bold font-mono text-white">{h.score} pts</span>
               </div>
             ))}
@@ -510,12 +513,12 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         </div>
 
         {/* Direct Image Link Detail */}
-        <div className="bg-[#0A1424] border border-[#22365C] p-3.5 rounded-xl flex items-center justify-between gap-3">
+        <div className="bg-app border border-line p-3.5 rounded-xl flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-mono font-bold text-[#E3A73B] uppercase block mb-0.5">
+            <span className="text-[10px] font-mono font-bold text-accent uppercase block mb-0.5">
               LINK DIRETO DA FOTO DO PERFIL
             </span>
-            <p className="text-xs font-mono text-[#A9B7CE] truncate">
+            <p className="text-xs font-mono text-muted truncate">
               {member.avatarUrl}
             </p>
           </div>
@@ -526,7 +529,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 onClose();
                 onOpenImageModal(member);
               }}
-              className="px-3 py-1.5 rounded-xl bg-[#14294A] hover:bg-[#E3A73B] hover:text-[#1a1200] text-xs font-bold text-white border border-[#22365C] transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-accent hover:text-accent-ink text-xs font-bold text-white border border-line transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
             >
               <ImageIcon className="w-3.5 h-3.5" />
               Alterar URL
@@ -535,10 +538,10 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 border-t border-[#22365C] pt-3">
+        <div className="flex justify-end gap-3 border-t border-line pt-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-[#22365C] text-xs font-bold text-[#A9B7CE] hover:text-white cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-line text-xs font-bold text-muted hover:text-white cursor-pointer"
           >
             Fechar
           </button>
@@ -547,7 +550,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               onClose();
               onSelectForEvaluation(member);
             }}
-            className="px-5 py-2 rounded-xl bg-[#E3A73B] text-[#1a1200] font-extrabold text-xs hover:bg-[#eeb64f] transition-all cursor-pointer shadow-md"
+            className="px-5 py-2 rounded-xl bg-accent text-accent-ink font-extrabold text-xs hover:bg-accent-hover transition-all cursor-pointer shadow-md"
           >
             Iniciar Avaliação
           </button>

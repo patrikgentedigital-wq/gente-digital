@@ -2,10 +2,10 @@ import React, { lazy, Suspense } from 'react';
 import { TeamMember } from '../types';
 import type { EvaluationPayload } from '../lib/firebaseLoader';
 import { ImageLinkModal } from './ImageLinkModal';
-import { EmployeeDetailModal } from './EmployeeDetailModal';
 import { MemberFormModal } from './MemberFormModal';
 import { KioskModeModal } from './KioskModeModal';
 
+const EmployeeDetailModal = lazy(() => import('./EmployeeDetailModal').then((module) => ({ default: module.EmployeeDetailModal })));
 const ReportExportModal = lazy(() => import('./ReportExportModal').then((module) => ({ default: module.ReportExportModal })));
 
 export interface ReportModalState {

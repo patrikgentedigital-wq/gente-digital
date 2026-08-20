@@ -8,6 +8,7 @@ import {
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import firebase from 'firebase/compat/app';
+import { TEAM_LEADERS } from '../src/lib/teams';
 
 const RULES = readFileSync(join(process.cwd(), 'firestore.rules'), 'utf8');
 
@@ -408,5 +409,13 @@ describe('wildcard de negação', () => {
         .doc('member1')
         .get(),
     );
+  });
+});
+
+describe('consistência da lista de líderes (drift guard)', () => {
+  it('firestore.rules contém todos os líderes de src/lib/teams.ts', () => {
+    for (const leader of TEAM_LEADERS) {
+      expect(RULES, `time ${leader} ausente em firestore.rules`).toContain(leader);
+    }
   });
 });

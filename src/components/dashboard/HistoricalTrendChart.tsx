@@ -30,8 +30,8 @@ const TrendTooltip: React.FC<TrendTooltipProps> = ({ active, payload, label }) =
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
-      <div className="bg-[#0F1E38] border border-[#22365C] p-3 rounded-xl shadow-xl text-xs space-y-1">
-        <p className="font-mono font-bold text-[#E3A73B]">
+      <div className="bg-surface border border-line p-3 rounded-xl shadow-xl text-xs space-y-1">
+        <p className="font-mono font-bold text-accent">
           {label}{entry?.year ? ` / ${entry.year}` : ''}
         </p>
         <p className="text-white">
@@ -49,13 +49,13 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
   const hasWindow = Boolean(firstMonth && lastMonth);
 
   return (
-    <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl space-y-3">
+    <div className="bg-surface border border-line p-5 rounded-2xl space-y-3">
       <div>
-        <h3 className="font-display font-bold text-base text-[#F2F5FA] flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#E3A73B]" />
+        <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-accent" />
           Evolução da Média Geral{hasWindow ? ` (${firstMonth} a ${lastMonth})` : ''}
         </h3>
-        <p className="text-xs text-[#A9B7CE] mt-0.5">
+        <p className="text-xs text-muted mt-0.5">
           Trajetória do desempenho médio da equipe nos últimos meses.
         </p>
       </div>

@@ -1,19 +1,10 @@
 import { z } from 'zod';
 import type { EvaluationPayload } from './firebase';
 import type { LeaderName, TeamMember } from '../types';
+import { TEAM_LEADERS } from './teams';
 import { CRITERIA_SCORE_KEYS } from './evaluation';
 
-const leaderNames = [
-  'Djemerson',
-  'Fernanda',
-  'Brenda',
-  'Alexandre',
-  'Alfredo',
-  'Vinicius',
-  'Hellody',
-  'Samile',
-  'Diego',
-] as const satisfies readonly LeaderName[];
+const leaderNames = TEAM_LEADERS satisfies readonly LeaderName[];
 
 const performanceStatuses = ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] as const;
 const evaluationStatuses = ['Pendente', 'Forms Respondido', 'Concluído'] as const;
@@ -101,7 +92,7 @@ const teamMemberSchema = z.object({
   selfEvaluationScores: criteriaScoresSchema.optional(),
   evaluationHistory: z.array(evaluationHistoryEntrySchema).max(100).default([]),
   updatedAt: z.unknown().optional(),
-  deleted: z.boolean().optional(),
+  deleted: z.boolean().default(false),
   deletedAt: z.unknown().optional(),
   deletedBy: z.string().min(1).max(128).optional(),
 }).superRefine((member, context) => {

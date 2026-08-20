@@ -42,28 +42,28 @@ const TeamBarTooltip: React.FC<TeamBarTooltipProps> = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-[#0F1E38] border border-[#22365C] p-3.5 rounded-xl shadow-2xl font-sans text-xs space-y-1.5 min-w-[180px]">
-        <div className="flex items-center gap-2 font-bold text-[#F2F5FA] border-b border-[#22365C] pb-1">
+      <div className="bg-surface border border-line p-3.5 rounded-xl shadow-2xl font-sans text-xs space-y-1.5 min-w-[180px]">
+        <div className="flex items-center gap-2 font-bold text-ink border-b border-line pb-1">
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
             style={{ backgroundColor: data.color }}
           />
           <span>Time {data.leader}</span>
         </div>
-        <div className="flex justify-between text-[#A9B7CE]">
+        <div className="flex justify-between text-muted">
           <span>Média do Time:</span>
-          <span className="font-mono font-bold text-[#E3A73B]">{data.avgScore} pts</span>
+          <span className="font-mono font-bold text-accent">{data.avgScore} pts</span>
         </div>
-        <div className="flex justify-between text-[#A9B7CE]">
+        <div className="flex justify-between text-muted">
           <span>Integrantes:</span>
           <span className="font-mono font-bold text-white">{data.count} colaboradores</span>
         </div>
-        <div className="flex justify-between text-[#A9B7CE]">
+        <div className="flex justify-between text-muted">
           <span>Nível Voando (&gt;140):</span>
-          <span className="font-mono font-bold text-[#4fb579]">{data.voandoCount}</span>
+          <span className="font-mono font-bold text-success">{data.voandoCount}</span>
         </div>
         {data.topMember && (
-          <div className="pt-1 border-t border-[#22365C] text-[11px] text-[#A9B7CE]">
+          <div className="pt-1 border-t border-line text-[11px] text-muted">
             Destaque: <strong className="text-white">{data.topMember.name}</strong> ({data.topMember.score} pts)
           </div>
         )}
@@ -75,19 +75,19 @@ const TeamBarTooltip: React.FC<TeamBarTooltipProps> = ({ active, payload }) => {
 
 export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamStats }) => {
   return (
-    <div className="lg:col-span-2 bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl space-y-4">
+    <div className="lg:col-span-2 bg-surface border border-line p-5 rounded-2xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-display font-bold text-base text-[#F2F5FA] flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-[#E3A73B]" />
+          <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-accent" />
             Média de Pontuação por Equipe
           </h3>
-          <p className="text-xs text-[#A9B7CE] mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Comparativo de performance média entre os líderes e seus times.
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#E3A73B]">
-          <span className="w-2 h-0.5 bg-[#E3A73B]" />
+        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-accent">
+          <span className="w-2 h-0.5 bg-accent" />
           <span>Meta: 140 pts</span>
         </div>
       </div>

@@ -24,6 +24,8 @@ const AuditLogsView = lazy(() => import('./components/AuditLogsView').then((modu
 import { LeaderLoginModal } from './components/LeaderLoginModal';
 import { InfoModal, InfoModalType } from './components/InfoModal';
 import { ToastContainer } from './components/ToastContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Skeleton } from './components/Skeleton';
 import { toast } from './utils/toastUtils';
 import {
   getDefaultEvaluationCycle,
@@ -49,6 +51,25 @@ export default function App() {
   const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit') {
+      setActiveTab(tab);
+    }
+    const query = params.get('q');
+    if (query !== null) setSearchQuery(query);
+  }, []);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (activeTab === 'ranking') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', activeTab);
+    if (searchQuery.trim()) url.searchParams.set('q', searchQuery.trim());
+    else url.searchParams.delete('q');
+    window.history.replaceState(null, '', url.toString());
+  }, [activeTab, searchQuery]);
 
   useEffect(() => {
     if (!authUser) {
@@ -237,7 +258,7 @@ export default function App() {
   const authenticatedContent = authUser && (
     <>
       {membersError && (
-        <div className="mx-auto mt-4 max-w-[1040px] rounded-xl border border-[#e2687a]/40 bg-[#3A1620] p-3 text-xs text-[#ffb4c0]" role="alert">
+        <div className="mx-auto mt-4 max-w-[1040px] rounded-xl border border-danger/40 bg-danger-soft p-3 text-xs text-danger-ink" role="alert">
           {membersError}
         </div>
         )}
@@ -301,7 +322,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0A1424] text-[#F2F5FA] flex flex-col font-sans selection:bg-[#E3A73B] selection:text-[#1a1200]">
+    <div className="min-h-screen bg-app text-ink flex flex-col font-sans selection:bg-accent selection:text-accent-ink">
       <ToastContainer />
       <Navbar
         activeTab={activeTab}
@@ -320,34 +341,46 @@ export default function App() {
       />
 
       {!authReady || (authUser && !authRoleReady) ? (
-        <main className="flex-1 flex items-center justify-center p-8 text-sm text-[#A9B7CE]">Verificando sessão...</main>
+        <main className="flex-1 flex items-center justify-center p-8 text-sm text-muted">Verificando sessão...</main>
       ) : authUser && !authRole ? (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-2xl border border-[#22365C] bg-[#0F1E38] p-6 text-center">
+          <div className="max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
             <h2 className="text-xl font-bold text-white">Acesso sem autorização</h2>
-            <p className="mt-2 text-sm text-[#A9B7CE]">Sua conta está autenticada, mas ainda não possui uma role autorizada para esta plataforma.</p>
+            <p className="mt-2 text-sm text-muted">Sua conta está autenticada, mas ainda não possui uma role autorizada para esta plataforma.</p>
             <button
               type="button"
               onClick={() => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.'))}
-              className="mt-5 rounded-xl bg-[#E3A73B] px-4 py-2 text-xs font-bold text-[#1a1200]"
+              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
             >
               Encerrar sessão
             </button>
           </div>
         </main>
       ) : authUser ? (
-        <Suspense fallback={<main className="flex-1 flex items-center justify-center p-8 text-sm text-[#A9B7CE]">Carregando plataforma...</main>}>
-          {authenticatedContent}
+        <Suspense fallback={
+          <main className="flex-1 flex flex-col gap-3 p-8 max-w-[1040px] w-full mx-auto" aria-busy="true">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-4">
+              <Skeleton className="h-44 w-full" />
+              <Skeleton className="h-44 w-full" />
+              <Skeleton className="h-44 w-full" />
+            </div>
+            <Skeleton className="h-16 w-full mt-2" />
+            <Skeleton className="h-16 w-full" />
+          </main>
+        }>
+          <ErrorBoundary>{authenticatedContent}</ErrorBoundary>
         </Suspense>
       ) : (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-2xl border border-[#22365C] bg-[#0F1E38] p-6 text-center">
+          <div className="max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
             <h2 className="text-xl font-bold text-white">Acesso autenticado necessário</h2>
-            <p className="mt-2 text-sm text-[#A9B7CE]">Os dados de colaboradores só são carregados após autenticação de um líder autorizado.</p>
+            <p className="mt-2 text-sm text-muted">Os dados de colaboradores só são carregados após autenticação de um líder autorizado.</p>
             <button
               type="button"
               onClick={() => setIsLeaderModalOpen(true)}
-              className="mt-5 rounded-xl bg-[#E3A73B] px-4 py-2 text-xs font-bold text-[#1a1200]"
+              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
             >
               Entrar como líder
             </button>
@@ -365,9 +398,10 @@ export default function App() {
         }}
       />
 
-      <AuthenticatedModals
-        isAuthenticated={Boolean(authUser && authRole)}
-        isAdmin={authRole === 'admin'}
+      <ErrorBoundary>
+        <AuthenticatedModals
+          isAuthenticated={Boolean(authUser && authRole)}
+          isAdmin={authRole === 'admin'}
         isMemberFormOpen={isMemberFormOpen}
         memberToEdit={memberToEdit}
         onCloseMemberForm={() => {
@@ -396,8 +430,9 @@ export default function App() {
           setActiveTab('leader');
         }}
         reportModal={reportModal}
-        onCloseReport={() => setReportModal(null)}
-      />
+          onCloseReport={() => setReportModal(null)}
+        />
+      </ErrorBoundary>
 
       <InfoModal
         type={infoModal}
@@ -405,21 +440,21 @@ export default function App() {
         onClose={() => setInfoModal(null)}
       />
 
-      <footer className="border-t border-[#22365C] bg-[#0A1424] py-6 px-6 mt-auto">
-        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 font-mono text-xs text-[#6C7C99]">
-          <div>© 2026 <strong className="text-[#E3A73B]">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
+      <footer className="border-t border-line bg-app py-6 px-6 mt-auto">
+        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 font-mono text-xs text-faint">
+          <div>© 2026 <strong className="text-accent">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
           <div className="flex gap-4">
             <button
               type="button"
               onClick={() => setInfoModal('privacy')}
-              className="hover:text-[#E3A73B] transition-colors cursor-pointer"
+              className="hover:text-accent transition-colors cursor-pointer"
             >
               Privacidade
             </button>
             <button
               type="button"
               onClick={() => setInfoModal('support')}
-              className="hover:text-[#E3A73B] transition-colors cursor-pointer"
+              className="hover:text-accent transition-colors cursor-pointer"
             >
               Suporte
             </button>

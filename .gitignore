@@ -13,3 +13,5 @@ coverage/
 *credential*.json
 .firebase/
 firebase-debug.log
+playwright-report/
+test-results/

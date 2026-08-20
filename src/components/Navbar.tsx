@@ -25,25 +25,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
 }) => {
   return (
-    <header className="border-b border-[#22365C] bg-[#0A1424] relative overflow-hidden">
+    <header className="border-b border-line bg-app relative overflow-hidden">
       {/* Subtle radial glow background */}
       <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_15%_-20%,rgba(227,167,59,0.12),transparent),radial-gradient(500px_200px_at_90%_0%,rgba(59,111,224,0.12),transparent)] pointer-events-none" />
 
       <div className="max-w-[1040px] mx-auto px-6 pt-7 pb-4 relative flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
         <div>
           {/* Eyebrow */}
-          <div className="font-mono text-xs tracking-widest text-[#E3A73B] uppercase mb-2 flex items-center gap-2 font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#E3A73B] shadow-[0_0_8px_rgba(227,167,59,0.5)]" />
+          <div className="font-mono text-xs tracking-widest text-accent uppercase mb-2 flex items-center gap-2 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(227,167,59,0.5)]" />
             Gente Digital · Análise de Desempenho
           </div>
 
           {/* Title */}
-          <h1 className="font-display text-3xl md:text-4xl font-extrabold text-[#F2F5FA] tracking-tight">
+          <h1 className="font-display text-3xl md:text-4xl font-extrabold text-ink tracking-tight">
             Quadro de Desempenho
           </h1>
 
           {/* Subtitle */}
-          <p className="text-sm text-[#A9B7CE] mt-1.5 font-sans">
+          <p className="text-sm text-muted mt-1.5 font-sans">
             Ranking e análises de desempenho com base na avaliação validada pela liderança
           </p>
         </div>
@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onOpenKioskMode}
-              className="bg-[#0F1E38] hover:bg-[#14294A] hover:border-[#E3A73B] border border-[#22365C] text-[#E3A73B] font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="bg-surface hover:bg-surface-2 hover:border-accent border border-line text-accent font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Abrir Modo Telão / TV para apresentações ao vivo"
             >
               <Tv className="w-3.5 h-3.5" />
@@ -66,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onOpenMemberForm}
-              className="bg-[#0F1E38] hover:bg-[#14294A] hover:border-[#4fb579] border border-[#22365C] text-[#4fb579] font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="bg-surface hover:bg-surface-2 hover:border-success border border-line text-success font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Cadastrar novo colaborador"
             >
               <UserPlus className="w-3.5 h-3.5" />
@@ -80,9 +80,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               if (isAuthenticated) setActiveTab('leader');
               else onOpenLeaderModal();
             }}
-            className="bg-[#14294A] hover:border-[#E3A73B] hover:text-[#E3A73B] border border-[#22365C] text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+            className="bg-surface-2 hover:border-accent hover:text-accent border border-line text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
           >
-            <Lock className="w-3.5 h-3.5 text-[#E3A73B]" />
+            <Lock className="w-3.5 h-3.5 text-accent" />
             {isAuthenticated ? `Sessão do ${role === 'admin' ? 'Admin' : 'Líder'}` : 'Área do Líder'}
           </button>
           {isAuthenticated && onLogout && (
@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={onLogout}
               aria-label="Encerrar sessão"
-              className="text-xs text-[#A9B7CE] hover:text-white px-2 py-2 rounded-lg"
+              className="text-xs text-muted hover:text-white px-2 py-2 rounded-lg"
             >
               Sair
             </button>
@@ -100,15 +100,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Navigation Tabs Bar */}
       <div className="max-w-[1040px] mx-auto px-6 pb-2 relative">
-        <nav className="flex items-center gap-2 border-t border-[#22365C]/60 pt-3 overflow-x-auto">
+        <nav className="flex items-center gap-2 border-t border-line/60 pt-3 overflow-x-auto">
           <button
             type="button"
             aria-current={activeTab === 'ranking' ? 'page' : undefined}
             onClick={() => setActiveTab('ranking')}
             className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'ranking'
-                ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
-                : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
+                ? 'bg-accent text-accent-ink font-bold shadow-md'
+                : 'text-muted hover:text-white hover:bg-surface'
             }`}
           >
             <Trophy className="w-3.5 h-3.5" />
@@ -121,8 +121,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('dashboard')}
             className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'dashboard'
-                ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
-                : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
+                ? 'bg-accent text-accent-ink font-bold shadow-md'
+                : 'text-muted hover:text-white hover:bg-surface'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
@@ -135,8 +135,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('teams')}
             className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'teams'
-                ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
-                : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
+                ? 'bg-accent text-accent-ink font-bold shadow-md'
+                : 'text-muted hover:text-white hover:bg-surface'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
@@ -152,8 +152,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'leader'
-                ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
-                : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
+                ? 'bg-accent text-accent-ink font-bold shadow-md'
+                : 'text-muted hover:text-white hover:bg-surface'
             }`}
           >
             <Lock className="w-3.5 h-3.5" />
@@ -167,8 +167,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setActiveTab('audit')}
               className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === 'audit'
-                  ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
-                  : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
+                  ? 'bg-accent text-accent-ink font-bold shadow-md'
+                  : 'text-muted hover:text-white hover:bg-surface'
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />

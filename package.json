@@ -17,6 +17,7 @@
     "roles": "node scripts/manage-roles.mjs",
     "test": "vitest run --config vitest.config.ts --configLoader runner",
     "test:rules": "node scripts/run-rules-tests.mjs",
+    "test:e2e": "playwright test",
     "test:watch": "vitest --config vitest.config.ts --configLoader runner"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "firebase": "^12.17.1",
     "lucide-react": "^0.546.0",
+    "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "recharts": "^3.10.1",
@@ -31,8 +33,10 @@
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "^1.62.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.14.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10.4.21",

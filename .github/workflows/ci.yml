@@ -82,10 +82,30 @@ jobs:
       - name: Run rules tests against Firestore emulator
         run: npm run test:rules
 
+  e2e:
+    name: E2E (Playwright smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E smoke test
+        run: npm run test:e2e
+
   deploy:
     name: Deploy to Firebase (hosting + rules + functions)
     if: github.ref == 'refs/heads/main' && vars.ENABLE_DEPLOY == 'true'
-    needs: [app, functions, firestore-rules]
+    needs: [app, functions, firestore-rules, e2e]
     runs-on: ubuntu-latest
     environment: production
     permissions:

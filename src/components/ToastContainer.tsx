@@ -14,30 +14,30 @@ export const ToastContainer: React.FC = () => {
   return (
     <div className="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none" aria-live="polite" aria-atomic="false">
       {toasts.map((t) => {
-        let borderCls = 'border-[#22365C]';
-        let bgCls = 'bg-[#0F1E38]';
+        let borderCls = 'border-line';
+        let bgCls = 'bg-surface';
         let textCls = 'text-white';
         let IconComponent = Info;
-        let iconColor = 'text-[#38BDF8]';
+        let iconColor = 'text-info';
 
         if (t.type === 'success') {
-          borderCls = 'border-[#4fb579]/40';
-          bgCls = 'bg-[#132a1c]';
-          textCls = 'text-[#e6f8ee]';
+          borderCls = 'border-success/40';
+          bgCls = 'bg-success-soft';
+          textCls = 'text-success-pale';
           IconComponent = CheckCircle2;
-          iconColor = 'text-[#4fb579]';
+          iconColor = 'text-success';
         } else if (t.type === 'error') {
-          borderCls = 'border-[#e2687a]/40';
-          bgCls = 'bg-[#3A1620]';
-          textCls = 'text-[#ffebee]';
+          borderCls = 'border-danger/40';
+          bgCls = 'bg-danger-soft';
+          textCls = 'text-danger-pale';
           IconComponent = AlertCircle;
-          iconColor = 'text-[#e2687a]';
+          iconColor = 'text-danger';
         } else if (t.type === 'warning') {
-          borderCls = 'border-[#E3A73B]/40';
-          bgCls = 'bg-[#3A2E14]';
-          textCls = 'text-[#fef3c7]';
+          borderCls = 'border-accent/40';
+          bgCls = 'bg-gold-soft';
+          textCls = 'text-warn-pale';
           IconComponent = AlertTriangle;
-          iconColor = 'text-[#E3A73B]';
+          iconColor = 'text-accent';
         }
 
         return (

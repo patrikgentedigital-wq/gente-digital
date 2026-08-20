@@ -189,11 +189,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Title & Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
-          <h2 className="text-2xl font-display font-extrabold text-[#F2F5FA] flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-[#E3A73B]" />
+          <h2 className="text-2xl font-display font-extrabold text-ink flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-accent" />
             Dashboard Analytics de Desempenho
           </h2>
-          <p className="text-xs text-[#A9B7CE] mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             Métricas consolidadas de performance, médias por equipe e distribuição de resultados.
           </p>
         </div>
@@ -204,16 +204,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               exportMembersToCSV(members, 'dashboard-analytics-gente-digital.csv');
               toast.success('Métricas e dados do dashboard exportados para CSV!', 'Exportação Concluída');
             }}
-            className="flex items-center gap-1.5 bg-[#0F1E38] hover:bg-[#14294A] border border-[#22365C] hover:border-[#E3A73B] text-[#A9B7CE] hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
           >
-            <Download className="w-3.5 h-3.5 text-[#E3A73B]" />
+            <Download className="w-3.5 h-3.5 text-accent" />
             Exportar CSV
           </button>
 
-          <div className="flex items-center gap-2 bg-[#0F1E38] border border-[#22365C] rounded-xl px-3 py-1.5">
-            <Filter className="w-3.5 h-3.5 text-[#E3A73B]" />
-            <span className="text-xs font-mono font-bold text-[#A9B7CE]">Período:</span>
-            <span className="text-xs font-mono font-bold text-[#E3A73B]">Ciclo {getDefaultEvaluationCycle()}</span>
+          <div className="flex items-center gap-2 bg-surface border border-line rounded-xl px-3 py-1.5">
+            <Filter className="w-3.5 h-3.5 text-accent" />
+            <span className="text-xs font-mono font-bold text-muted">Período:</span>
+            <span className="text-xs font-mono font-bold text-accent">Ciclo {getDefaultEvaluationCycle()}</span>
           </div>
         </div>
       </div>

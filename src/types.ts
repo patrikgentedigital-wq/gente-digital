@@ -1,15 +1,8 @@
+import type { TeamLeaderName } from './lib/teams';
+
 export type PerformanceStatus = 'Voando' | 'Caminho Certo' | 'Atenção' | 'Alarme';
 
-export type LeaderName = 
-  | 'Djemerson' 
-  | 'Fernanda' 
-  | 'Brenda' 
-  | 'Alexandre' 
-  | 'Alfredo' 
-  | 'Vinicius' 
-  | 'Hellody' 
-  | 'Samile' 
-  | 'Diego';
+export type LeaderName = TeamLeaderName;
 
 export interface EvaluationCriterion {
   id: string;

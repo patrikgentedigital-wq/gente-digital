@@ -181,7 +181,11 @@ export function subscribeToMembers(
   onInvalidData?: (error: FirestoreDataValidationError) => void,
 ) {
   const membersRef = collection(db, 'members');
-  const membersQuery = query(membersRef, orderBy('score', 'desc'));
+  const membersQuery = query(
+    membersRef,
+    where('deleted', '==', false),
+    orderBy('score', 'desc'),
+  );
 
   return onSnapshot(
     membersQuery,

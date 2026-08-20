@@ -4,6 +4,7 @@ import { TeamMember } from '../types';
 import { CRITERIA_CATEGORIES } from '../data/catalogData';
 import { useDialog } from '../hooks/useDialog';
 import { getCategoryScore } from '../utils/reportUtils';
+import { Avatar } from './Avatar';
 
 interface ReportExportModalProps {
   member: TeamMember;
@@ -33,13 +34,13 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
 
   return (
     <div
-      className="report-print-root fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/85 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200"
+      className="report-print-root fixed inset-0 z-50 flex items-center justify-center bg-overlay/85 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200"
       role="presentation"
     >
       {/* Modal Box */}
       <div
         ref={dialogRef}
-        className="report-print-modal bg-[#0F1E38] border border-[#22365C] w-full max-w-3xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-[#F2F5FA]"
+        className="report-print-modal bg-surface border border-line w-full max-w-3xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-export-title"
@@ -47,16 +48,16 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
       >
         
         {/* Top Bar Action */}
-        <div className="p-4 border-b border-[#22365C] bg-[#14294A] flex justify-between items-center print:hidden">
+        <div className="p-4 border-b border-line bg-surface-2 flex justify-between items-center print:hidden">
           <div className="flex items-center gap-2 font-display font-bold text-sm text-white">
-            <Sparkles className="w-4 h-4 text-[#E3A73B]" />
+            <Sparkles className="w-4 h-4 text-accent" />
             <span id="report-export-title">Relatório Consolidado de Desempenho</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-[#E3A73B] text-[#1a1200] font-bold text-xs hover:bg-[#eeb64f] transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               Imprimir / Baixar PDF
@@ -64,7 +65,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <button
               onClick={onClose}
               aria-label="Fechar relatório"
-              className="p-2 text-[#A9B7CE] hover:text-white rounded-lg hover:bg-[#22365C] transition-colors"
+              className="p-2 text-muted hover:text-white rounded-lg hover:bg-line transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -75,34 +76,36 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
         <div className="report-print-content p-8 overflow-y-auto space-y-6 print:p-0 print:overflow-visible" ref={printRef}>
           
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-[#14294A] to-[#0A1424] border border-[#22365C] p-6 rounded-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="bg-gradient-to-r from-surface-2 to-app border border-line p-6 rounded-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4">
-              <img
+              <Avatar
+                name={member.name}
                 src={member.avatarUrl}
-                alt={member.name}
-                referrerPolicy="no-referrer"
-                className="w-20 h-20 rounded-full object-cover border-2 border-[#E3A73B] shadow-lg bg-[#0A1424]"
+                teamColor={member.teamColor}
+                size="2xl"
+                shape="circle"
+                className="border-2 border-accent shadow-lg bg-app"
               />
               <div>
-                <div className="font-mono text-[10px] text-[#E3A73B] uppercase tracking-widest font-bold mb-0.5">
+                <div className="font-mono text-[10px] text-accent uppercase tracking-widest font-bold mb-0.5">
                   GENTE DIGITAL · RELATÓRIO INDIVIDUAL
                 </div>
                 <h2 className="text-2xl font-display font-bold text-white">{member.name}</h2>
-                <p className="text-xs text-[#A9B7CE] font-sans">{member.role}</p>
-                <div className="flex items-center gap-2 mt-2 font-mono text-[11px] text-[#6C7C99]">
+                <p className="text-xs text-muted font-sans">{member.role}</p>
+                <div className="flex items-center gap-2 mt-2 font-mono text-[11px] text-faint">
                   <span>Líder: <strong className="text-white">{member.team}</strong></span>
                   <span>•</span>
-                  <span>Rank: <strong className="text-[#E3A73B]">#{member.rank}</strong></span>
+                  <span>Rank: <strong className="text-accent">#{member.rank}</strong></span>
                 </div>
               </div>
             </div>
 
-            <div className="text-right border-t md:border-t-0 border-[#22365C] pt-3 md:pt-0 w-full md:w-auto">
-              <div className="font-mono text-[10px] text-[#6C7C99] uppercase">Pontuação Final</div>
-              <div className="text-4xl font-mono font-bold text-[#E3A73B]">
-                {member.score} <span className="text-sm font-normal text-[#6C7C99]">/ 155</span>
+            <div className="text-right border-t md:border-t-0 border-line pt-3 md:pt-0 w-full md:w-auto">
+              <div className="font-mono text-[10px] text-faint uppercase">Pontuação Final</div>
+              <div className="text-4xl font-mono font-bold text-accent">
+                {member.score} <span className="text-sm font-normal text-faint">/ 155</span>
               </div>
-              <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-[#3A2E14] text-[#E3A73B] border border-[#E3A73B]/30 uppercase">
+              <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-gold-soft text-accent border border-accent/30 uppercase">
                 {member.status}
               </div>
             </div>
@@ -111,7 +114,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
           {/* Category Breakdown */}
           <div className="space-y-3">
             <h3 className="font-display font-bold text-sm text-white uppercase tracking-wider font-mono flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-[#E3A73B]" />
+              <CheckCircle2 className="w-4 h-4 text-accent" />
               Pontuação por Categoria de Avaliação
             </h3>
 
@@ -121,17 +124,17 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 const percent = sum === null ? 0 : Math.round((sum / max) * 100);
 
                 return (
-                  <div key={cat.id} className="bg-[#14294A]/60 border border-[#22365C] p-3.5 rounded-xl flex flex-col justify-between">
+                  <div key={cat.id} className="bg-surface-2/60 border border-line p-3.5 rounded-xl flex flex-col justify-between">
                     <div className="flex justify-between items-center text-xs mb-2">
                       <span className="font-semibold text-white">{cat.id}. {cat.name}</span>
-                      <span className="font-mono text-[#E3A73B] font-bold">
+                      <span className="font-mono text-accent font-bold">
                         {sum === null ? '—' : `${sum}/${max}`}
                       </span>
                     </div>
 
-                    <div className="w-full h-2 bg-[#0A1424] rounded-full overflow-hidden border border-[#22365C]">
+                    <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-line">
                       <div
-                        className="h-full bg-gradient-to-r from-[#E3A73B] to-[#4fb579] rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-accent to-success rounded-full transition-all duration-500"
                         style={{ width: `${percent}%` }}
                       />
                     </div>
@@ -142,19 +145,19 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
           </div>
 
           {/* Feedback & Observations */}
-          <div className="bg-[#14294A] border border-[#22365C] p-4 rounded-xl space-y-2">
-            <span className="font-mono text-[11px] font-bold text-[#E3A73B] uppercase tracking-wider block">
+          <div className="bg-surface-2 border border-line p-4 rounded-xl space-y-2">
+            <span className="font-mono text-[11px] font-bold text-accent uppercase tracking-wider block">
               Parecer Final da Liderança
             </span>
-            <p className="text-xs text-[#A9B7CE] italic leading-relaxed">
+            <p className="text-xs text-muted italic leading-relaxed">
               "{leaderComments || 'Parecer não informado.'}"
             </p>
           </div>
 
           {/* Signatures & Stamp */}
-          <div className="border-t border-[#22365C] pt-6 grid grid-cols-2 gap-6 text-center text-xs font-mono text-[#6C7C99]">
+          <div className="border-t border-line pt-6 grid grid-cols-2 gap-6 text-center text-xs font-mono text-faint">
             <div className="space-y-8">
-              <div className="border-b border-[#22365C] w-3/4 mx-auto" />
+              <div className="border-b border-line w-3/4 mx-auto" />
               <div>
                 <p className="font-bold text-white">{member.name}</p>
                 <p className="text-[10px]">Assinatura do Colaborador</p>
@@ -162,7 +165,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             </div>
 
             <div className="space-y-8">
-              <div className="border-b border-[#22365C] w-3/4 mx-auto" />
+              <div className="border-b border-line w-3/4 mx-auto" />
               <div>
                 <p className="font-bold text-white">{member.team} (Líder)</p>
                 <p className="text-[10px]">Validação de Liderança</p>
@@ -171,7 +174,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
           </div>
 
           {/* Footer watermark */}
-          <div className="text-center font-mono text-[10px] text-[#6C7C99] pt-2">
+          <div className="text-center font-mono text-[10px] text-faint pt-2">
              Ciclo: {cycle} · Documento gerado em {new Date().toLocaleDateString('pt-BR')} via Plataforma Gente Digital
           </div>
         </div>

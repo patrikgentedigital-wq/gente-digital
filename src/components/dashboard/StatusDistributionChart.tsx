@@ -35,7 +35,7 @@ const StatusPieTooltip: React.FC<StatusPieTooltipProps> = ({ active, payload }) 
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-[#0F1E38] border border-[#22365C] p-3 rounded-xl shadow-xl text-xs space-y-1">
+      <div className="bg-surface border border-line p-3 rounded-xl shadow-xl text-xs space-y-1">
         <p className="font-bold text-white flex items-center gap-1.5">
           <span
             className="w-2.5 h-2.5 rounded-full inline-block"
@@ -43,7 +43,7 @@ const StatusPieTooltip: React.FC<StatusPieTooltipProps> = ({ active, payload }) 
           />
           {data.name}
         </p>
-        <p className="text-[#A9B7CE]">
+        <p className="text-muted">
           Qtd: <strong className="text-white font-mono">{data.value}</strong> colaboradores ({data.pct}%)
         </p>
       </div>
@@ -57,13 +57,13 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
   totalMembers,
 }) => {
   return (
-    <div className="bg-[#0F1E38] border border-[#22365C] p-5 rounded-2xl flex flex-col justify-between space-y-4">
+    <div className="bg-surface border border-line p-5 rounded-2xl flex flex-col justify-between space-y-4">
       <div>
-        <h3 className="font-display font-bold text-base text-[#F2F5FA] flex items-center gap-2">
-          <PieChartIcon className="w-4 h-4 text-[#E3A73B]" />
+        <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
+          <PieChartIcon className="w-4 h-4 text-accent" />
           Distribuição por Nível
         </h3>
-        <p className="text-xs text-[#A9B7CE] mt-0.5">
+        <p className="text-xs text-muted mt-0.5">
           Proporção de colaboradores por faixa de status de desempenho.
         </p>
       </div>
@@ -91,12 +91,12 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
         {/* Center Donut Label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl font-bold font-mono text-white">{totalMembers}</span>
-          <span className="text-[10px] font-mono text-[#6C7C99]">Membros</span>
+          <span className="text-[10px] font-mono text-faint">Membros</span>
         </div>
       </div>
 
       {/* Legend Items */}
-      <div className="space-y-1.5 pt-2 border-t border-[#22365C]">
+      <div className="space-y-1.5 pt-2 border-t border-line">
         {pieData.map((item, idx) => (
           <div key={idx} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
@@ -104,10 +104,10 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
                 className="w-2.5 h-2.5 rounded-xs shrink-0"
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-[#A9B7CE]">{item.shortName}</span>
+              <span className="text-muted">{item.shortName}</span>
             </div>
             <span className="font-mono font-bold text-white">
-              {item.value} <span className="text-[#6C7C99] font-normal">({item.pct}%)</span>
+              {item.value} <span className="text-faint font-normal">({item.pct}%)</span>
             </span>
           </div>
         ))}

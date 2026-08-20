@@ -20,7 +20,13 @@ export default defineConfig(() => {
           manualChunks(id) {
             if (id.includes('node_modules')) {
               if (id.includes('firebase')) {
-                return 'vendor-firebase';
+                if (id.includes('/firestore') || id.includes('@firebase/firestore')) {
+                  return 'vendor-firebase-firestore';
+                }
+                if (id.includes('/auth') || id.includes('@firebase/auth')) {
+                  return 'vendor-firebase-auth';
+                }
+                return 'vendor-firebase-core';
               }
               if (id.includes('recharts') || id.includes('d3-') || id.includes('victory-vendor')) {
                 return 'vendor-recharts';

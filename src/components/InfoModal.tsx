@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Shield, HelpCircle, Mail, MessageSquare, Lock, Database, Award } from 'lucide-react';
+import { useDialog } from '../hooks/useDialog';
 
 export type InfoModalType = 'privacy' | 'support' | null;
 
@@ -10,6 +11,8 @@ interface InfoModalProps {
 }
 
 export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) => {
+  const dialogRef = useDialog(isOpen, onClose);
+
   if (!isOpen || !type) return null;
 
   return (
@@ -18,7 +21,12 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         className="relative w-full max-w-2xl bg-[#0F1E38] border border-[#22365C] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="info-modal-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -28,7 +36,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
               {type === 'privacy' ? <Shield className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-white">
+              <h3 id="info-modal-title" className="font-display font-bold text-lg text-white">
                 {type === 'privacy' ? 'Política de Privacidade & Proteção de Dados' : 'Suporte & Ajuda da Plataforma'}
               </h3>
               <p className="text-xs text-[#A9B7CE] font-mono">Gente Digital • Governança Interna</p>
@@ -37,6 +45,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           <button
             type="button"
             onClick={onClose}
+            aria-label="Fechar informações"
             className="p-2 text-[#6C7C99] hover:text-white rounded-lg hover:bg-[#22365C] transition-colors"
           >
             <X className="w-5 h-5" />

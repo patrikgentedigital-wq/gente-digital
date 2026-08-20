@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TeamMember, LeaderName } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { X, UserPlus, Edit3, Trash2, Mail, Briefcase, Users, Link as LinkIcon, AlertTriangle, Check } from 'lucide-react';
+import { useDialog } from '../hooks/useDialog';
 
 interface MemberFormModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   onDeleteMember,
 }) => {
   const isEditing = !!memberToEdit;
+  const dialogRef = useDialog(isOpen, onClose);
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -99,8 +101,15 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
+      <div
+        ref={dialogRef}
+        className="bg-[#0F1E38] border border-[#22365C] w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="member-form-modal-title"
+        tabIndex={-1}
+      >
         {/* Header */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
@@ -108,7 +117,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               {isEditing ? <Edit3 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-white">
+              <h3 id="member-form-modal-title" className="font-display font-bold text-lg text-white">
                 {isEditing ? 'Editar Colaborador' : 'Novo Colaborador'}
               </h3>
               <p className="text-xs text-[#A9B7CE]">
@@ -117,7 +126,9 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Fechar formulário de colaborador"
             className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors"
           >
             <X className="w-5 h-5" />

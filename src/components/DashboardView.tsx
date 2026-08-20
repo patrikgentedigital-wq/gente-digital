@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
-import { DEFAULT_EVALUATION_CYCLE } from '../lib/evaluation';
+import { getDefaultEvaluationCycle } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
 import { BarChart3, Filter, Download } from 'lucide-react';
@@ -213,7 +213,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center gap-2 bg-[#0F1E38] border border-[#22365C] rounded-xl px-3 py-1.5">
             <Filter className="w-3.5 h-3.5 text-[#E3A73B]" />
             <span className="text-xs font-mono font-bold text-[#A9B7CE]">Período:</span>
-            <span className="text-xs font-mono font-bold text-[#E3A73B]">Ciclo {DEFAULT_EVALUATION_CYCLE}</span>
+            <span className="text-xs font-mono font-bold text-[#E3A73B]">Ciclo {getDefaultEvaluationCycle()}</span>
           </div>
         </div>
       </div>

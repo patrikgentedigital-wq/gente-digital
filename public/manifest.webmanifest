@@ -1,0 +1,19 @@
+{
+  "name": "Gente Digital · Quadro de Desempenho",
+  "short_name": "Gente Digital",
+  "description": "Quadro de desempenho e avaliação do time Gente Digital",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A1424",
+  "theme_color": "#0A1424",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

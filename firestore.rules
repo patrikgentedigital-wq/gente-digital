@@ -129,11 +129,11 @@ service cloud.firestore {
 
     function validEvaluation(data, evaluationId) {
       return data.keys().hasOnly([
-          'id', 'memberId', 'memberName', 'leaderName', 'score', 'status',
-          'cycle', 'comments', 'pdiGoals', 'criteriaScores', 'selfScores',
-          'createdAt', 'updatedAt'
-        ]) &&
-        data.keys().hasAll(['id', 'memberId', 'score', 'status', 'cycle', 'comments', 'criteriaScores']) &&
+           'id', 'memberId', 'memberName', 'leaderName', 'score', 'status',
+           'cycle', 'comments', 'pdiGoals', 'criteriaScores', 'selfScores', 'revision',
+           'createdAt', 'updatedAt'
+         ]) &&
+        data.keys().hasAll(['id', 'memberId', 'score', 'status', 'cycle', 'comments', 'criteriaScores', 'revision']) &&
         data.id == evaluationId && validId(data.id) &&
         data.memberId is string && validId(data.memberId) &&
         exists(/databases/$(database)/documents/members/$(data.memberId)) &&
@@ -142,6 +142,7 @@ service cloud.firestore {
         validStatusForScore(data.score, data.status) &&
         data.cycle is string && data.cycle.size() > 0 && data.cycle.size() <= 64 &&
         data.comments is string && data.comments.size() <= 5000 &&
+        data.revision is int && data.revision >= 1 && data.revision <= 1000000 &&
         validCriteriaScores(data.criteriaScores, true) &&
         (!('memberName' in data) || (data.memberName is string && data.memberName.size() <= 100)) &&
         (!('leaderName' in data) || (data.leaderName is string && data.leaderName.size() <= 100)) &&
@@ -166,8 +167,48 @@ service cloud.firestore {
       allow update: if isLeaderOrAdmin() &&
         validEvaluation(request.resource.data, evaluationId) &&
         request.resource.data.memberId == resource.data.memberId &&
+        (('revision' in resource.data && request.resource.data.revision == resource.data.revision + 1) ||
+          (!('revision' in resource.data) && request.resource.data.revision == 1)) &&
         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
       allow delete: if isAdmin() && validId(evaluationId);
+    }
+
+    function validAuditLog(data, auditId) {
+      return data.keys().hasOnly([
+          'id', 'action', 'evaluationId', 'memberId', 'memberName', 'cycle',
+          'revision', 'score', 'status', 'previousScore', 'previousStatus',
+          'actorId', 'actorEmail', 'actorName',
+          'createdAt'
+        ]) &&
+        data.keys().hasAll([
+          'id', 'action', 'evaluationId', 'memberId', 'memberName', 'cycle',
+          'revision', 'score', 'status', 'actorId', 'actorEmail', 'actorName',
+          'createdAt'
+        ]) &&
+        data.id == auditId && validId(data.id) &&
+        data.action == 'evaluation_saved' &&
+        validId(data.evaluationId) && validId(data.memberId) &&
+        exists(/databases/$(database)/documents/members/$(data.memberId)) &&
+        data.memberName is string && data.memberName.size() <= 100 &&
+        data.cycle is string && data.cycle.size() > 0 && data.cycle.size() <= 64 &&
+        data.revision is int && data.revision >= 1 && data.revision <= 1000000 &&
+        data.score is number && data.score >= 0 && data.score <= 155 &&
+        data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
+        validStatusForScore(data.score, data.status) &&
+        (!('previousScore' in data) || (data.previousScore is number && data.previousScore >= 0 && data.previousScore <= 155)) &&
+        (!('previousStatus' in data) || data.previousStatus in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme']) &&
+        data.actorId is string && data.actorId.size() > 0 && data.actorId.size() <= 128 &&
+        data.actorEmail is string && data.actorEmail.size() <= 254 &&
+        data.actorName is string && data.actorName.size() <= 100 &&
+        data.actorId == request.auth.uid &&
+        data.actorEmail == request.auth.token.email &&
+        data.createdAt is timestamp;
+    }
+
+    match /auditLogs/{auditId} {
+      allow read: if isAdmin();
+      allow create: if isLeaderOrAdmin() && validAuditLog(request.resource.data, auditId);
+      allow update, delete: if false;
     }
 
     match /{document=**} {

@@ -12,7 +12,7 @@ export const ToastContainer: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+    <div className="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none" aria-live="polite" aria-atomic="false">
       {toasts.map((t) => {
         let borderCls = 'border-[#22365C]';
         let bgCls = 'bg-[#0F1E38]';
@@ -43,15 +43,18 @@ export const ToastContainer: React.FC = () => {
         return (
           <div
             key={t.id}
+            role={t.type === 'error' ? 'alert' : 'status'}
             className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border ${borderCls} ${bgCls} ${textCls} shadow-2xl backdrop-blur-md transition-all duration-300 transform translate-y-0 animate-in slide-in-from-top-2`}
           >
-            <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${iconColor}`} />
+            <IconComponent aria-hidden="true" className={`w-5 h-5 shrink-0 mt-0.5 ${iconColor}`} />
             <div className="flex-1 min-w-0">
               {t.title && <div className="font-bold text-xs mb-0.5">{t.title}</div>}
               <div className="text-xs leading-relaxed opacity-95">{t.message}</div>
             </div>
             <button
+              type="button"
               onClick={() => toast.remove(t.id)}
+              aria-label="Fechar notificação"
               className="text-slate-400 hover:text-white p-1 rounded-md transition-colors"
             >
               <X className="w-3.5 h-3.5" />

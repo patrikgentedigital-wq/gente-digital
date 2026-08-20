@@ -18,6 +18,7 @@ import {
   Rocket,
   ShieldCheck,
 } from 'lucide-react';
+import { useDialog } from '../hooks/useDialog';
 
 interface KioskModeModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   onClose,
   members,
 }) => {
+  const dialogRef = useDialog(isOpen, onClose);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -55,15 +57,6 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     }, 10000);
     return () => clearInterval(interval);
   }, [isOpen, isPlaying]);
-
-  // Keyboard shortcut Esc to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -102,7 +95,14 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     .sort((a, b) => b.avgScore - a.avgScore);
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#060D1A] text-[#F2F5FA] flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-300">
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-50 bg-[#060D1A] text-[#F2F5FA] flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="kiosk-mode-title"
+      tabIndex={-1}
+    >
       {/* Kiosk Header */}
       <header className="px-8 py-4 bg-[#0A1424]/90 border-b border-[#22365C] flex justify-between items-center backdrop-blur-md">
         <div className="flex items-center gap-4">
@@ -111,7 +111,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-display font-black text-2xl tracking-wider text-white">
+                 <h1 id="kiosk-mode-title" className="font-display font-black text-2xl tracking-wider text-white">
                 GENTE DIGITAL
               </h1>
               <span className="bg-[#E3A73B]/20 text-[#E3A73B] text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-[#E3A73B]/30 uppercase tracking-widest animate-pulse">
@@ -163,8 +163,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
             {currentTime}
           </div>
 
-          <button
-            onClick={onClose}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar modo TV"
             className="text-[#6C7C99] hover:text-white p-2 rounded-xl hover:bg-[#14294A] transition-colors cursor-pointer"
             title="Sair do Modo TV (Esc)"
           >

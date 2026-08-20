@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
-import { X, Printer, Download, Award, CheckCircle2, Calendar, User, ShieldCheck, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
 import { TeamMember } from '../types';
 import { CRITERIA_CATEGORIES } from '../data/catalogData';
+import { useDialog } from '../hooks/useDialog';
+import { getCategoryScore } from '../utils/reportUtils';
 
 interface ReportExportModalProps {
   member: TeamMember;
@@ -21,6 +23,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   cycle = 'Ciclo atual',
 }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useDialog(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -28,28 +31,26 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
     window.print();
   };
 
-  // Helper to calculate category score
-  const getCategoryScore = (catId: number): { sum: number | null; max: number } => {
-    const cat = CRITERIA_CATEGORIES.find((c) => c.id === catId);
-    if (!cat) return { sum: null, max: 25 };
-    const max = cat.items.length * 5;
-    if (!criteriaScores) return { sum: null, max };
-
-    const values = cat.items.map((_, idx) => criteriaScores[`${catId}-${idx}`]);
-    if (values.some((value) => typeof value !== 'number')) return { sum: null, max };
-    return { sum: values.reduce((total, value) => total + (value ?? 0), 0), max };
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/85 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div
+      className="report-print-root fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/85 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200"
+      role="presentation"
+    >
       {/* Modal Box */}
-      <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-3xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-[#F2F5FA]">
+      <div
+        ref={dialogRef}
+        className="report-print-modal bg-[#0F1E38] border border-[#22365C] w-full max-w-3xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-[#F2F5FA]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-export-title"
+        tabIndex={-1}
+      >
         
         {/* Top Bar Action */}
         <div className="p-4 border-b border-[#22365C] bg-[#14294A] flex justify-between items-center print:hidden">
           <div className="flex items-center gap-2 font-display font-bold text-sm text-white">
             <Sparkles className="w-4 h-4 text-[#E3A73B]" />
-            Relatório Consolidado de Desempenho
+            <span id="report-export-title">Relatório Consolidado de Desempenho</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -62,6 +63,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             </button>
             <button
               onClick={onClose}
+              aria-label="Fechar relatório"
               className="p-2 text-[#A9B7CE] hover:text-white rounded-lg hover:bg-[#22365C] transition-colors"
             >
               <X className="w-5 h-5" />
@@ -70,7 +72,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
         </div>
 
         {/* Printable Report Canvas */}
-        <div className="p-8 overflow-y-auto space-y-6 print:p-0 print:overflow-visible" ref={printRef}>
+        <div className="report-print-content p-8 overflow-y-auto space-y-6 print:p-0 print:overflow-visible" ref={printRef}>
           
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-[#14294A] to-[#0A1424] border border-[#22365C] p-6 rounded-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -115,7 +117,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {CRITERIA_CATEGORIES.map((cat) => {
-                const { sum, max } = getCategoryScore(cat.id);
+                const { sum, max } = getCategoryScore(cat.id, criteriaScores);
                 const percent = sum === null ? 0 : Math.round((sum / max) * 100);
 
                 return (

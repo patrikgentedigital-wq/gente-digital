@@ -33,8 +33,13 @@ export function generateEvaluationCycles(referenceDate = new Date()): Evaluation
   return cycles;
 }
 
-export const AVAILABLE_EVALUATION_CYCLES: EvaluationCycleOption[] = generateEvaluationCycles();
-export const DEFAULT_EVALUATION_CYCLE: string = AVAILABLE_EVALUATION_CYCLES[0]?.id || 'Agosto/2026';
+export function getEvaluationCycles(referenceDate = new Date()): EvaluationCycleOption[] {
+  return generateEvaluationCycles(referenceDate);
+}
+
+export function getDefaultEvaluationCycle(referenceDate = new Date()): string {
+  return getEvaluationCycles(referenceDate)[0]?.id || `${MONTH_NAMES[referenceDate.getMonth()]}/${referenceDate.getFullYear()}`;
+}
 
 export const CRITERIA_SCORE_KEYS = CRITERIA_CATEGORIES.flatMap((category) =>
   category.items.map((_, index) => `${category.id}-${index}`),

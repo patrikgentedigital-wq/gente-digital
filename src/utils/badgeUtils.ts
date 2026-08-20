@@ -1,7 +1,7 @@
 import { TeamMember, Badge } from '../types';
-import { DEFAULT_EVALUATION_CYCLE } from '../lib/evaluation';
+import { getDefaultEvaluationCycle } from '../lib/evaluation';
 
-const CURRENT_CYCLE_LABEL = `Ciclo ${DEFAULT_EVALUATION_CYCLE}`;
+const getCurrentCycleLabel = () => `Ciclo ${getDefaultEvaluationCycle()}`;
 
 export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = []): Badge[] {
   const teamMembers = allMembers.filter((m) => m.team === member.team);
@@ -31,7 +31,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       category: 'performance',
       rarity: 'diamond',
       unlocked: member.score >= 150,
-      unlockedAt: member.score >= 150 ? CURRENT_CYCLE_LABEL : undefined,
+      unlockedAt: member.score >= 150 ? getCurrentCycleLabel() : undefined,
       progress: {
         current: Math.min(member.score, 150),
         max: 150,
@@ -45,7 +45,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       category: 'performance',
       rarity: 'gold',
       unlocked: member.rank <= 3,
-      unlockedAt: member.rank <= 3 ? CURRENT_CYCLE_LABEL : undefined,
+      unlockedAt: member.rank <= 3 ? getCurrentCycleLabel() : undefined,
       progress: {
         current: member.rank <= 3 ? 3 : Math.max(0, 4 - member.rank),
         max: 3,
@@ -59,7 +59,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       category: 'performance',
       rarity: 'gold',
       unlocked: member.score > 140,
-      unlockedAt: member.score > 140 ? CURRENT_CYCLE_LABEL : undefined,
+      unlockedAt: member.score > 140 ? getCurrentCycleLabel() : undefined,
       progress: {
         current: Math.min(member.score, 140),
         max: 140,
@@ -73,7 +73,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       category: 'leadership',
       rarity: 'diamond',
       unlocked: isTeamLeader,
-      unlockedAt: isTeamLeader ? CURRENT_CYCLE_LABEL : undefined,
+      unlockedAt: isTeamLeader ? getCurrentCycleLabel() : undefined,
     },
     {
       id: 'rapid_growth',
@@ -83,7 +83,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       category: 'growth',
       rarity: 'gold',
       unlocked: isGrowth,
-      unlockedAt: isGrowth ? DEFAULT_EVALUATION_CYCLE : undefined,
+      unlockedAt: isGrowth ? getDefaultEvaluationCycle() : undefined,
     },
     {
       id: 'gold_consistency',
@@ -103,7 +103,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       category: 'growth',
       rarity: 'silver',
       unlocked: member.score >= 130,
-      unlockedAt: member.score >= 130 ? DEFAULT_EVALUATION_CYCLE : undefined,
+      unlockedAt: member.score >= 130 ? getDefaultEvaluationCycle() : undefined,
       progress: {
         current: Math.min(member.score, 130),
         max: 130,

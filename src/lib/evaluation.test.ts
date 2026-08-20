@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CRITERIA_SCORE_KEYS,
   getCategoryScorePercent,
+  generateEvaluationCycles,
+  getDefaultEvaluationCycle,
   getPerformanceStatus,
   hasCompleteCriteriaScores,
   makeEvaluationId,
@@ -32,6 +34,15 @@ describe('evaluation domain rules', () => {
   it('creates a deterministic evaluation id per member and cycle', () => {
     expect(makeEvaluationId('emp-1', 'Agosto/2026')).toBe('evaluation_emp-1_agosto_2026');
     expect(makeEvaluationId('emp-1', 'Agosto/2026')).toBe(makeEvaluationId('emp-1', 'Agosto/2026'));
+  });
+
+  it('generates cycles dynamically across a year boundary', () => {
+    const referenceDate = new Date(2026, 0, 15);
+    const cycles = generateEvaluationCycles(referenceDate);
+
+    expect(cycles[0]?.id).toBe('Janeiro/2026');
+    expect(cycles[1]?.id).toBe('Dezembro/2025');
+    expect(getDefaultEvaluationCycle(referenceDate)).toBe('Janeiro/2026');
   });
 
   it('rejects incomplete criteria instead of treating missing values as five', () => {

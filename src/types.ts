@@ -40,6 +40,24 @@ export interface EvaluationHistoryEntry {
   pdiGoals?: PdiGoal[];
 }
 
+export interface EvaluationAuditLog {
+  id: string;
+  action: 'evaluation_saved';
+  evaluationId: string;
+  memberId: string;
+  memberName: string;
+  cycle: string;
+  revision: number;
+  score: number;
+  status: PerformanceStatus;
+  previousScore?: number;
+  previousStatus?: PerformanceStatus;
+  actorId: string;
+  actorEmail: string;
+  actorName: string;
+  createdAt?: unknown;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
@@ -84,4 +102,3 @@ export interface TeamStructure {
   color: string;
   members: string[];
 }
-

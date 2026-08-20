@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Image as ImageIcon, Check, AlertCircle, RefreshCw, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { AVATAR_PRESETS } from '../data/catalogData';
+import { useDialog } from '../hooks/useDialog';
 
 interface ImageLinkModalProps {
   isOpen: boolean;
@@ -19,6 +20,13 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
 }) => {
   const [urlInput, setUrlInput] = useState(currentAvatarUrl);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const dialogRef = useDialog(isOpen, onClose);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setUrlInput(currentAvatarUrl);
+    setTestStatus('idle');
+  }, [currentAvatarUrl, isOpen]);
 
   if (!isOpen) return null;
 
@@ -53,8 +61,15 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
+      <div
+        ref={dialogRef}
+        className="bg-[#0F1E38] border border-[#22365C] w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="image-link-modal-title"
+        tabIndex={-1}
+      >
         {/* Header */}
         <div className="flex justify-between items-center border-b border-[#22365C] pb-4">
           <div className="flex items-center gap-3">
@@ -62,14 +77,16 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
               <LinkIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-lg text-white">Link Direto da Imagem</h3>
+              <h3 id="image-link-modal-title" className="font-display font-bold text-lg text-white">Link Direto da Imagem</h3>
               <p className="text-xs text-[#A9B7CE]">
                 Personalize o avatar de <span className="text-[#E3A73B] font-semibold">{memberName}</span>
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Fechar edição da imagem"
             className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors"
           >
             <X className="w-5 h-5" />
@@ -127,6 +144,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
               className="flex-1 bg-[#0A1424] border border-[#22365C] rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#E3A73B] transition-colors"
             />
             <button
+              type="button"
               onClick={handleTestUrl}
               className="bg-[#14294A] hover:bg-[#22365C] border border-[#22365C] text-xs font-semibold px-3.5 py-2 rounded-xl text-white transition-colors flex items-center gap-1.5 shrink-0"
             >
@@ -157,6 +175,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
           <div className="grid grid-cols-5 gap-2 bg-[#0A1424] p-2.5 rounded-xl border border-[#22365C]">
             {AVATAR_PRESETS.map((preset, index) => (
               <button
+                type="button"
                 key={index}
                 onClick={() => handleSelectPreset(preset)}
                 className={`relative rounded-lg overflow-hidden border-2 transition-all hover:scale-105 aspect-square ${
@@ -177,12 +196,14 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 border-t border-[#22365C] pt-4 mt-2">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-[#22365C] text-xs font-semibold text-[#A9B7CE] hover:text-white hover:bg-[#14294A] transition-colors"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={handleSave}
             className="px-5 py-2 rounded-xl bg-[#E3A73B] text-[#1a1200] font-bold text-xs hover:bg-[#eeb64f] transition-colors shadow-[0_0_15px_rgba(227,167,59,0.2)]"
           >

@@ -1,56 +1,41 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
-import { TeamMember, PerformanceStatus, PdiGoal } from './types';
+import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
-  subscribeToAuth,
-  subscribeToMembers,
-  getCurrentUserRole,
   getEvaluationFromFirestore,
   updateMemberInFirestore,
   addMemberToFirestore,
   deleteMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
   logoutLeader,
-  EvaluationPayload,
-} from './lib/firebase';
+  isEvaluationConflictError,
+} from './lib/firebaseLoader';
+import type { EvaluationPayload } from './lib/firebaseLoader';
+import { useAuthSession } from './hooks/useAuthSession';
+import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';
+import { AuthenticatedModals } from './components/AuthenticatedModals';
+import type { ReportModalState } from './components/AuthenticatedModals';
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((module) => ({ default: module.LeaderboardView })));
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
-import { ImageLinkModal } from './components/ImageLinkModal';
-import { EmployeeDetailModal } from './components/EmployeeDetailModal';
 import { LeaderLoginModal } from './components/LeaderLoginModal';
-const ReportExportModal = lazy(() => import('./components/ReportExportModal').then((module) => ({ default: module.ReportExportModal })));
-import { MemberFormModal } from './components/MemberFormModal';
-import { KioskModeModal } from './components/KioskModeModal';
 import { InfoModal, InfoModalType } from './components/InfoModal';
 import { ToastContainer } from './components/ToastContainer';
 import { toast } from './utils/toastUtils';
 import {
-  DEFAULT_EVALUATION_CYCLE,
+  getDefaultEvaluationCycle,
   getPerformanceStatus,
   makeEvaluationId,
   normalizeCriteriaScores,
   rankMembers,
 } from './lib/evaluation';
 
-interface ReportModalState {
-  member: TeamMember;
-  criteriaScores?: Record<string, number>;
-  leaderComments?: string;
-  cycle?: string;
-}
-
 export default function App() {
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
+  const { members, setMembers, membersError } = useMembers(authUser, authRole);
   const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
-  const [authUser, setAuthUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [authRole, setAuthRole] = useState<'leader' | 'admin' | null>(null);
-  const [authRoleReady, setAuthRoleReady] = useState(false);
-  const [membersError, setMembersError] = useState<string | null>(null);
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
   const [detailModalMember, setDetailModalMember] = useState<TeamMember | null>(null);
@@ -63,55 +48,12 @@ export default function App() {
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
 
-  useEffect(() => subscribeToAuth((user) => {
-    setAuthUser(user);
-    setAuthReady(true);
-    if (!user) {
-      setAuthRole(null);
-      setAuthRoleReady(true);
-      setMembers([]);
+  useEffect(() => {
+    if (!authUser) {
       setCurrentLeader(null);
       setSelectedEvaluationMember(null);
-    } else {
-      setAuthRole(null);
-      setAuthRoleReady(false);
     }
-  }), []);
-
-  useEffect(() => {
-    if (!authUser) return undefined;
-
-    let active = true;
-    getCurrentUserRole(authUser)
-      .then((role) => {
-        if (active) setAuthRole(role);
-      })
-      .catch((error) => {
-        console.error('Unable to resolve Firebase role:', error);
-        if (active) setAuthRole(null);
-      })
-      .finally(() => {
-        if (active) setAuthRoleReady(true);
-      });
-
-    return () => {
-      active = false;
-    };
   }, [authUser]);
-
-  useEffect(() => {
-    if (!authUser || !authRole) return undefined;
-
-    setMembersError(null);
-    return subscribeToMembers(
-      (updatedMembers) => setMembers(updatedMembers),
-      (error) => {
-        console.error('Members subscription failed:', error);
-        setMembers([]);
-        setMembersError('Não foi possível carregar os dados do Firestore. Verifique sua autorização.');
-      },
-    );
-  }, [authRole, authUser]);
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
     return getEvaluationFromFirestore(makeEvaluationId(memberId, cycle));
@@ -125,7 +67,7 @@ export default function App() {
 
     let active = true;
     setDetailEvaluation(null);
-    loadEvaluation(detailModalMember.id, DEFAULT_EVALUATION_CYCLE)
+    loadEvaluation(detailModalMember.id, getDefaultEvaluationCycle())
       .then((evaluation) => {
         if (active) setDetailEvaluation(evaluation || null);
       })
@@ -148,16 +90,16 @@ export default function App() {
     }
 
     try {
-      const evaluation = await loadEvaluation(member.id, DEFAULT_EVALUATION_CYCLE);
+      const evaluation = await loadEvaluation(member.id, getDefaultEvaluationCycle());
       setReportModal({
         member,
         criteriaScores: normalizeCriteriaScores(evaluation?.criteriaScores),
         leaderComments: evaluation?.comments,
-        cycle: evaluation?.cycle || DEFAULT_EVALUATION_CYCLE,
+        cycle: evaluation?.cycle || getDefaultEvaluationCycle(),
       });
     } catch (error) {
       console.error('Unable to load report data:', error);
-      setReportModal({ member, cycle: DEFAULT_EVALUATION_CYCLE });
+      setReportModal({ member, cycle: getDefaultEvaluationCycle() });
       toast.error('Não foi possível carregar os detalhes da avaliação.');
     }
   };
@@ -228,11 +170,12 @@ export default function App() {
     newTotalScore: number,
     criteriaScores: Record<string, number>,
     comments: string,
-    cycle = DEFAULT_EVALUATION_CYCLE,
+    cycle = getDefaultEvaluationCycle(),
     pdiGoals: PdiGoal[] = [],
-  ) => {
+    expectedRevision = 0,
+  ): Promise<number> => {
     const targetMember = members.find((member) => member.id === memberId);
-    if (!targetMember || !authUser) return;
+    if (!targetMember || !authUser) return 0;
 
     const newStatus: PerformanceStatus = getPerformanceStatus(newTotalScore);
 
@@ -248,7 +191,7 @@ export default function App() {
       ],
     };
     try {
-      await saveEvaluationAndMemberInFirestore({
+      const savedRevision = await saveEvaluationAndMemberInFirestore({
         member: updatedMember,
         evaluation: {
           id: makeEvaluationId(memberId, cycle),
@@ -262,15 +205,21 @@ export default function App() {
           pdiGoals,
           criteriaScores,
         },
+        expectedRevision,
       });
       setMembers((previous) => rankMembers(previous.map((member) =>
         member.id === memberId ? updatedMember : member
       )));
       setSelectedEvaluationMember(updatedMember);
       toast.success(`Avaliação de ${targetMember.name} salva com sucesso.`);
-    } catch {
-      toast.error('A avaliação não foi salva. Nenhum dado local foi confirmado.');
-      throw new Error('evaluation-save-failed');
+      return savedRevision;
+    } catch (error) {
+      if (isEvaluationConflictError(error)) {
+        toast.error('Esta avaliação foi alterada por outra pessoa. Recarregue os dados antes de salvar novamente.');
+      } else {
+        toast.error('A avaliação não foi salva. Nenhum dado local foi confirmado.');
+      }
+      throw new Error(isEvaluationConflictError(error) ? 'evaluation-conflict' : 'evaluation-save-failed');
     }
   };
 
@@ -402,59 +351,39 @@ export default function App() {
         }}
       />
 
-         <Suspense fallback={null}>
-         {authUser && authRole && (
-         <>
-           {authRole === 'admin' && (
-             isMemberFormOpen && (
-             <MemberFormModal
-               isOpen={isMemberFormOpen}
-               onClose={() => {
-                 setIsMemberFormOpen(false);
-                 setMemberToEdit(null);
-               }}
-               memberToEdit={memberToEdit}
-               onSaveMember={handleSaveMember}
-               onDeleteMember={handleDeleteMember}
-              />
-              ))}
-           {isKioskOpen && <KioskModeModal isOpen onClose={() => setIsKioskOpen(false)} members={members} />}
-           {authRole === 'admin' && imageModalMember && (
-            <ImageLinkModal
-              isOpen
-              onClose={() => setImageModalMember(null)}
-              memberName={imageModalMember.name}
-              currentAvatarUrl={imageModalMember.avatarUrl}
-              onSaveAvatar={handleSaveAvatarUrl}
-            />
-          )}
-           {detailModalMember && (
-             <EmployeeDetailModal
-               member={detailModalMember}
-               allMembers={members}
-               evaluation={detailEvaluation}
-               onClose={() => setDetailModalMember(null)}
-               onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
-              onSelectForEvaluation={(member) => {
-                setSelectedEvaluationMember(member);
-                setDetailModalMember(null);
-                setActiveTab('leader');
-              }}
-            />
-          )}
-           {reportModal && (
-             <ReportExportModal
-               member={reportModal.member}
-               isOpen
-               onClose={() => setReportModal(null)}
-               criteriaScores={reportModal.criteriaScores}
-               leaderComments={reportModal.leaderComments}
-               cycle={reportModal.cycle}
-             />
-          )}
-          </>
-        )}
-      </Suspense>
+      <AuthenticatedModals
+        isAuthenticated={Boolean(authUser && authRole)}
+        isAdmin={authRole === 'admin'}
+        isMemberFormOpen={isMemberFormOpen}
+        memberToEdit={memberToEdit}
+        onCloseMemberForm={() => {
+          setIsMemberFormOpen(false);
+          setMemberToEdit(null);
+        }}
+        onOpenMemberForm={(member) => {
+          setMemberToEdit(member);
+          setIsMemberFormOpen(true);
+        }}
+        onSaveMember={handleSaveMember}
+        onDeleteMember={handleDeleteMember}
+        isKioskOpen={isKioskOpen}
+        onCloseKiosk={() => setIsKioskOpen(false)}
+        members={members}
+        imageModalMember={imageModalMember}
+        onOpenImageModal={setImageModalMember}
+        onCloseImageModal={() => setImageModalMember(null)}
+        onSaveAvatar={handleSaveAvatarUrl}
+        detailModalMember={detailModalMember}
+        detailEvaluation={detailEvaluation}
+        onCloseDetail={() => setDetailModalMember(null)}
+        onSelectForEvaluation={(member) => {
+          setSelectedEvaluationMember(member);
+          setDetailModalMember(null);
+          setActiveTab('leader');
+        }}
+        reportModal={reportModal}
+        onCloseReport={() => setReportModal(null)}
+      />
 
       <InfoModal
         type={infoModal}

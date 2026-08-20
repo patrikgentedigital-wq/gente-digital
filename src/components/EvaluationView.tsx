@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember, PdiGoal } from '../types';
-import { EvaluationPayload } from '../lib/firebase';
+import type { EvaluationPayload } from '../lib/firebaseLoader';
 import { CRITERIA_CATEGORIES, TEAMS } from '../data/catalogData';
 import {
   FileText,
@@ -30,9 +30,10 @@ import {
   Tooltip,
 } from 'recharts';
 import { toast } from '../utils/toastUtils';
+import { ConfirmModal } from './ConfirmModal';
 import {
-  AVAILABLE_EVALUATION_CYCLES,
-  DEFAULT_EVALUATION_CYCLE,
+  getDefaultEvaluationCycle,
+  getEvaluationCycles,
   hasCompleteCriteriaScores,
   normalizeCriteriaScores,
 } from '../lib/evaluation';
@@ -47,8 +48,9 @@ interface EvaluationViewProps {
     criteriaScores: Record<string, number>,
     comments: string,
     cycle?: string,
-    pdiGoals?: PdiGoal[]
-  ) => Promise<void>;
+    pdiGoals?: PdiGoal[],
+    expectedRevision?: number,
+  ) => Promise<number>;
   onOpenImageModal?: (member: TeamMember) => void;
   onOpenReportModal: (
     member: TeamMember,
@@ -68,7 +70,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   onLoadEvaluation,
   currentLeader,
 }) => {
-  const [cycle, setCycle] = useState<string>(DEFAULT_EVALUATION_CYCLE);
+  const [cycle, setCycle] = useState<string>(() => getDefaultEvaluationCycle());
+  const availableEvaluationCycles = getEvaluationCycles();
   const [teamFilter, setTeamFilter] = useState<string>(() => {
     if (currentLeader && TEAMS.some((t) => t.leader.toLowerCase() === currentLeader.toLowerCase())) {
       return currentLeader;
@@ -97,6 +100,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [newGoalDeadline, setNewGoalDeadline] = useState('');
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
+  const [evaluationRevision, setEvaluationRevision] = useState(0);
+  const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
+
+  const runOrConfirmDiscard = (action: () => void) => {
+    if (isDirty) {
+      setPendingDiscardAction(() => action);
+      return;
+    }
+    action();
+  };
 
   // Warn if closing window with unsaved draft
   useEffect(() => {
@@ -122,6 +135,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setPdiGoals([]);
     setIsDirty(false);
     setIsLoadingEvaluation(true);
+    setEvaluationRevision(0);
 
     onLoadEvaluation(memberId, cycle)
       .then((evaluation) => {
@@ -129,6 +143,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         setScores(normalizeCriteriaScores(evaluation?.criteriaScores));
         setLeaderComments(evaluation?.comments || '');
         setPdiGoals(evaluation?.pdiGoals || memberPdiGoals || []);
+        setEvaluationRevision(evaluation?.revision ?? 0);
       })
       .catch((error) => {
         console.error('Unable to load evaluation:', error);
@@ -236,14 +251,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     }
 
     try {
-      await onSaveEvaluation(
+      const savedRevision = await onSaveEvaluation(
         selectedMember.id,
         grandTotal,
         Object.fromEntries(scoreKeys.map((key) => [key, scores[key] as number])),
         leaderComments.trim(),
         cycle,
         pdiGoals,
+        evaluationRevision,
       );
+      setEvaluationRevision(savedRevision);
       setIsDirty(false);
       toast.success(
         `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
@@ -255,7 +272,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   return (
-    <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
+    <>
+      <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
       {/* Header Bar */}
       <div className="bg-[#0F1E38] border border-[#22365C] p-6 rounded-2xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
         <div>
@@ -297,17 +315,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           <select
             value={teamFilter}
             onChange={(e) => {
-              if (isDirty && !window.confirm('Você possui alterações não salvas nesta avaliação. Deseja descartá-las?')) {
-                return;
-              }
               const newFilter = e.target.value;
-              setTeamFilter(newFilter);
-              const filtered = newFilter === 'all'
-                ? members
-                : members.filter((m) => m.team.toLowerCase() === newFilter.toLowerCase());
-              if (filtered.length > 0 && !filtered.some((m) => m.id === selectedMember.id)) {
-                onSelectMember(filtered[0]);
-              }
+              runOrConfirmDiscard(() => {
+                setTeamFilter(newFilter);
+                const filtered = newFilter === 'all'
+                  ? members
+                  : members.filter((m) => m.team.toLowerCase() === newFilter.toLowerCase());
+                if (filtered.length > 0 && !filtered.some((m) => m.id === selectedMember.id)) {
+                  onSelectMember(filtered[0]);
+                }
+              });
             }}
             className="w-full bg-[#14294A] border border-[#22365C] text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
           >
@@ -332,11 +349,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             <select
               value={selectedMember.id}
               onChange={(e) => {
-                if (isDirty && !window.confirm('Você possui alterações não salvas nesta avaliação. Deseja descartá-las?')) {
-                  return;
-                }
                 const m = members.find((x) => x.id === e.target.value);
-                if (m) onSelectMember(m);
+                if (m) runOrConfirmDiscard(() => onSelectMember(m));
               }}
               className="flex-1 bg-[#14294A] border border-[#22365C] text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
             >
@@ -372,14 +386,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             <select
               value={cycle}
               onChange={(e) => {
-                if (isDirty && !window.confirm('Você possui alterações não salvas nesta avaliação. Deseja descartá-las?')) {
-                  return;
-                }
-                setCycle(e.target.value);
+                const nextCycle = e.target.value;
+                runOrConfirmDiscard(() => setCycle(nextCycle));
               }}
               className="w-full bg-[#14294A] border border-[#22365C] text-white font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-[#E3A73B]"
             >
-              {AVAILABLE_EVALUATION_CYCLES.map((c) => (
+              {availableEvaluationCycles.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
                 </option>
@@ -649,6 +661,20 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           Salvar Avaliação
         </button>
       </div>
-    </div>
+      </div>
+      <ConfirmModal
+        isOpen={Boolean(pendingDiscardAction)}
+        title="Descartar alterações?"
+        message="Você possui alterações não salvas nesta avaliação. Deseja descartá-las?"
+        confirmLabel="Descartar"
+        onClose={() => setPendingDiscardAction(null)}
+        onConfirm={() => {
+          const action = pendingDiscardAction;
+          setPendingDiscardAction(null);
+          setIsDirty(false);
+          action?.();
+        }}
+      />
+    </>
   );
 };

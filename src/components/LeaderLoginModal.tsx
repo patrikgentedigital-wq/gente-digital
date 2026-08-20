@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Lock, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
-import { loginWithEmailAndPassword } from '../lib/firebase';
+import { loginWithEmailAndPassword } from '../lib/firebaseLoader';
+import { useDialog } from '../hooks/useDialog';
 
 interface LeaderLoginModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
+  const dialogRef = useDialog(isOpen, onClose);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,10 +57,12 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
       }}
     >
       <div
+        ref={dialogRef}
         className="bg-[#0F1E38] border border-[#22365C] w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="leader-login-title"
+        tabIndex={-1}
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">

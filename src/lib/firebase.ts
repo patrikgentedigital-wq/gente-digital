@@ -1,13 +1,17 @@
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
+  browserLocalPersistence,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User,
 } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
   doc,
   collection,
   getDoc,
@@ -20,7 +24,14 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { PerformanceStatus, TeamMember, PdiGoal } from '../types';
+import type { EvaluationAuditLog, PerformanceStatus, TeamMember, PdiGoal } from '../types';
+import {
+  FirestoreDataValidationError,
+  parseEvaluationPayload,
+  parseTeamMember,
+  validateEvaluationPayload,
+  validateTeamMember,
+} from './firestoreSchemas';
 
 export enum OperationType {
   CREATE = 'create',
@@ -57,9 +68,20 @@ const { firestoreDatabaseId, ...firebaseOptions } = resolvedFirebaseConfig;
 const app = initializeApp(firebaseOptions);
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, firestoreDatabaseId);
+export const db = (() => {
+  try {
+    return initializeFirestore(app, { localCache: persistentLocalCache() }, firestoreDatabaseId);
+  } catch (error) {
+    console.warn('Persistência offline do Firestore indisponível; usando cache em memória.', error);
+    return getFirestore(app, firestoreDatabaseId);
+  }
+})();
+const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn('Persistência local do Firebase Auth indisponível; usando sessão em memória.', error);
+});
 
 export async function loginWithEmailAndPassword(email: string, password: string) {
+  await authPersistenceReady;
   const credential = await signInWithEmailAndPassword(auth, email, password);
 
   if (!credential.user.emailVerified) {
@@ -96,6 +118,17 @@ export interface FirestoreErrorInfo {
   };
 }
 
+export class EvaluationConflictError extends Error {
+  constructor(
+    public readonly evaluationId: string,
+    public readonly expectedRevision: number,
+    public readonly actualRevision: number,
+  ) {
+    super('Esta avaliação foi alterada por outra pessoa desde o carregamento.');
+    this.name = 'EvaluationConflictError';
+  }
+}
+
 export function handleFirestoreError(error: unknown, operationType: string, path: string | null): never {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -113,6 +146,7 @@ export function handleFirestoreError(error: unknown, operationType: string, path
 export function subscribeToMembers(
   onData: (members: TeamMember[]) => void,
   onError?: (error: unknown) => void,
+  onInvalidData?: (error: FirestoreDataValidationError) => void,
 ) {
   const membersRef = collection(db, 'members');
   const membersQuery = query(membersRef, orderBy('score', 'desc'));
@@ -123,7 +157,16 @@ export function subscribeToMembers(
       const members: TeamMember[] = [];
 
       snapshot.forEach((memberSnapshot) => {
-        members.push(memberSnapshot.data() as TeamMember);
+        try {
+          members.push(parseTeamMember(memberSnapshot.data(), memberSnapshot.id));
+        } catch (error) {
+          if (error instanceof FirestoreDataValidationError) {
+            console.error(error.message, error.issues);
+            onInvalidData?.(error);
+          } else {
+            console.error('Unexpected member validation error:', error);
+          }
+        }
       });
 
       const rankedMembers = members.map((member, index) => ({
@@ -141,7 +184,7 @@ export function subscribeToMembers(
 
 export async function addMemberToFirestore(newMember: TeamMember) {
   try {
-    await setDoc(doc(db, 'members', newMember.id), newMember);
+    await setDoc(doc(db, 'members', newMember.id), validateTeamMember(newMember));
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `members/${newMember.id}`);
   }
@@ -149,8 +192,9 @@ export async function addMemberToFirestore(newMember: TeamMember) {
 
 export async function updateMemberInFirestore(updatedMember: TeamMember) {
   try {
+    const validatedMember = validateTeamMember(updatedMember);
     await setDoc(doc(db, 'members', updatedMember.id), {
-      ...updatedMember,
+      ...validatedMember,
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (error) {
@@ -177,6 +221,7 @@ export interface EvaluationPayload {
   comments: string;
   pdiGoals: PdiGoal[];
   criteriaScores: Record<string, number>;
+  revision?: number;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -184,54 +229,94 @@ export interface EvaluationPayload {
 export async function getEvaluationFromFirestore(evaluationId: string): Promise<EvaluationPayload | null> {
   try {
     const snapshot = await getDoc(doc(db, 'evaluations', evaluationId));
-    return snapshot.exists() ? (snapshot.data() as EvaluationPayload) : null;
+    return snapshot.exists() ? parseEvaluationPayload(snapshot.data(), snapshot.id) : null;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, `evaluations/${evaluationId}`);
-  }
-}
-
-export async function saveEvaluationInFirestore(evaluationData: EvaluationPayload) {
-  try {
-    await setDoc(doc(db, 'evaluations', evaluationData.id), {
-      ...evaluationData,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `evaluations/${evaluationData.id}`);
   }
 }
 
 export async function saveEvaluationAndMemberInFirestore({
   member,
   evaluation,
+  expectedRevision = 0,
 }: {
   member: TeamMember;
   evaluation: EvaluationPayload;
-}) {
+  expectedRevision?: number;
+}): Promise<number> {
   const memberRef = doc(db, 'members', member.id);
   const evaluationRef = doc(db, 'evaluations', evaluation.id);
+  const auditRevision = Math.max(0, expectedRevision) + 1;
+  const auditRef = doc(db, 'auditLogs', `audit_${evaluation.id}_${auditRevision}`);
 
   try {
+    const validatedMember = validateTeamMember(member);
     await runTransaction(db, async (transaction) => {
       const existingMember = await transaction.get(memberRef);
       if (!existingMember.exists()) {
         throw new Error(`Membro ${member.id} não encontrado`);
       }
 
+      const existingEvaluation = await transaction.get(evaluationRef);
+      const currentRevision = existingEvaluation.exists()
+        ? Number(existingEvaluation.data().revision || 0)
+        : 0;
+      if (!Number.isInteger(currentRevision) || currentRevision !== expectedRevision) {
+        throw new EvaluationConflictError(evaluation.id, expectedRevision, currentRevision);
+      }
+
+      const persistedEvaluation = validateEvaluationPayload({
+        ...evaluation,
+        revision: currentRevision + 1,
+        ...(existingEvaluation.exists()
+          ? {}
+          : { createdAt: serverTimestamp() }),
+      });
+      const previousEvaluation = existingEvaluation.exists() ? existingEvaluation.data() : undefined;
+      const auditLog: EvaluationAuditLog = {
+        id: auditRef.id,
+        action: 'evaluation_saved',
+        evaluationId: persistedEvaluation.id,
+        memberId: persistedEvaluation.memberId,
+        memberName: persistedEvaluation.memberName,
+        cycle: persistedEvaluation.cycle,
+        revision: persistedEvaluation.revision || currentRevision + 1,
+        score: persistedEvaluation.score,
+        status: persistedEvaluation.status,
+        ...(typeof previousEvaluation?.score === 'number'
+          ? { previousScore: previousEvaluation.score }
+          : {}),
+        ...(previousEvaluation?.status === 'Voando' ||
+        previousEvaluation?.status === 'Caminho Certo' ||
+        previousEvaluation?.status === 'Atenção' ||
+        previousEvaluation?.status === 'Alarme'
+          ? { previousStatus: previousEvaluation.status }
+          : {}),
+        actorId: auth.currentUser?.uid || 'unknown',
+        actorEmail: auth.currentUser?.email || '',
+        actorName: persistedEvaluation.leaderName,
+      };
+
       transaction.set(memberRef, {
-        score: member.score,
-        status: member.status,
-        evaluationStatus: member.evaluationStatus,
-        pdiGoals: member.pdiGoals,
-        history: member.history,
+        score: validatedMember.score,
+        status: validatedMember.status,
+        evaluationStatus: validatedMember.evaluationStatus,
+        pdiGoals: validatedMember.pdiGoals,
+        history: validatedMember.history,
         updatedAt: serverTimestamp(),
       }, { merge: true });
       transaction.set(evaluationRef, {
-        ...evaluation,
+        ...persistedEvaluation,
         updatedAt: serverTimestamp(),
       }, { merge: true });
+      transaction.set(auditRef, {
+        ...auditLog,
+        createdAt: serverTimestamp(),
+      });
     });
+    return auditRevision;
   } catch (error) {
+    if (error instanceof EvaluationConflictError) throw error;
     handleFirestoreError(
       error,
       OperationType.WRITE,

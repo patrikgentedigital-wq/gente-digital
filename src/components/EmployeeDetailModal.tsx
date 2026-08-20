@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { TeamMember, Badge, PdiGoal } from '../types';
-import { EvaluationPayload } from '../lib/firebase';
+import type { TeamMember } from '../types';
+import type { EvaluationPayload } from '../lib/firebaseLoader';
 import { CRITERIA_CATEGORIES } from '../data/catalogData';
 import { getCategoryScorePercent } from '../lib/evaluation';
 import { getMemberBadges } from '../utils/badgeUtils';
+import { useDialog } from '../hooks/useDialog';
 import {
   X,
   Award,
@@ -106,6 +107,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   onSelectForEvaluation,
   evaluation,
 }) => {
+  const dialogRef = useDialog(Boolean(member), onClose);
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
 
   if (!member) return null;
@@ -134,8 +136,15 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   const completedGoalsCount = pdiGoals.filter((g) => g.status === 'completed').length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-[#0F1E38] border border-[#22365C] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050912]/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
+      <div
+        ref={dialogRef}
+        className="bg-[#0F1E38] border border-[#22365C] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-[#F2F5FA] max-h-[90vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-detail-title"
+        tabIndex={-1}
+      >
         {/* Header */}
         <div className="flex justify-between items-start border-b border-[#22365C] pb-4">
           <div className="flex items-center gap-4">
@@ -162,7 +171,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             </div>
 
             <div>
-              <h3 className="text-xl font-display font-bold text-white">{member.name}</h3>
+              <h3 id="employee-detail-title" className="text-xl font-display font-bold text-white">{member.name}</h3>
               <p className="text-xs text-[#A9B7CE]">{member.role}</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] font-mono text-[#E3A73B] bg-[#3A2E14] px-2 py-0.5 rounded border border-[#E3A73B]/30 font-bold">
@@ -176,7 +185,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Fechar detalhes do colaborador"
             className="text-[#6C7C99] hover:text-white p-1 rounded-lg hover:bg-[#14294A] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />

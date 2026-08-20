@@ -9,6 +9,11 @@ import {
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import {
+  getFunctions,
+  httpsCallable,
+  FunctionsError,
+} from 'firebase/functions';
+import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
@@ -25,7 +30,6 @@ import {
   where,
   getDocs,
   deleteField,
-  runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -34,7 +38,6 @@ import {
   FirestoreDataValidationError,
   parseEvaluationPayload,
   parseTeamMember,
-  validateEvaluationPayload,
   validateTeamMember,
 } from './firestoreSchemas';
 
@@ -362,83 +365,72 @@ export async function saveEvaluationAndMemberInFirestore({
   evaluation: EvaluationPayload;
   expectedRevision?: number;
 }): Promise<number> {
-  const memberRef = doc(db, 'members', member.id);
-  const evaluationRef = doc(db, 'evaluations', evaluation.id);
-  const auditRevision = Math.max(0, expectedRevision) + 1;
-  const auditRef = doc(db, 'auditLogs', `audit_${evaluation.id}_${auditRevision}`);
-
   try {
-    const validatedMember = validateTeamMember(member);
-    await runTransaction(db, async (transaction) => {
-      const existingMember = await transaction.get(memberRef);
-      if (!existingMember.exists()) {
-        throw new Error(`Membro ${member.id} não encontrado`);
-      }
+    const functions = getFunctions(app);
+    const callable = httpsCallable<
+      {
+        member: {
+          id: string;
+          score: number;
+          status: PerformanceStatus;
+          evaluationStatus: TeamMember['evaluationStatus'];
+          pdiGoals: PdiGoal[];
+          history: { month: string; score: number }[];
+        };
+        evaluation: {
+          id: string;
+          memberId: string;
+          memberName: string;
+          leaderName: string;
+          score: number;
+          status: PerformanceStatus;
+          cycle: string;
+          comments: string;
+          pdiGoals: PdiGoal[];
+          criteriaScores: Record<string, number>;
+          selfScores?: Record<string, number>;
+        };
+        expectedRevision: number;
+      },
+      { revision: number }
+    >(functions, 'saveEvaluation');
 
-      const existingEvaluation = await transaction.get(evaluationRef);
-      const currentRevision = existingEvaluation.exists()
-        ? Number(existingEvaluation.data().revision || 0)
-        : 0;
-      if (!Number.isInteger(currentRevision) || currentRevision !== expectedRevision) {
-        throw new EvaluationConflictError(evaluation.id, expectedRevision, currentRevision);
-      }
-
-      const persistedEvaluation = validateEvaluationPayload({
-        ...evaluation,
-        revision: currentRevision + 1,
-        ...(existingEvaluation.exists()
-          ? {}
-          : { createdAt: serverTimestamp() }),
-      });
-      const previousEvaluation = existingEvaluation.exists() ? existingEvaluation.data() : undefined;
-      const auditLog: EvaluationAuditLog = {
-        id: auditRef.id,
-        action: 'evaluation_saved',
-        evaluationId: persistedEvaluation.id,
-        memberId: persistedEvaluation.memberId,
-        memberName: persistedEvaluation.memberName,
-        cycle: persistedEvaluation.cycle,
-        revision: persistedEvaluation.revision || currentRevision + 1,
-        score: persistedEvaluation.score,
-        status: persistedEvaluation.status,
-        ...(typeof previousEvaluation?.score === 'number'
-          ? { previousScore: previousEvaluation.score }
-          : {}),
-        ...(previousEvaluation?.status === 'Voando' ||
-        previousEvaluation?.status === 'Caminho Certo' ||
-        previousEvaluation?.status === 'Atenção' ||
-        previousEvaluation?.status === 'Alarme'
-          ? { previousStatus: previousEvaluation.status }
-          : {}),
-        actorId: auth.currentUser?.uid || 'unknown',
-        actorEmail: auth.currentUser?.email || '',
-        actorName: persistedEvaluation.leaderName,
-      };
-
-      transaction.set(memberRef, {
-        score: validatedMember.score,
-        status: validatedMember.status,
-        evaluationStatus: validatedMember.evaluationStatus,
-        pdiGoals: validatedMember.pdiGoals,
-        history: validatedMember.history,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      transaction.set(evaluationRef, {
-        ...persistedEvaluation,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      transaction.set(auditRef, {
-        ...auditLog,
-        createdAt: serverTimestamp(),
-      });
+    const result = await callable({
+      member: {
+        id: member.id,
+        score: member.score,
+        status: member.status,
+        evaluationStatus: member.evaluationStatus,
+        pdiGoals: member.pdiGoals ?? [],
+        history: member.history ?? [],
+      },
+      evaluation: {
+        id: evaluation.id,
+        memberId: evaluation.memberId,
+        memberName: evaluation.memberName,
+        leaderName: evaluation.leaderName,
+        score: evaluation.score,
+        status: evaluation.status,
+        cycle: evaluation.cycle,
+        comments: evaluation.comments,
+        pdiGoals: evaluation.pdiGoals ?? [],
+        criteriaScores: evaluation.criteriaScores,
+      },
+      expectedRevision,
     });
-    return auditRevision;
+    return result.data.revision;
   } catch (error) {
-    if (error instanceof EvaluationConflictError) throw error;
+    if (
+      error instanceof FunctionsError &&
+      error.code === 'functions/failed-precondition' &&
+      error.message.includes('evaluation-conflict')
+    ) {
+      throw new EvaluationConflictError(evaluation.id, expectedRevision, Number.NaN);
+    }
     handleFirestoreError(
       error,
       OperationType.WRITE,
-      `members/${member.id} + evaluations/${evaluation.id}`,
+      `saveEvaluation (${member.id}/${evaluation.id})`,
     );
   }
 }

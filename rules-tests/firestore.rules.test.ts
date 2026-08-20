@@ -15,21 +15,6 @@ const PROJECT_ID = 'demo-gente-digital';
 
 let testEnv: RulesTestEnvironment;
 
-const CRITERIA_KEYS = [
-  '1-0', '1-1', '1-2', '1-3', '1-4',
-  '2-0', '2-1', '2-2', '2-3', '2-4',
-  '3-0', '3-1', '3-2', '3-3', '3-4',
-  '4-0', '4-1', '4-2', '4-3', '4-4',
-  '5-0', '5-1', '5-2', '5-3', '5-4',
-  '6-0', '6-1', '6-2', '6-3', '6-4', '6-5',
-];
-
-function criteriaScores(): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const key of CRITERIA_KEYS) out[key] = 3;
-  return out;
-}
-
 function memberDoc(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id,
@@ -62,10 +47,18 @@ function memberDoc(id: string, overrides: Record<string, unknown> = {}): Record<
   };
 }
 
-function evaluationDoc(
-  id: string,
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+function evaluationDoc(id: string): Record<string, unknown> {
+  const criteriaScores: Record<string, number> = {};
+  for (const key of [
+    '1-0', '1-1', '1-2', '1-3', '1-4',
+    '2-0', '2-1', '2-2', '2-3', '2-4',
+    '3-0', '3-1', '3-2', '3-3', '3-4',
+    '4-0', '4-1', '4-2', '4-3', '4-4',
+    '5-0', '5-1', '5-2', '5-3', '5-4',
+    '6-0', '6-1', '6-2', '6-3', '6-4', '6-5',
+  ]) {
+    criteriaScores[key] = 3;
+  }
   return {
     id,
     memberId: 'member1',
@@ -75,34 +68,10 @@ function evaluationDoc(
     status: 'Voando',
     cycle: '2026-Q2',
     comments: 'Ótimo ciclo',
-    criteriaScores: criteriaScores(),
+    criteriaScores,
     revision: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
-    ...overrides,
-  };
-}
-
-function auditLogDoc(
-  id: string,
-  actor: { uid: string; email: string },
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return {
-    id,
-    action: 'evaluation_saved',
-    evaluationId: 'eval1',
-    memberId: 'member1',
-    memberName: 'Ana Souza',
-    cycle: '2026-Q2',
-    revision: 1,
-    score: 145,
-    status: 'Voando',
-    actorId: actor.uid,
-    actorEmail: actor.email,
-    actorName: 'Carlos Lima',
-    createdAt: new Date(),
-    ...overrides,
   };
 }
 
@@ -147,12 +116,12 @@ async function seedMembers(): Promise<void> {
   });
 }
 
-describe('autenticação e permissões de membros', () => {
-  it('bloqueia leitura de membros sem login', async () => {
+describe('leitura de membros', () => {
+  it('bloqueia leitura sem login', async () => {
     await assertFails(testEnv.unauthenticatedContext().firestore().collection('members').get());
   });
 
-  it('bloqueia leitura de membros para usuário verificado sem role', async () => {
+  it('bloqueia leitura para usuário verificado sem role', async () => {
     const ctx = testEnv.authenticatedContext('plain', {
       email: 'plain@example.com',
       email_verified: true,
@@ -160,7 +129,7 @@ describe('autenticação e permissões de membros', () => {
     await assertFails(ctx.firestore().collection('members').get());
   });
 
-  it('bloqueia leitura de membros para usuário com role mas e-mail não verificado', async () => {
+  it('bloqueia leitura para role válida com e-mail não verificado', async () => {
     const ctx = testEnv.authenticatedContext('leader1', {
       email: LEADER.email,
       email_verified: false,
@@ -169,11 +138,18 @@ describe('autenticação e permissões de membros', () => {
     await assertFails(ctx.firestore().collection('members').get());
   });
 
-  it('permite leitura de membros para líder verificado', async () => {
+  it('permite leitura para líder verificado', async () => {
     await seedMembers();
     await assertSucceeds(leaderCtx().firestore().collection('members').get());
   });
 
+  it('permite leitura para admin verificado', async () => {
+    await seedMembers();
+    await assertSucceeds(adminCtx().firestore().collection('members').get());
+  });
+});
+
+describe('escrita de membros (apenas admin; líder usa a callable saveEvaluation)', () => {
   it('bloqueia criação de membro por líder', async () => {
     await assertFails(
       leaderCtx().firestore().collection('members').doc('member2').set(memberDoc('member2')),
@@ -186,7 +162,7 @@ describe('autenticação e permissões de membros', () => {
     );
   });
 
-  it('bloqueia criação de membro com score fora da faixa por admin', async () => {
+  it('bloqueia criação de membro com score fora da faixa', async () => {
     await assertFails(
       adminCtx().firestore().collection('members').doc('member2').set(memberDoc('member2', { score: 200 })),
     );
@@ -204,26 +180,44 @@ describe('autenticação e permissões de membros', () => {
     await assertFails(adminCtx().firestore().collection('members').doc('member2').set(doc));
   });
 
-  it('bloqueia update de membro por líder alterando campo fora da avaliação (name)', async () => {
-    await seedMembers();
-    await assertFails(leaderCtx().firestore().collection('members').doc('member1').update({ name: 'Hack' }));
-  });
-
-  it('bloqueia update de membro por líder alterando team', async () => {
+  it('bloqueia QUALQUER update de membro por líder (inclusive campos de avaliação)', async () => {
     await seedMembers();
     await assertFails(
-      leaderCtx().firestore().collection('members').doc('member1').update({ team: 'Diego' }),
-    );
-  });
-
-  it('permite update de avaliação válido por líder (score/status/evaluationStatus)', async () => {
-    await seedMembers();
-    await assertSucceeds(
       leaderCtx().firestore().collection('members').doc('member1').update({
         score: 100,
         status: 'Alarme',
         evaluationStatus: 'Concluído',
         updatedAt: new Date(),
+      }),
+    );
+  });
+
+  it('bloqueia update de history por líder (validação por elemento vive na callable)', async () => {
+    await seedMembers();
+    await assertFails(
+      leaderCtx().firestore().collection('members').doc('member1').update({
+        history: [{ month: '2026-01', score: 'string-malicioso' }],
+        updatedAt: new Date(),
+      }),
+    );
+  });
+
+  it('bloqueia update de pdiGoals por líder (validação por elemento vive na callable)', async () => {
+    await seedMembers();
+    await assertFails(
+      leaderCtx().firestore().collection('members').doc('member1').update({
+        pdiGoals: [{ id: 'goal9', title: 'Meta', deadline: '2026-05-01', status: 'hacker', x: 1 }],
+        updatedAt: new Date(),
+      }),
+    );
+  });
+
+  it('permite update completo e válido por admin', async () => {
+    await seedMembers();
+    await assertSucceeds(
+      adminCtx().firestore().collection('members').doc('member1').set({
+        ...memberDoc('member1'),
+        name: 'Ana Souza Lima',
       }),
     );
   });
@@ -236,326 +230,6 @@ describe('autenticação e permissões de membros', () => {
   it('permite delete de membro por admin', async () => {
     await seedMembers();
     await assertSucceeds(adminCtx().firestore().collection('members').doc('member1').delete());
-  });
-});
-
-describe('history (validação estrutural top-level)', () => {
-  it('permite history como lista dentro do limite', async () => {
-    await seedMembers();
-    await assertSucceeds(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        history: [
-          { month: '2026-01', score: 140 },
-          { month: '2026-02', score: 145 },
-          { month: '2026-03', score: 149 },
-        ],
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia history que não seja lista', async () => {
-    await seedMembers();
-    await assertFails(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        history: 'não é lista',
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia history acima de 100 entradas', async () => {
-    await seedMembers();
-    const huge = Array.from({ length: 101 }, (_, i) => ({ month: `2026-${i}`, score: 100 }));
-    await assertFails(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        history: huge,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('documenta limitação: rules NÃO validam elementos de history (cliente zod + função futura)', async () => {
-    await seedMembers();
-    await assertSucceeds(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        history: [{ month: '2026-01', score: 'string-malicioso' }],
-        updatedAt: new Date(),
-      }),
-    );
-  });
-});
-
-describe('pdiGoals (validação estrutural top-level)', () => {
-  it('permite pdiGoal com dueDate em update de avaliação', async () => {
-    await seedMembers();
-    await assertSucceeds(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        pdiGoals: [
-          {
-            id: 'goal9',
-            title: 'Nova meta',
-            deadline: '2026-05-01',
-            status: 'pending',
-            description: 'Detalhe',
-            dueDate: '2026-06-01',
-          },
-        ],
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia pdiGoals acima de 50 itens', async () => {
-    await seedMembers();
-    const many = Array.from({ length: 51 }, (_, i) => ({
-      id: `goal${i}`,
-      title: 'Meta',
-      deadline: '2026-05-01',
-      status: 'pending',
-    }));
-    await assertFails(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        pdiGoals: many,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia pdiGoals que não seja lista', async () => {
-    await seedMembers();
-    await assertFails(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        pdiGoals: 'não é lista',
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('documenta limitação: rules NÃO validam elementos de pdiGoals (cliente zod + função futura)', async () => {
-    await seedMembers();
-    await assertSucceeds(
-      leaderCtx().firestore().collection('members').doc('member1').update({
-        pdiGoals: [
-          {
-            id: 'goal9',
-            title: 'Nova meta',
-            deadline: '2026-05-01',
-            status: 'done-malicioso',
-            hacker: 'x',
-          },
-        ],
-        updatedAt: new Date(),
-      }),
-    );
-  });
-});
-
-describe('evaluations', () => {
-  it('permite criação de avaliação válida por líder (membro existe)', async () => {
-    await seedMembers();
-    await assertSucceeds(
-      leaderCtx().firestore().collection('evaluations').doc('eval1').set(evaluationDoc('eval1')),
-    );
-  });
-
-  it('bloqueia criação de avaliação para membro inexistente', async () => {
-    await assertFails(
-      leaderCtx()
-        .firestore()
-        .collection('evaluations')
-        .doc('eval1')
-        .set(evaluationDoc('eval1', { memberId: 'ghost' })),
-    );
-  });
-
-  it('bloqueia criação de avaliação com critério fora do conjunto de chaves', async () => {
-    await seedMembers();
-    const bad = criteriaScores();
-    delete bad['6-5'];
-    await assertFails(
-      leaderCtx()
-        .firestore()
-        .collection('evaluations')
-        .doc('eval1')
-        .set(evaluationDoc('eval1', { criteriaScores: bad })),
-    );
-  });
-
-  it('documenta limitação: faixa de valores (0..5) validada só no cliente zod', async () => {
-    await seedMembers();
-    const bad = criteriaScores();
-    bad['1-0'] = 6;
-    await assertSucceeds(
-      leaderCtx()
-        .firestore()
-        .collection('evaluations')
-        .doc('eval1')
-        .set(evaluationDoc('eval1', { criteriaScores: bad })),
-    );
-  });
-
-  it('permite update de avaliação com revision +1', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertSucceeds(
-      db.collection('evaluations').doc('eval1').update({
-        comments: 'Revisado',
-        score: 146,
-        status: 'Voando',
-        revision: 2,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia update de avaliação com revision repetida (conflito de escrita)', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertFails(
-      db.collection('evaluations').doc('eval1').update({
-        comments: 'Concorrente',
-        revision: 1,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia update de avaliação com revision pulada', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertFails(
-      db.collection('evaluations').doc('eval1').update({
-        comments: 'Pulou',
-        revision: 5,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('A-02: bloqueia update de avaliação alterando o cycle', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertFails(
-      db.collection('evaluations').doc('eval1').update({
-        cycle: '2026-Q3',
-        revision: 2,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia update de avaliação alterando memberId', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertFails(
-      db.collection('evaluations').doc('eval1').update({
-        memberId: 'other',
-        revision: 2,
-        updatedAt: new Date(),
-      }),
-    );
-  });
-
-  it('bloqueia delete de avaliação por líder', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertFails(db.collection('evaluations').doc('eval1').delete());
-  });
-
-  it('permite delete de avaliação por admin', async () => {
-    await seedMembers();
-    const db = adminCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    await assertSucceeds(db.collection('evaluations').doc('eval1').delete());
-  });
-});
-
-describe('auditLogs', () => {
-  it('permite criação de auditLog válido pelo próprio ator', async () => {
-    await seedMembers();
-    await assertSucceeds(
-      leaderCtx()
-        .firestore()
-        .collection('auditLogs')
-        .doc('log1')
-        .set(auditLogDoc('log1', LEADER)),
-    );
-  });
-
-  it('bloqueia auditLog com actorId diferente do usuário autenticado', async () => {
-    await seedMembers();
-    await assertFails(
-      leaderCtx()
-        .firestore()
-        .collection('auditLogs')
-        .doc('log1')
-        .set(auditLogDoc('log1', LEADER, { actorId: 'someone-else' })),
-    );
-  });
-
-  it('bloqueia auditLog com actorEmail diferente do token', async () => {
-    await seedMembers();
-    await assertFails(
-      leaderCtx()
-        .firestore()
-        .collection('auditLogs')
-        .doc('log1')
-        .set(auditLogDoc('log1', LEADER, { actorEmail: 'fake@example.com' })),
-    );
-  });
-
-  it('bloqueia leitura de auditLogs por líder', async () => {
-    await seedMembers();
-    await assertFails(leaderCtx().firestore().collection('auditLogs').get());
-  });
-
-  it('permite leitura de auditLogs por admin', async () => {
-    await seedMembers();
-    await assertSucceeds(adminCtx().firestore().collection('auditLogs').get());
-  });
-
-  it('bloqueia update de auditLog', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('auditLogs').doc('log1').set(auditLogDoc('log1', LEADER)));
-    await assertFails(db.collection('auditLogs').doc('log1').update({ score: 100 }));
-  });
-
-  it('bloqueia delete de auditLog', async () => {
-    await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('auditLogs').doc('log1').set(auditLogDoc('log1', LEADER)));
-    await assertFails(db.collection('auditLogs').doc('log1').delete());
-  });
-});
-
-describe('wildcard de negação', () => {
-  it('bloqueia escrita em coleção desconhecida', async () => {
-    await assertFails(
-      adminCtx().firestore().collection('secret').doc('x').set({ data: 'leak' }),
-    );
-  });
-
-  it('bloqueia leitura em coleção desconhecida', async () => {
-    await assertFails(leaderCtx().firestore().collection('secret').get());
-  });
-
-  it('bloqueia acesso sem login a qualquer caminho', async () => {
-    await assertFails(
-      testEnv
-        .unauthenticatedContext()
-        .firestore()
-        .collection('members')
-        .doc('member1')
-        .get(),
-    );
   });
 });
 
@@ -599,7 +273,7 @@ describe('arquivamento (soft-delete) de membros', () => {
     );
   });
 
-  it('bloqueia arquivamento por líder (chaves fora do update de avaliação)', async () => {
+  it('bloqueia arquivamento por líder', async () => {
     await seedMembers();
     await assertFails(
       leaderCtx().firestore().collection('members').doc('member1').update({
@@ -621,12 +295,118 @@ describe('arquivamento (soft-delete) de membros', () => {
   });
 });
 
-describe('sanidade dos fixtures', () => {
-  it('criação de avaliação pela própria seed passa (regressão de setup)', async () => {
+describe('evaluations (escrita apenas via Cloud Function)', () => {
+  it('permite leitura por líder', async () => {
+    await assertSucceeds(leaderCtx().firestore().collection('evaluations').get());
+  });
+
+  it('permite leitura por admin', async () => {
+    await assertSucceeds(adminCtx().firestore().collection('evaluations').get());
+  });
+
+  it('bloqueia leitura sem login', async () => {
+    await assertFails(testEnv.unauthenticatedContext().firestore().collection('evaluations').get());
+  });
+
+  it('bloqueia criação de avaliação válida pelo cliente (mesmo líder legítimo)', async () => {
     await seedMembers();
-    const db = leaderCtx().firestore();
-    await assertSucceeds(db.collection('evaluations').doc('eval1').set(evaluationDoc('eval1')));
-    const snap = await db.collection('evaluations').doc('eval1').get();
-    expect(snap.exists).toBe(true);
+    await assertFails(
+      leaderCtx().firestore().collection('evaluations').doc('eval1').set(evaluationDoc('eval1')),
+    );
+  });
+
+  it('bloqueia criação de avaliação pelo admin via cliente (forçar uso da callable)', async () => {
+    await seedMembers();
+    await assertFails(
+      adminCtx().firestore().collection('evaluations').doc('eval1').set(evaluationDoc('eval1')),
+    );
+  });
+
+  it('bloqueia update de avaliação pelo cliente', async () => {
+    await seedMembers();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().collection('evaluations').doc('eval1').set(evaluationDoc('eval1'));
+    });
+    await assertFails(
+      leaderCtx().firestore().collection('evaluations').doc('eval1').update({
+        comments: 'Revisado fora da função',
+        revision: 2,
+        updatedAt: new Date(),
+      }),
+    );
+  });
+
+  it('bloqueia delete de avaliação por líder e permite por admin', async () => {
+    await seedMembers();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().collection('evaluations').doc('eval1').set(evaluationDoc('eval1'));
+    });
+    await assertFails(leaderCtx().firestore().collection('evaluations').doc('eval1').delete());
+    await assertSucceeds(adminCtx().firestore().collection('evaluations').doc('eval1').delete());
+  });
+});
+
+describe('auditLogs (append-only via Cloud Function)', () => {
+  it('permite leitura por admin', async () => {
+    await assertSucceeds(adminCtx().firestore().collection('auditLogs').get());
+  });
+
+  it('bloqueia leitura por líder', async () => {
+    await assertFails(leaderCtx().firestore().collection('auditLogs').get());
+  });
+
+  it('bloqueia QUALQUER escrita de auditLog pelo cliente (inclusive admin)', async () => {
+    await seedMembers();
+    const log = {
+      id: 'log1',
+      action: 'evaluation_saved',
+      evaluationId: 'eval1',
+      memberId: 'member1',
+      memberName: 'Ana Souza',
+      cycle: '2026-Q2',
+      revision: 1,
+      score: 145,
+      status: 'Voando',
+      actorId: ADMIN.uid,
+      actorEmail: ADMIN.email,
+      actorName: 'Admin',
+      createdAt: new Date(),
+    };
+    await assertFails(adminCtx().firestore().collection('auditLogs').doc('log1').set(log));
+    await assertFails(leaderCtx().firestore().collection('auditLogs').doc('log1').set(log));
+  });
+
+  it('bloqueia update e delete de auditLog', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().collection('auditLogs').doc('log1').set({
+        id: 'log1',
+        action: 'evaluation_saved',
+      });
+    });
+    await assertFails(adminCtx().firestore().collection('auditLogs').doc('log1').update({ score: 1 }));
+    await assertFails(adminCtx().firestore().collection('auditLogs').doc('log1').delete());
+  });
+});
+
+describe('wildcard de negação', () => {
+  it('bloqueia escrita em coleção desconhecida', async () => {
+    await assertFails(
+      adminCtx().firestore().collection('secret').doc('x').set({ data: 'leak' }),
+    );
+  });
+
+  it('bloqueia leitura em coleção desconhecida', async () => {
+    await assertFails(leaderCtx().firestore().collection('secret').get());
+  });
+
+  it('bloqueia acesso sem login a qualquer caminho', async () => {
+    await assertFails(
+      testEnv
+        .unauthenticatedContext()
+        .firestore()
+        .collection('members')
+        .doc('member1')
+        .get(),
+    );
   });
 });

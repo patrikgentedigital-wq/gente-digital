@@ -4,13 +4,18 @@ import { logger } from 'firebase-functions/logger';
 import { defineString } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import {
   parseRoleInput,
   ROLE_ADMIN,
   RoleInputError,
   type RoleInput,
 } from './roles';
+import {
+  formatZodIssues,
+  saveEvaluationInputSchema,
+  PERFORMANCE_STATUSES,
+} from './evaluationSchemas';
 
 initializeApp();
 
@@ -126,6 +131,131 @@ export const bootstrapFirstAdmin = onCall(async (request) => {
 });
 
 const FIRESTORE_DATABASE_ID = 'ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93';
+
+class EvaluationConflictSignal extends Error {}
+class MemberNotFoundSignal extends Error {}
+
+function isPerformanceStatus(value: unknown): value is (typeof PERFORMANCE_STATUSES)[number] {
+  return typeof value === 'string' && (PERFORMANCE_STATUSES as readonly string[]).includes(value);
+}
+
+// Único caminho de escrita de avaliações/membros(somente leitura de avaliação)/auditLogs:
+// valida o payload elemento a elemento com zod (o que as rules não conseguem),
+// preserva a checagem otimista de revisão e grava a trilha de auditoria.
+export const saveEvaluation = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Faça login para salvar avaliações.');
+  }
+  const token = request.auth.token as Record<string, unknown>;
+  const role = token.role;
+  if (token.email_verified !== true || (role !== 'leader' && role !== 'admin')) {
+    throw new HttpsError(
+      'permission-denied',
+      'Apenas líderes ou administradores com e-mail verificado podem salvar avaliações.',
+    );
+  }
+
+  const parsed = saveEvaluationInputSchema.safeParse(request.data);
+  if (!parsed.success) {
+    throw new HttpsError(
+      'invalid-argument',
+      `Payload inválido: ${formatZodIssues(parsed.error)}`,
+    );
+  }
+  const { member, evaluation, expectedRevision } = parsed.data;
+  const actorEmail = typeof token.email === 'string' ? token.email : '';
+
+  const db = getFirestore(FIRESTORE_DATABASE_ID);
+  const memberRef = db.collection('members').doc(member.id);
+  const evaluationRef = db.collection('evaluations').doc(evaluation.id);
+  const auditRevision = Math.max(0, expectedRevision) + 1;
+  const auditRef = db.collection('auditLogs').doc(`audit_${evaluation.id}_${auditRevision}`);
+
+  try {
+    const resultRevision = await db.runTransaction(async (tx) => {
+      const memberSnap = await tx.get(memberRef);
+      if (!memberSnap.exists) {
+        throw new MemberNotFoundSignal();
+      }
+
+      const existingEval = await tx.get(evaluationRef);
+      const previous = existingEval.exists ? existingEval.data() : undefined;
+      const currentRevision = previous ? Number(previous.revision ?? 0) : 0;
+      if (!Number.isInteger(currentRevision) || currentRevision !== expectedRevision) {
+        throw new EvaluationConflictSignal();
+      }
+
+      const now = FieldValue.serverTimestamp();
+
+      tx.update(memberRef, {
+        score: member.score,
+        status: member.status,
+        evaluationStatus: member.evaluationStatus,
+        pdiGoals: member.pdiGoals,
+        history: member.history,
+        updatedAt: now,
+      });
+
+      tx.set(
+        evaluationRef,
+        {
+          id: evaluation.id,
+          memberId: evaluation.memberId,
+          memberName: evaluation.memberName,
+          leaderName: evaluation.leaderName,
+          score: evaluation.score,
+          status: evaluation.status,
+          cycle: evaluation.cycle,
+          comments: evaluation.comments,
+          pdiGoals: evaluation.pdiGoals,
+          criteriaScores: evaluation.criteriaScores,
+          ...(evaluation.selfScores !== undefined ? { selfScores: evaluation.selfScores } : {}),
+          revision: auditRevision,
+          ...(previous ? {} : { createdAt: now }),
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+
+      tx.set(auditRef, {
+        id: auditRef.id,
+        action: 'evaluation_saved',
+        evaluationId: evaluation.id,
+        memberId: evaluation.memberId,
+        memberName: evaluation.memberName,
+        cycle: evaluation.cycle,
+        revision: auditRevision,
+        score: evaluation.score,
+        status: evaluation.status,
+        ...(typeof previous?.score === 'number' ? { previousScore: previous.score } : {}),
+        ...(isPerformanceStatus(previous?.status) ? { previousStatus: previous.status } : {}),
+        actorId: request.auth!.uid,
+        actorEmail,
+        actorName: evaluation.leaderName,
+        createdAt: now,
+      });
+
+      return auditRevision;
+    });
+
+    logger.info(
+      `saveEvaluation: avaliação ${evaluation.id} revisão ${resultRevision} salva por ${actorEmail}`,
+    );
+    return { revision: resultRevision };
+  } catch (error) {
+    if (error instanceof EvaluationConflictSignal) {
+      throw new HttpsError(
+        'failed-precondition',
+        'evaluation-conflict: a avaliação foi alterada por outra pessoa.',
+      );
+    }
+    if (error instanceof MemberNotFoundSignal) {
+      throw new HttpsError('not-found', `Membro ${member.id} não encontrado.`);
+    }
+    logger.error('saveEvaluation: falha inesperada', error);
+    throw new HttpsError('internal', 'Falha ao salvar a avaliação.');
+  }
+});
 
 export const onMemberDeleted = onDocumentDeleted(
   { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID },

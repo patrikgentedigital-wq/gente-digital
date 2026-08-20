@@ -15,14 +15,19 @@ const hoisted = vi.hoisted(() => {
     setCustomUserClaims: vi.fn(),
     listUsers: vi.fn(),
   };
+  const mockTx = { get: vi.fn(), update: vi.fn(), set: vi.fn() };
   const mockDb = {
-    collection: vi.fn(),
+    collection: vi.fn((name: string) => ({
+      doc: (id: string) => ({ __path: `${name}/${id}`, name, id }),
+    })),
     batch: vi.fn(),
+    runTransaction: (cb: (tx: unknown) => Promise<unknown>) => cb(hoisted.mockTx),
   };
   return {
     HttpsError,
     mockAuth,
     mockDb,
+    mockTx,
     mockParams: {
       BOOTSTRAP_ADMIN_EMAIL: '',
       TEAMS_WEBHOOK_URL: '',
@@ -30,11 +35,14 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { mockAuth, mockParams } = hoisted;
+const { mockAuth, mockParams, mockTx } = hoisted;
 
 vi.mock('firebase-admin/app', () => ({ initializeApp: vi.fn() }));
 vi.mock('firebase-admin/auth', () => ({ getAuth: () => mockAuth }));
-vi.mock('firebase-admin/firestore', () => ({ getFirestore: () => hoisted.mockDb }));
+vi.mock('firebase-admin/firestore', () => ({
+  getFirestore: () => hoisted.mockDb,
+  FieldValue: { serverTimestamp: () => ({ __serverTimestamp: true }) },
+}));
 
 vi.mock('firebase-functions/v2/https', () => ({
   HttpsError: hoisted.HttpsError,
@@ -58,9 +66,14 @@ import {
   setUserRole as setUserRoleRaw,
   bootstrapFirstAdmin as bootstrapFirstAdminRaw,
   onMemberStatusChanged as onMemberStatusChangedRaw,
+  saveEvaluation as saveEvaluationRaw,
 } from './index';
 
 type CallableRequestLike = { auth: { uid: string } | null; data: unknown };
+type CallableRequestWithToken = {
+  auth: { uid: string; token: Record<string, unknown> } | null;
+  data: unknown;
+};
 type RoleResult = { uid: string; email: string | undefined; role: string | null };
 type StatusChangeEvent = {
   params: { memberId: string };
@@ -74,6 +87,9 @@ type AuthUser = { uid: string; email: string; emailVerified: boolean; customClai
 const setUserRole = setUserRoleRaw as unknown as (request: CallableRequestLike) => Promise<RoleResult>;
 const bootstrapFirstAdmin = bootstrapFirstAdminRaw as unknown as (request: CallableRequestLike) => Promise<RoleResult>;
 const onMemberStatusChanged = onMemberStatusChangedRaw as unknown as (event: StatusChangeEvent) => Promise<unknown>;
+const saveEvaluation = saveEvaluationRaw as unknown as (
+  request: CallableRequestWithToken,
+) => Promise<{ revision: number }>;
 
 const users: Record<string, AuthUser> = {
   admin1: { uid: 'admin1', email: 'admin@empresa.com.br', emailVerified: true, customClaims: { role: 'admin' } },
@@ -283,6 +299,249 @@ describe('onMemberStatusChanged trigger', () => {
       'https://example.com/hook',
       expect.objectContaining({ method: 'POST', body: expect.stringContaining('Ana') }),
     );
+  });
+});
+
+describe('saveEvaluation callable', () => {
+  const criteriaScores: Record<string, number> = {};
+  for (const key of [
+    '1-0', '1-1', '1-2', '1-3', '1-4',
+    '2-0', '2-1', '2-2', '2-3', '2-4',
+    '3-0', '3-1', '3-2', '3-3', '3-4',
+    '4-0', '4-1', '4-2', '4-3', '4-4',
+    '5-0', '5-1', '5-2', '5-3', '5-4',
+    '6-0', '6-1', '6-2', '6-3', '6-4', '6-5',
+  ]) {
+    criteriaScores[key] = 3;
+  }
+
+  const pdiGoals = [
+    { id: 'goal1', title: 'Meta', deadline: '2026-03-01', status: 'pending', dueDate: '2026-04-01' },
+  ];
+
+  const basePayload = {
+    member: {
+      id: 'member1',
+      score: 145,
+      status: 'Voando',
+      evaluationStatus: 'Concluído',
+      pdiGoals,
+      history: [{ month: '2026-Q2', score: 145 }],
+    },
+    evaluation: {
+      id: 'eval_member1_2026Q2',
+      memberId: 'member1',
+      memberName: 'Ana Souza',
+      leaderName: 'Carlos Lima',
+      score: 145,
+      status: 'Voando',
+      cycle: '2026-Q2',
+      comments: 'Ótimo ciclo',
+      pdiGoals,
+      criteriaScores,
+    },
+    expectedRevision: 0,
+  };
+
+  const leaderAuth = {
+    uid: 'leader1',
+    token: { email: 'leader@empresa.com.br', email_verified: true, role: 'leader' },
+  };
+
+  const memberRef = { __path: 'members/member1', name: 'members', id: 'member1' };
+  const evaluationRef = { __path: 'evaluations/eval_member1_2026Q2', name: 'evaluations', id: 'eval_member1_2026Q2' };
+
+  function mockTransaction(options: {
+    memberExists?: boolean;
+    existingEvaluation?: Record<string, unknown> | null;
+  } = {}) {
+    const memberExists = options.memberExists ?? true;
+    mockTx.get.mockImplementation(async (ref: { __path: string }) => {
+      if (ref.__path === 'members/member1') {
+        return {
+          exists: memberExists,
+          data: () => ({ id: 'member1', name: 'Ana Souza', score: 140, status: 'Atenção' }),
+        };
+      }
+      if (ref.__path === 'evaluations/eval_member1_2026Q2') {
+        if (!options.existingEvaluation) return { exists: false, data: () => undefined };
+        return { exists: true, data: () => options.existingEvaluation };
+      }
+      return { exists: false, data: () => undefined };
+    });
+  }
+
+  beforeEach(() => {
+    mockTx.get.mockReset();
+    mockTx.update.mockReset();
+    mockTx.set.mockReset();
+    mockTx.update.mockResolvedValue(undefined);
+    mockTx.set.mockResolvedValue(undefined);
+  });
+
+  it('rejects unauthenticated callers', async () => {
+    await expectHttpsError(
+      () => saveEvaluation({ auth: null, data: basePayload }),
+      'unauthenticated',
+    );
+  });
+
+  it('rejects callers without role', async () => {
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: { uid: 'other1', token: { email: 'other@empresa.com.br', email_verified: true } },
+        data: basePayload,
+      }),
+      'permission-denied',
+    );
+  });
+
+  it('rejects callers with unverified email', async () => {
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: { uid: 'leader1', token: { email: 'leader@empresa.com.br', email_verified: false, role: 'leader' } },
+        data: basePayload,
+      }),
+      'permission-denied',
+    );
+  });
+
+  it('rejects pdiGoal element with unknown key (validação por elemento no servidor)', async () => {
+    const malicious = [{
+      id: 'goal1', title: 'Meta', deadline: '2026-03-01', status: 'pending', hacker: 'x',
+    }];
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: {
+          ...basePayload,
+          member: { ...basePayload.member, pdiGoals: malicious },
+          evaluation: { ...basePayload.evaluation, pdiGoals: malicious },
+        },
+      }),
+      'invalid-argument',
+      /pdiGoals/,
+    );
+  });
+
+  it('rejects history element with non-number score', async () => {
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: {
+          ...basePayload,
+          member: { ...basePayload.member, history: [{ month: '2026-Q2', score: 'alta' }] },
+        },
+      }),
+      'invalid-argument',
+      /history/,
+    );
+  });
+
+  it('rejects incomplete criteriaScores', async () => {
+    const incomplete = { ...criteriaScores };
+    delete incomplete['6-5'];
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: { ...basePayload, evaluation: { ...basePayload.evaluation, criteriaScores: incomplete } },
+      }),
+      'invalid-argument',
+    );
+  });
+
+  it('rejects criteriaScore out of range', async () => {
+    const outOfRange = { ...criteriaScores, '1-0': 6 };
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: { ...basePayload, evaluation: { ...basePayload.evaluation, criteriaScores: outOfRange } },
+      }),
+      'invalid-argument',
+    );
+  });
+
+  it('rejects evaluation/member score divergence', async () => {
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: { ...basePayload, evaluation: { ...basePayload.evaluation, score: 130 } },
+      }),
+      'invalid-argument',
+      /divergem/,
+    );
+  });
+
+  it('rejects when member does not exist', async () => {
+    mockTransaction({ memberExists: false });
+    await expectHttpsError(
+      () => saveEvaluation({ auth: leaderAuth, data: basePayload }),
+      'not-found',
+    );
+  });
+
+  it('rejects revision conflict', async () => {
+    mockTransaction({ existingEvaluation: { revision: 2, score: 140, status: 'Atenção' } });
+    await expectHttpsError(
+      () => saveEvaluation({ auth: leaderAuth, data: basePayload }),
+      'failed-precondition',
+      /evaluation-conflict/,
+    );
+  });
+
+  it('saves a new evaluation and writes member + audit log', async () => {
+    mockTransaction({});
+    const result = await saveEvaluation({ auth: leaderAuth, data: basePayload });
+
+    expect(result).toEqual({ revision: 1 });
+    expect(mockTx.update).toHaveBeenCalledWith(
+      memberRef,
+      expect.objectContaining({
+        score: 145,
+        status: 'Voando',
+        evaluationStatus: 'Concluído',
+        pdiGoals,
+        history: [{ month: '2026-Q2', score: 145 }],
+      }),
+    );
+    expect(mockTx.set).toHaveBeenCalledWith(
+      evaluationRef,
+      expect.objectContaining({ id: 'eval_member1_2026Q2', revision: 1 }),
+      { merge: true },
+    );
+    expect(mockTx.set).toHaveBeenCalledWith(
+      { __path: 'auditLogs/audit_eval_member1_2026Q2_1', name: 'auditLogs', id: 'audit_eval_member1_2026Q2_1' },
+      expect.objectContaining({
+        action: 'evaluation_saved',
+        actorId: 'leader1',
+        actorEmail: 'leader@empresa.com.br',
+        revision: 1,
+      }),
+    );
+  });
+
+  it('saves an update with incremented revision and previous values in audit log', async () => {
+    mockTransaction({ existingEvaluation: { revision: 1, score: 140, status: 'Atenção' } });
+    const result = await saveEvaluation({ auth: leaderAuth, data: { ...basePayload, expectedRevision: 1 } });
+
+    expect(result).toEqual({ revision: 2 });
+    expect(mockTx.set).toHaveBeenCalledWith(
+      { __path: 'auditLogs/audit_eval_member1_2026Q2_2', name: 'auditLogs', id: 'audit_eval_member1_2026Q2_2' },
+      expect.objectContaining({
+        revision: 2,
+        previousScore: 140,
+        previousStatus: 'Atenção',
+      }),
+    );
+  });
+
+  it('allows an admin caller as well', async () => {
+    mockTransaction({});
+    const result = await saveEvaluation({
+      auth: { uid: 'admin1', token: { email: 'admin@empresa.com.br', email_verified: true, role: 'admin' } },
+      data: basePayload,
+    });
+    expect(result).toEqual({ revision: 1 });
   });
 });
 

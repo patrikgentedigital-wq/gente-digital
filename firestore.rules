@@ -2,11 +2,18 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Prototype data model:
-    // members/{memberId}: member summary, score and status.
-    // evaluations/{evaluationId}: one persisted evaluation per member/cycle.
-    // PII such as email is currently present in members and therefore all
-    // member reads require an authorized, verified leader or administrator.
+    // Modelo de dados:
+    // members/{memberId}: resumo do membro, score e status (PII: e-mail).
+    // evaluations/{evaluationId}: uma avaliação persistida por membro/ciclo.
+    // auditLogs/{auditId}: trilha imutável de auditoria.
+    //
+    // Arquitetura de escrita (rev. 3):
+    // - Membros: criados/atualizados/excluídos (soft-delete) APENAS por admin.
+    // - Avaliações, atualização de membro pelo líder e auditLogs: APENAS via
+    //   Cloud Function saveEvaluation (Admin SDK + validação zod elemento a
+    //   elemento — as rules não possuem list.all(), então validação de
+    //   elementos de history/pdiGoals/criteriaScores é impraticável em rules).
+    // - Regras detalhadas de conflito (revision) e consistência vivem na função.
 
     function isVerifiedUser() {
       return request.auth != null && request.auth.token.email_verified == true;
@@ -43,35 +50,10 @@ service cloud.firestore {
         (score < 120 && status == 'Alarme');
     }
 
-    function validCriteriaScores(scores, requireAll) {
-      // NOTA: sem validacao por chave (0..5) — 31 chamadas estouravam o limite
-      // de 1000 expressoes do motor de rules (quota de producao). A integridade
-      // do CONJUNTO de chaves e garantida (hasOnly/hasAll); a faixa de valores
-      // e validada no cliente (zod) e, futuramente, na Cloud Function.
-      return scores is map &&
-        scores.keys().hasOnly([
-          '1-0', '1-1', '1-2', '1-3', '1-4',
-          '2-0', '2-1', '2-2', '2-3', '2-4',
-          '3-0', '3-1', '3-2', '3-3', '3-4',
-          '4-0', '4-1', '4-2', '4-3', '4-4',
-          '5-0', '5-1', '5-2', '5-3', '5-4',
-          '6-0', '6-1', '6-2', '6-3', '6-4', '6-5'
-        ]) &&
-        (!requireAll || scores.keys().hasAll([
-          '1-0', '1-1', '1-2', '1-3', '1-4',
-          '2-0', '2-1', '2-2', '2-3', '2-4',
-          '3-0', '3-1', '3-2', '3-3', '3-4',
-          '4-0', '4-1', '4-2', '4-3', '4-4',
-          '5-0', '5-1', '5-2', '5-3', '5-4',
-          '6-0', '6-1', '6-2', '6-3', '6-4', '6-5'
-        ]));
-    }
-
-    // NOTE: a linguagem de regras do Firestore NAO possui list.all()/any()
-    // (diferente do Cloud Storage). Validacao ELEMENTO a ELEMENTO de listas
-    // (history, pdiGoals) nao e expressavel em rules — cabe ao cliente (zod)
-    // e, para fechamento completo, a uma Cloud Function (saveEvaluation).
-    // Aqui garantimos apenas a forma top-level: lista + limite de tamanho.
+    // NOTA: a linguagem de rules NÃO possui list.all()/any() e há o limite
+    // de 1000 expressões por request. history/pdiGoals são validados aqui
+    // apenas estruturalmente (lista + limite); a validação por elemento é
+    // feita pelo zod na Cloud Function saveEvaluation.
 
     function validMember(data, memberId) {
       return data.keys().hasOnly([
@@ -108,103 +90,24 @@ service cloud.firestore {
           (data.deletedAt is timestamp && data.deletedBy is string && data.deletedBy.size() > 0));
     }
 
-    function validLeaderEvaluationUpdate(data, memberId) {
-      return validId(memberId) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'score', 'status', 'evaluationStatus', 'pdiGoals', 'history', 'updatedAt'
-        ]) &&
-        data.score is number && data.score >= 0 && data.score <= 155 &&
-        data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
-        validStatusForScore(data.score, data.status) &&
-        data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
-        (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
-        (!('updatedAt' in data) || data.updatedAt is timestamp);
-    }
-
-    function validEvaluation(data, evaluationId) {
-      return data.keys().hasOnly([
-           'id', 'memberId', 'memberName', 'leaderName', 'score', 'status',
-           'cycle', 'comments', 'pdiGoals', 'criteriaScores', 'selfScores', 'revision',
-           'createdAt', 'updatedAt'
-         ]) &&
-        data.keys().hasAll(['id', 'memberId', 'score', 'status', 'cycle', 'comments', 'criteriaScores', 'revision']) &&
-        data.id == evaluationId && validId(data.id) &&
-        data.memberId is string && validId(data.memberId) &&
-        exists(/databases/$(database)/documents/members/$(data.memberId)) &&
-        data.score is number && data.score >= 0 && data.score <= 155 &&
-        data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
-        validStatusForScore(data.score, data.status) &&
-        data.cycle is string && data.cycle.size() > 0 && data.cycle.size() <= 64 &&
-        data.comments is string && data.comments.size() <= 5000 &&
-        data.revision is int && data.revision >= 1 && data.revision <= 1000000 &&
-        validCriteriaScores(data.criteriaScores, true) &&
-        (!('memberName' in data) || (data.memberName is string && data.memberName.size() <= 100)) &&
-        (!('leaderName' in data) || (data.leaderName is string && data.leaderName.size() <= 100)) &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
-        (!('selfScores' in data) || (data.selfScores is map && data.selfScores.keys().size() <= 31)) &&
-        (!('createdAt' in data) || data.createdAt is timestamp) &&
-        (!('updatedAt' in data) || data.updatedAt is timestamp);
-    }
-
     match /members/{memberId} {
       allow read: if isLeaderOrAdmin();
       allow create: if isAdmin() && validMember(request.resource.data, memberId);
-      allow update: if
-        (isAdmin() && validMember(request.resource.data, memberId)) ||
-        (isLeader() && validLeaderEvaluationUpdate(request.resource.data, memberId));
+      allow update: if isAdmin() && validMember(request.resource.data, memberId);
       allow delete: if isAdmin() && validId(memberId);
     }
 
     match /evaluations/{evaluationId} {
       allow read: if isLeaderOrAdmin();
-      allow create: if isLeaderOrAdmin() && validEvaluation(request.resource.data, evaluationId);
-      allow update: if isLeaderOrAdmin() &&
-        validEvaluation(request.resource.data, evaluationId) &&
-        request.resource.data.memberId == resource.data.memberId &&
-        request.resource.data.cycle == resource.data.cycle &&
-        (('revision' in resource.data && request.resource.data.revision == resource.data.revision + 1) ||
-          (!('revision' in resource.data) && request.resource.data.revision == 1)) &&
-        (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+      // Criação/atualização apenas via Cloud Function saveEvaluation (Admin SDK).
+      allow create, update: if false;
       allow delete: if isAdmin() && validId(evaluationId);
-    }
-
-    function validAuditLog(data, auditId) {
-      return data.keys().hasOnly([
-          'id', 'action', 'evaluationId', 'memberId', 'memberName', 'cycle',
-          'revision', 'score', 'status', 'previousScore', 'previousStatus',
-          'actorId', 'actorEmail', 'actorName',
-          'createdAt'
-        ]) &&
-        data.keys().hasAll([
-          'id', 'action', 'evaluationId', 'memberId', 'memberName', 'cycle',
-          'revision', 'score', 'status', 'actorId', 'actorEmail', 'actorName',
-          'createdAt'
-        ]) &&
-        data.id == auditId && validId(data.id) &&
-        data.action == 'evaluation_saved' &&
-        validId(data.evaluationId) && validId(data.memberId) &&
-        exists(/databases/$(database)/documents/members/$(data.memberId)) &&
-        data.memberName is string && data.memberName.size() <= 100 &&
-        data.cycle is string && data.cycle.size() > 0 && data.cycle.size() <= 64 &&
-        data.revision is int && data.revision >= 1 && data.revision <= 1000000 &&
-        data.score is number && data.score >= 0 && data.score <= 155 &&
-        data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
-        validStatusForScore(data.score, data.status) &&
-        (!('previousScore' in data) || (data.previousScore is number && data.previousScore >= 0 && data.previousScore <= 155)) &&
-        (!('previousStatus' in data) || data.previousStatus in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme']) &&
-        data.actorId is string && data.actorId.size() > 0 && data.actorId.size() <= 128 &&
-        data.actorEmail is string && data.actorEmail.size() <= 254 &&
-        data.actorName is string && data.actorName.size() <= 100 &&
-        data.actorId == request.auth.uid &&
-        data.actorEmail == request.auth.token.email &&
-        data.createdAt is timestamp;
     }
 
     match /auditLogs/{auditId} {
       allow read: if isAdmin();
-      allow create: if isLeaderOrAdmin() && validAuditLog(request.resource.data, auditId);
-      allow update, delete: if false;
+      // Append-only via Cloud Function saveEvaluation (Admin SDK).
+      allow write: if false;
     }
 
     match /{document=**} {

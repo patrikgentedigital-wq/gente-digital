@@ -1,11 +1,12 @@
 # Auditoria de Riscos — Gente Digital
 
-Data: 2026-08-20 (rev. 2, pós-testes do emulador) · Projeto: `gen-lang-client-0169317507` · Banco Firestore nomeado: `ai-studio-gentedigital-...`
+Data: 2026-08-20 (rev. 3, callable saveEvaluation) · Projeto: `gen-lang-client-0169317507` · Banco Firestore nomeado: `ai-studio-gentedigital-...`
 
-> Este documento foca em **o que pode dar errado** (visão de risco operacional,
-> de segurança residual e de produto). A rev. 2 incorpora a validação das Rules
-> pelo Firebase Emulator Suite com testes automatizados — que pegou **dois bugs
-> de produção** que a revisão manual não viu — e o soft-delete de membros.
+> Este documento foca em **o que pode dar errado**. A rev. 3 fecha a última
+> lacuna de integridade: o save de avaliações agora passa pela **Cloud Function
+> callable `saveEvaluation`** com validação zod elemento a elemento no servidor,
+> e as Firestore Rules proíbem escrita direta de avaliações/auditLogs por
+> clientes.
 
 ---
 
@@ -89,26 +90,30 @@ Legenda: Prob. = probabilidade (A/M/B), Imp. = impacto (A/M/B), Sev. = severidad
 - **Limite de expressões:** rules agora ficam folgadas do orçamento de 1.000;
   os 49 testes cobrem os caminhos de escrita mais caros.
 
-## 5. Limitação técnica documentada (rules + listas)
+## 5. Arquitetura de escrita (rev. 3) — lacuna de elementos FECHADA
 
-A linguagem de rules do Firestore **não permite validação elemento a elemento
-de listas** (não há `all()`/`any()` nem indexação; `list.all` não existe —
-provado no emulador). Portanto:
+Antes da rev. 3, `history`/`pdiGoals`/`criteriaScores` eram validados apenas no
+cliente (zod), porque as rules não conseguem validar elementos de listas e o
+limite de 1.000 expressões impedia validação pesada. Agora:
 
-- `history` e `pdiGoals`: rules garantem **lista + limite de tamanho** (50/100).
-  A integridade dos elementos é garantida **no cliente** (schemas zod estritos,
-  sem `.passthrough()`).
-- `criteriaScores`: rules garantem o **conjunto exato de chaves** (31);
-  a faixa de valores 0..5 é garantida **no cliente** (zod).
-- Os testes de rules incluem casos que **documentam a limitação** (escrita de
-  elemento malformado passa na regra), para que a lacuna não seja esquecida.
+- **Todo o fluxo de salvar avaliação** passa pela callable `saveEvaluation`
+  (`functions/src/index.ts`), que valida com zod **no servidor**, elemento a
+  elemento: pdiGoals (chaves/status/dueDate), history (tipos/faixas),
+  criteriaScores (31 chaves exatas, 0..5), consistência score↔status e
+  score↔score entre avaliação e membro, além da checagem otimista de revisão.
+- **Rules endurecidas**: clientes não escrevem mais `evaluations` nem
+  `auditLogs`; líderes não escrevem mais `members` (nem score/status). O único
+  caminho de escrita de avaliação é a função (Admin SDK, que bypassa rules).
+- **Trilha de auditoria** continua append-only, agora escrita pela função com
+  ator derivado do token de autenticação (não mais do cliente).
+- **CSP atualizado**: `connect-src` agora inclui `https://*.cloudfunctions.net`
+  (sem isso o navegador bloquearia a callable).
 
-**Fechamento definitivo (recomendado, decisão pendente):** migrar o save de
-avaliação para uma **Cloud Function callable** (`saveEvaluation`) que valide
-tudo com zod no servidor; as regras então negam escrita direta de
-`history`/`pdiGoals`/`criteriaScores` por clientes. Custo: o fluxo de save
-passa a depender de functions deployadas (hoje o app funciona sem elas) e há
-trabalho de refactor (função + cliente + testes + regras).
+**Novo requisito operacional (importante):** o app passa a **depender das
+functions deployadas** para salvar avaliações. Ordem de deploy:
+`firebase deploy --only functions` **antes ou junto** com
+`firebase deploy --only firestore:<database>` e hosting. Se as rules forem
+publicadas sem as functions, salvar avaliação falha até o deploy das functions.
 
 ## 6. Continuidade operacional
 
@@ -136,30 +141,41 @@ trabalho de refactor (função + cliente + testes + regras).
 
 | Prioridade | Ação | Onde/Como |
 |---|---|---|
-| Alta | Publicar Rules e Functions (este PR contém correções que afetam produção) | `firebase deploy --only firestore:ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93` e `firebase deploy --only functions` (com `functions/.env`: `BOOTSTRAP_ADMIN_EMAIL`, opcional `TEAMS_WEBHOOK_URL`) |
+| Alta | Publicar **functions antes das rules** (o save depende da callable) | 1) `firebase deploy --only functions` (com `functions/.env`: `BOOTSTRAP_ADMIN_EMAIL`, opcional `TEAMS_WEBHOOK_URL`); 2) `firebase deploy --only firestore:ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93`; 3) `firebase deploy --only hosting` e validar CSP |
 | Alta | Publicar Hosting (`dist/` já buildado) e validar CSP | `firebase deploy --only hosting`; testar avatares, fontes, gráficos |
 | Média | Habilitar deploy no CI | Variável `ENABLE_DEPLOY=true` + secret `FIREBASE_SERVICE_ACCOUNT` no GitHub |
 | Média | Backup diário do Firestore | Cloud Scheduler → export para GCS |
 | Média | MFA obrigatório para contas com role | Console Firebase Auth |
 | Média | App Check nas escritas | Firebase Console → App Check → reCAPTCHA v3 |
-| Média | Decidir sobre `saveEvaluation` como callable (fechar lacuna de elementos das listas) | Epopeia separada; requer aprovação (muda arquitetura de escrita) |
 | Média | P-01: visão do colaborador (`linkedUid` + rule de self-read, **sem usar e-mail como chave** — UID não muda) | Decisão de produto; revisão de segurança da regra |
 | Baixa | Teste do PWA em iPhone real (ícones PNG + apple-touch-icon) | Gerar PNGs 192/512/180 e atualizar manifest/index.html |
 
-## 9. O que foi CORRIGIDO e validado nesta rodada (rev. 2)
+## 9. O que foi CORRIGIDO e validado nesta rodada (rev. 3)
 
-- **Rules testadas automaticamente** no Firestore Emulator (49 testes, `npm run test:rules`) — validação de auth, roles, membros, evaluations, auditLogs, soft-delete e wildcard.
-- **Fix do `list.all()`** (inexistente em rules) — escritas de membro voltam a funcionar.
-- **Fix do orçamento de 1.000 expressões** em `validEvaluation`/`validCriteriaScores` — salvar avaliação passa a funcionar.
-- **Soft-delete de membros:** arquivar em vez de excluir; restauração admin na Trilha de Auditoria; regras + tipos + schemas + testes.
-- **CI:** novo job `firestore-rules` (setup-java Temurin 21) e deploy de `hosting,firestore,functions` em main (gate `ENABLE_DEPLOY`).
-- **Java local:** JDK 21 Temurin portátil em `%LOCALAPPDATA%\Temp\opencode\jdk` (resolver o obstáculo do emulador; CI usa setup-java).
+- **Callable `saveEvaluation`** (functions/src/index.ts + evaluationSchemas.ts):
+  validação zod elemento a elemento no servidor (pdiGoals, history,
+  criteriaScores completos 0..5, consistência score↔status, revisão otimista),
+  grava avaliação + membro + auditLog em transação; ator do auditLog vem do
+  token de autenticação.
+- **Rules endurecidas e simplificadas** (35 testes no emulador): membros
+  escritos só por admin; evaluations/auditLogs escritos só via função; leitura
+  de evaluations por líder/admin; auditLogs só admin.
+- **Cliente** chama a callable (`httpsCallable`); conflito de revisão mapeado
+  para `EvaluationConflictError` (recarrega a avaliação como antes); erros
+  tipados preservados.
+- **CSP**: `connect-src` agora permite `https://*.cloudfunctions.net`.
+- **13 novos testes de functions** para a callable (auth/roles, validação por
+  elemento, conflito, membro ausente, gravações corretas) — total 39.
 
-Validação executada (rev. 2): `npm run lint` OK (raiz e functions); `npm test` 21/21 (raiz) e 26/26 (functions); `npm run build` OK; `npm run test:rules` 49/49 no emulador.
+Validação executada (rev. 3): `npm run lint` OK (raiz e functions); `npm test`
+21/21 (raiz) e 39/39 (functions); `npm run build` OK; `npm run test:rules`
+35/35 no emulador.
 
 ## 10. Riscos aceitos conscientemente
 
-- Validação de elementos de `history`/`pdiGoals`/faixa de `criteriaScores` apenas no cliente zod (até a decisão do callable `saveEvaluation`).
+- O fluxo de save depende de functions deployadas (aceito: é o preço da
+  validação autoritativa no servidor; mitigado pela ordem de deploy
+  documentada e pelo CI que publica tudo junto quando habilitado).
 - Sobreposição de leader/admin ver todas as PII (equipe pequena e de confiança).
 - Falta de staging (porte do projeto; CI cobre regressão).
 - Dependências moderadas do `functions` (fail no CI apenas para high/critical).

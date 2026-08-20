@@ -101,6 +101,9 @@ const teamMemberSchema = z.object({
   selfEvaluationScores: criteriaScoresSchema.optional(),
   evaluationHistory: z.array(evaluationHistoryEntrySchema).max(100).default([]),
   updatedAt: z.unknown().optional(),
+  deleted: z.boolean().optional(),
+  deletedAt: z.unknown().optional(),
+  deletedBy: z.string().min(1).max(128).optional(),
 }).superRefine((member, context) => {
   if (member.status !== statusForScore(member.score)) {
     context.addIssue({

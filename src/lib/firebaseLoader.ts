@@ -106,6 +106,14 @@ export async function deleteMemberFromFirestore(memberId: string) {
   return (await loadFirebase()).deleteMemberFromFirestore(memberId);
 }
 
+export async function restoreMemberFromFirestore(memberId: string) {
+  return (await loadFirebase()).restoreMemberFromFirestore(memberId);
+}
+
+export async function getArchivedMembersFromFirestore() {
+  return (await loadFirebase()).getArchivedMembersFromFirestore();
+}
+
 export async function saveEvaluationAndMemberInFirestore({
   member,
   evaluation,

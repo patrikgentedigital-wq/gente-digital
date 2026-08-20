@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import type { EvaluationAuditLog } from '../types';
-import { subscribeToAuditLogs } from '../lib/firebaseLoader';
-import { FileSearch, ShieldCheck, AlertTriangle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { EvaluationAuditLog, TeamMember } from '../types';
+import { getArchivedMembersFromFirestore, subscribeToAuditLogs } from '../lib/firebaseLoader';
+import { FileSearch, ShieldCheck, AlertTriangle, ArchiveRestore, RotateCcw } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   Voando: 'text-[#4fb579]',
@@ -23,14 +23,18 @@ function formatTimestamp(value: unknown): string {
 
 interface AuditLogsViewProps {
   members: { id: string; name: string }[];
+  onRestoreMember: (memberId: string) => Promise<void>;
 }
 
-export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members }) => {
+export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestoreMember }) => {
   const [logs, setLogs] = useState<EvaluationAuditLog[]>([]);
   const [memberFilter, setMemberFilter] = useState<string>('all');
   const [cycleFilter, setCycleFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [archivedMembers, setArchivedMembers] = useState<TeamMember[]>([]);
+  const [archivedError, setArchivedError] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -48,6 +52,31 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members }) => {
     );
     return unsubscribe;
   }, []);
+
+  const loadArchived = useCallback(async () => {
+    try {
+      const archived = await getArchivedMembersFromFirestore();
+      setArchivedMembers(archived);
+      setArchivedError(null);
+    } catch (err) {
+      console.error('Unable to load archived members:', err);
+      setArchivedError('Não foi possível carregar os membros arquivados.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadArchived();
+  }, [loadArchived]);
+
+  const handleRestore = async (memberId: string) => {
+    setRestoringId(memberId);
+    try {
+      await onRestoreMember(memberId);
+      setArchivedMembers((previous) => previous.filter((m) => m.id !== memberId));
+    } finally {
+      setRestoringId(null);
+    }
+  };
 
   const cycles = useMemo(() => {
     const seen = new Set<string>();
@@ -170,6 +199,62 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members }) => {
           </div>
         </div>
       )}
+
+      <div className="bg-[#0F1E38] border border-[#22365C] p-6 rounded-2xl mt-6 shadow-xl">
+        <div className="flex items-center gap-2 mb-1">
+          <ArchiveRestore className="w-5 h-5 text-[#E3A73B]" />
+          <h3 className="font-display font-bold text-lg text-white">Membros Arquivados</h3>
+        </div>
+        <p className="text-xs text-[#A9B7CE] mt-0.5 mb-4">
+          Exclusão é reversível: histórico de avaliações é preservado até a restauração.
+        </p>
+
+        {archivedError ? (
+          <div className="rounded-xl border border-[#e2687a]/40 bg-[#3A1620] p-4 text-xs text-[#ffb4c0]" role="alert">
+            <AlertTriangle className="w-4 h-4 inline mr-1" />
+            {archivedError}
+          </div>
+        ) : archivedMembers.length === 0 ? (
+          <div className="text-center text-xs text-[#6C7C99] py-4 bg-[#14294A]/40 rounded-xl">
+            Nenhum membro arquivado.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-[#22365C]">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider text-[#6C7C99] border-b border-[#22365C]">
+                  <th className="px-4 py-3 font-mono">Nome</th>
+                  <th className="px-4 py-3 font-mono">Time</th>
+                  <th className="px-4 py-3 font-mono">Score final</th>
+                  <th className="px-4 py-3 font-mono">Arquivado em</th>
+                  <th className="px-4 py-3 font-mono">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archivedMembers.map((member) => (
+                  <tr key={member.id} className="border-b border-[#1F3356]/60 hover:bg-[#14294A]/40">
+                    <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{member.name}</td>
+                    <td className="px-4 py-3 text-[#A9B7CE] whitespace-nowrap">{member.team}</td>
+                    <td className="px-4 py-3 font-mono text-[#E3A73B]">{member.score}</td>
+                    <td className="px-4 py-3 text-[#A9B7CE] whitespace-nowrap">{formatTimestamp(member.deletedAt)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => void handleRestore(member.id)}
+                        disabled={restoringId === member.id}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#4fb579]/15 border border-[#4fb579]/40 text-[#4fb579] px-3 py-1.5 text-xs font-semibold hover:bg-[#4fb579]/25 disabled:opacity-50"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        {restoringId === member.id ? 'Restaurando...' : 'Restaurar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

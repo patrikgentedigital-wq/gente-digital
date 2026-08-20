@@ -81,6 +81,9 @@ export interface TeamMember {
   pdiGoals?: PdiGoal[];
   selfEvaluationScores?: Record<string, number>;
   evaluationHistory?: EvaluationHistoryEntry[];
+  deleted?: boolean;
+  deletedAt?: unknown;
+  deletedBy?: string;
 }
 
 export interface Badge {

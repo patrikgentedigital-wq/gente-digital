@@ -16,6 +16,7 @@
     "provision": "node scripts/provision-admin.mjs",
     "roles": "node scripts/manage-roles.mjs",
     "test": "vitest run --config vitest.config.ts --configLoader runner",
+    "test:rules": "node scripts/run-rules-tests.mjs",
     "test:watch": "vitest --config vitest.config.ts --configLoader runner"
   },
   "dependencies": {
@@ -29,12 +30,14 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "firebase-tools": "^15.28.1",
     "jsdom": "^30.0.1",
     "rimraf": "^6.0.1",
     "tailwindcss": "^4.1.14",

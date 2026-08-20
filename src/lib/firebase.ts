@@ -17,10 +17,14 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  updateDoc,
   onSnapshot,
   query,
   orderBy,
   limit,
+  where,
+  getDocs,
+  deleteField,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -183,7 +187,9 @@ export function subscribeToMembers(
 
       snapshot.forEach((memberSnapshot) => {
         try {
-          members.push(parseTeamMember(memberSnapshot.data(), memberSnapshot.id));
+          const member = parseTeamMember(memberSnapshot.data(), memberSnapshot.id);
+          if (member.deleted === true) return;
+          members.push(member);
         } catch (error) {
           if (error instanceof FirestoreDataValidationError) {
             console.error(error.message, error.issues);
@@ -229,9 +235,52 @@ export async function updateMemberInFirestore(updatedMember: TeamMember) {
 
 export async function deleteMemberFromFirestore(memberId: string) {
   try {
-    await deleteDoc(doc(db, 'members', memberId));
+    await updateDoc(doc(db, 'members', memberId), {
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: auth.currentUser?.uid || 'unknown',
+      updatedAt: serverTimestamp(),
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, `members/${memberId}`);
+  }
+}
+
+export async function restoreMemberFromFirestore(memberId: string) {
+  try {
+    await updateDoc(doc(db, 'members', memberId), {
+      deleted: false,
+      deletedAt: deleteField(),
+      deletedBy: deleteField(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `members/${memberId}`);
+  }
+}
+
+export async function getArchivedMembersFromFirestore(): Promise<TeamMember[]> {
+  try {
+    const archivedQuery = query(
+      collection(db, 'members'),
+      where('deleted', '==', true),
+    );
+    const snapshot = await getDocs(archivedQuery);
+    const archived: TeamMember[] = [];
+    snapshot.forEach((memberSnapshot) => {
+      try {
+        archived.push(parseTeamMember(memberSnapshot.data(), memberSnapshot.id));
+      } catch (error) {
+        if (error instanceof FirestoreDataValidationError) {
+          console.error(error.message, error.issues);
+        } else {
+          console.error('Unexpected archived member validation error:', error);
+        }
+      }
+    });
+    return archived;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'members?deleted=true');
   }
 }
 

@@ -43,12 +43,11 @@ service cloud.firestore {
         (score < 120 && status == 'Alarme');
     }
 
-    function validCriteriaScore(scores, key) {
-      return !(key in scores) ||
-        (scores[key] is number && scores[key] >= 0 && scores[key] <= 5);
-    }
-
     function validCriteriaScores(scores, requireAll) {
+      // NOTA: sem validacao por chave (0..5) — 31 chamadas estouravam o limite
+      // de 1000 expressoes do motor de rules (quota de producao). A integridade
+      // do CONJUNTO de chaves e garantida (hasOnly/hasAll); a faixa de valores
+      // e validada no cliente (zod) e, futuramente, na Cloud Function.
       return scores is map &&
         scores.keys().hasOnly([
           '1-0', '1-1', '1-2', '1-3', '1-4',
@@ -65,49 +64,22 @@ service cloud.firestore {
           '4-0', '4-1', '4-2', '4-3', '4-4',
           '5-0', '5-1', '5-2', '5-3', '5-4',
           '6-0', '6-1', '6-2', '6-3', '6-4', '6-5'
-        ])) &&
-        validCriteriaScore(scores, '1-0') && validCriteriaScore(scores, '1-1') &&
-        validCriteriaScore(scores, '1-2') && validCriteriaScore(scores, '1-3') &&
-        validCriteriaScore(scores, '1-4') && validCriteriaScore(scores, '2-0') &&
-        validCriteriaScore(scores, '2-1') && validCriteriaScore(scores, '2-2') &&
-        validCriteriaScore(scores, '2-3') && validCriteriaScore(scores, '2-4') &&
-        validCriteriaScore(scores, '3-0') && validCriteriaScore(scores, '3-1') &&
-        validCriteriaScore(scores, '3-2') && validCriteriaScore(scores, '3-3') &&
-        validCriteriaScore(scores, '3-4') && validCriteriaScore(scores, '4-0') &&
-        validCriteriaScore(scores, '4-1') && validCriteriaScore(scores, '4-2') &&
-        validCriteriaScore(scores, '4-3') && validCriteriaScore(scores, '4-4') &&
-        validCriteriaScore(scores, '5-0') && validCriteriaScore(scores, '5-1') &&
-        validCriteriaScore(scores, '5-2') && validCriteriaScore(scores, '5-3') &&
-        validCriteriaScore(scores, '5-4') && validCriteriaScore(scores, '6-0') &&
-        validCriteriaScore(scores, '6-1') && validCriteriaScore(scores, '6-2') &&
-        validCriteriaScore(scores, '6-3') && validCriteriaScore(scores, '6-4') &&
-        validCriteriaScore(scores, '6-5');
+        ]));
     }
 
-    function validHistoryEntry(entry) {
-      return entry is map &&
-        entry.keys().hasOnly(['month', 'score']) &&
-        ('month' in entry && entry.month is string && entry.month.size() > 0 && entry.month.size() <= 64) &&
-        ('score' in entry && entry.score is number && entry.score >= 0 && entry.score <= 155);
-    }
-
-    function validPdiGoal(goal) {
-      return goal is map &&
-        goal.keys().hasOnly(['id', 'title', 'deadline', 'status', 'description', 'dueDate']) &&
-        ('id' in goal && validId(goal.id)) &&
-        ('title' in goal && goal.title is string && goal.title.size() > 0 && goal.title.size() <= 200) &&
-        ('deadline' in goal && goal.deadline is string && goal.deadline.size() <= 100) &&
-        ('status' in goal && goal.status in ['pending', 'completed']) &&
-        (!('description' in goal) || (goal.description is string && goal.description.size() <= 1000)) &&
-        (!('dueDate' in goal) || (goal.dueDate is string && goal.dueDate.size() <= 64));
-    }
+    // NOTE: a linguagem de regras do Firestore NAO possui list.all()/any()
+    // (diferente do Cloud Storage). Validacao ELEMENTO a ELEMENTO de listas
+    // (history, pdiGoals) nao e expressavel em rules — cabe ao cliente (zod)
+    // e, para fechamento completo, a uma Cloud Function (saveEvaluation).
+    // Aqui garantimos apenas a forma top-level: lista + limite de tamanho.
 
     function validMember(data, memberId) {
       return data.keys().hasOnly([
           'id', 'name', 'role', 'team', 'teamColor', 'rank', 'previousRank',
           'score', 'maxScore', 'status', 'avatarUrl', 'evaluationStatus',
           'email', 'currentRating', 'history', 'pdiGoals',
-          'selfEvaluationScores', 'evaluationHistory', 'updatedAt'
+          'selfEvaluationScores', 'evaluationHistory', 'updatedAt',
+          'deleted', 'deletedAt', 'deletedBy'
         ]) &&
         data.keys().hasAll(['id', 'name', 'role', 'team', 'score', 'rank', 'maxScore', 'status', 'evaluationStatus']) &&
         data.id == memberId && validId(data.id) &&
@@ -124,11 +96,16 @@ service cloud.firestore {
         (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048 && (data.avatarUrl == '' || data.avatarUrl.matches('^https://.+')))) &&
         (!('email' in data) || (data.email is string && data.email.size() <= 254)) &&
         (!('currentRating' in data) || (data.currentRating is number && data.currentRating >= 0 && data.currentRating <= 5)) &&
-        (!('history' in data) || (data.history is list && data.history.size() <= 100 && data.history.all(validHistoryEntry))) &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50 && data.pdiGoals.all(validPdiGoal))) &&
+        (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
         (!('selfEvaluationScores' in data) || (data.selfEvaluationScores is map && data.selfEvaluationScores.keys().size() <= 31)) &&
         (!('evaluationHistory' in data) || (data.evaluationHistory is list && data.evaluationHistory.size() <= 100)) &&
-        (!('updatedAt' in data) || data.updatedAt is timestamp);
+        (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+        (!('deleted' in data) || data.deleted is bool) &&
+        (!('deletedAt' in data) || data.deletedAt is timestamp) &&
+        (!('deletedBy' in data) || (data.deletedBy is string && data.deletedBy.size() > 0 && data.deletedBy.size() <= 128)) &&
+        (!('deleted' in data) || data.deleted != true ||
+          (data.deletedAt is timestamp && data.deletedBy is string && data.deletedBy.size() > 0));
     }
 
     function validLeaderEvaluationUpdate(data, memberId) {
@@ -140,8 +117,8 @@ service cloud.firestore {
         data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
         validStatusForScore(data.score, data.status) &&
         data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50 && data.pdiGoals.all(validPdiGoal))) &&
-        (!('history' in data) || (data.history is list && data.history.size() <= 100 && data.history.all(validHistoryEntry))) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
+        (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
         (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
@@ -164,7 +141,7 @@ service cloud.firestore {
         validCriteriaScores(data.criteriaScores, true) &&
         (!('memberName' in data) || (data.memberName is string && data.memberName.size() <= 100)) &&
         (!('leaderName' in data) || (data.leaderName is string && data.leaderName.size() <= 100)) &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50 && data.pdiGoals.all(validPdiGoal))) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
         (!('selfScores' in data) || (data.selfScores is map && data.selfScores.keys().size() <= 31)) &&
         (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('updatedAt' in data) || data.updatedAt is timestamp);

@@ -1,114 +1,165 @@
 # Auditoria de Riscos — Gente Digital
 
-Data: 2026-08-20 · Projeto: `gen-lang-client-0169317507` · Banco Firestore nomeado: `ai-studio-gentedigital-...` · Hash auditado: `d05ef56`
+Data: 2026-08-20 (rev. 2, pós-testes do emulador) · Projeto: `gen-lang-client-0169317507` · Banco Firestore nomeado: `ai-studio-gentedigital-...`
 
 > Este documento foca em **o que pode dar errado** (visão de risco operacional,
-> de segurança residual e de produto). Os achados de código já corrigidos nesta
-> rodada estão listados na seção final e no histórico do repositório.
+> de segurança residual e de produto). A rev. 2 incorpora a validação das Rules
+> pelo Firebase Emulator Suite com testes automatizados — que pegou **dois bugs
+> de produção** que a revisão manual não viu — e o soft-delete de membros.
 
 ---
 
-## 1. Resumo executivo
+## 1. O que o emulador já pegou (e por que testes automatizados são obrigatórios)
 
-O sistema tem base de segurança **boa para o porte atual** (Rules fail-closed,
-roles via custom claims, verificação de e-mail como gate, transações com
-controle de revisão). Após as correções desta rodada, **não há vulnerabilidade
-crítica conhecida explorável remotamente sem credencial válida**.
+Ao rodar `firestore.rules` contra o Firestore Emulator com 49 testes
+(`npm run test:rules`, emulador real, `@firebase/rules-unit-testing`), dois
+achados sérios apareceram **que a revisão manual não detectaria**:
 
-Os riscos mais relevantes que permanecem **não são bugs** — são decisões de
-operação, produto e conformidade:
+1. **`list.all()` não existe na linguagem de rules do Firestore** (existe só no
+   Cloud Storage). A correção A-01 usava `history.all(...)`/`pdiGoals.all(...)` —
+   a regra "carrega", mas **toda escrita de membro falharia em produção** com
+   `Function not found error: Name: [all]`. Regra corrigida para validação
+   estrutural (lista + limite de tamanho).
+2. **Orçamento de 1.000 expressões por request** (quota real de produção,
+   documentada em firebase.google.com/docs/firestore/quotas). O `validEvaluation`
+   original — com `hasOnly`/`hasAll` de 31 chaves + 31 chamadas por critério —
+   estourava o limite em **toda criação/atualização de avaliação**, mesmo para
+   líder legítimo. Ou seja: **salvar avaliação provavelmente nunca funcionou em
+   produção**. Corrigido removendo as 31 chamadas por chave (a integridade do
+   conjunto de chaves é mantida com `hasOnly`+`hasAll`; a faixa 0..5 passou a
+   ser validada apenas no cliente zod — ver seção 5).
 
-1. **Insider com conta de líder comprometida** → acesso a PII de todos os membros + escrita de avaliações (sem MFA, sem App Check, sem segregação por time).
-2. **Perda irreversível de dados** → exclusão de membro apaga avaliações em cascata e não há backup automatizado nem soft-delete.
-3. **Retenção de dados pessoais sem política** → `auditLogs` é imutável e nunca é expurgado (LGPD/anonimização).
-4. **Gamificação invisível para o colaborador** (P-01) → risco de produto: o reforço de comportamento não acontece.
-5. **Publicação manual das Rules** → uma alteração errada em `firestore.rules` derruba o app em produção sem barreira de CI.
-
-Nenhum desses riscos impede a operação atual, mas todos exigem ação deliberada (operacional ou de produto), detalhada na seção 7.
+Isso confirma o ponto levantado na revisão: **revisão manual de rules não é
+suficiente**. Desde a rev. 2, as rules são testadas automaticamente no CI
+(job `firestore-rules`, com `actions/setup-java` Temurin 21).
 
 ---
 
-## 2. Matriz de risco
+## 2. Matriz de risco (rev. 2)
 
 Legenda: Prob. = probabilidade (A/M/B), Imp. = impacto (A/M/B), Sev. = severidade geral (Crit./Alto/Médio/Baixo).
 
 | # | Risco | Prob. | Imp. | Sev. | Mitigação existente | Gap |
 |---|-------|-------|------|------|---------------------|-----|
 | R1 | Conta de líder comprometida lê PII de todos e grava avaliações | M | A | **Alto** | Rules exigem login+email verificado; líder não apaga/exclui | Sem MFA; líder vê todos os times; sem App Check |
-| R2 | Exclusão acidental de membro apaga avaliações e histórico | M | A | **Alto** | `onMemberDeleted` limpa avaliações (intencional); confirm modal | Sem soft-delete, sem backup automatizado do Firestore |
-| R3 | Retenção indefinida de PII em `auditLogs`/membros (LGPD) | M | M | **Médio** | Nada expurga registros | Sem política de retenção/deleção; dados pessoais eternos |
-| R4 | Regra do Firestore publicada com erro derruba o app em produção | M | A | **Alto** | Regras são fail-closed | Publicação manual; emulador não roda no CI (sem Java) |
-| R5 | `TEAMS_WEBHOOK_URL` ausente deixa alertas silenciosos | A | B | **Baixo** | Trigger faz skip+log se ausente | Ninguém é notificado de queda de status até configurar |
-| R6 | Abuso de escrita por cliente headless (sem App Check) | B | M | **Médio** | Rules validam shape/campos | Qualquer um com config pública pode gravar docs válidos |
-| R7 | CSP quebra recursos do app (imagens/estilos) em produção | B | M | **Médio** | CSP restritivo adicionado | Precisa validar no deploy real (emulador não cobre hosting) |
-| R8 | Dependências transitivas do `functions` (7 moderadas no audit) | A | B | **Baixo** | `npm audit` no CI (fail ≥ high) | Moderadas não bloqueiam; atualizar quando possível |
-| R9 | Escala: subscriptions de coleção inteira + bundle pesado (recharts) | B | M | **Médio** | Escala atual é pequena (dezenas de membros) | `onSnapshot` de `members` inteiro; bundle ~104KB gzip só recharts |
-| R10 | Gamificação não chega ao colaborador (P-01 não implementado) | A | M | **Médio** | Kiosk TV + badges para líder | Sem login/visão do colaborador; tese do produto não opera |
+| R2 | Exclusão de membro apaga histórico irreversivelmente | B | A | **Médio** | **Soft-delete (rev. 2): arquivo reversível + restauração admin** | Purge definitivo existe fora do app (console); backup diário ainda recomendado |
+| R3 | Retenção indefinida de PII em `auditLogs`/membros (LGPD) | M | M | **Médio** | Nada expurga registros | Sem política de retenção/deleção |
+| R4 | Regra do Firestore publicada com erro derruba escritas em produção | M | A | **Baixo→Médio** | **49 testes no emulador + CI (rev. 2)**; deploy automático em main via `ENABLE_DEPLOY` | Falha residual só se deploy manual fora do CI |
+| R5 | `TEAMS_WEBHOOK_URL` ausente deixa alertas silenciosos | A | B | **Baixo** | Trigger faz skip+log se ausente | Ninguém é notificado até configurar |
+| R6 | Abuso de escrita por cliente headless (sem App Check) | B | M | **Médio** | Rules validam shape/campos; zod no cliente | Config pública; App Check recomendado (reCAPTCHA v3, grátis) |
+| R7 | CSP quebra recursos do app (imagens/estilos) em produção | B | M | **Médio** | CSP restritivo adicionado | Validar no deploy real |
+| R8 | Dependências transitivas do `functions` (moderadas) | A | B | **Baixo** | `npm audit` no CI (fail ≥ high) | Moderadas não bloqueiam |
+| R9 | Escala: subscriptions de coleção inteira + bundle pesado (recharts) | B | M | **Médio** | Escala atual pequena | `onSnapshot` de `members` inteiro; bundle ~104KB gzip só recharts |
+| R10 | Gamificação não chega ao colaborador (P-01 não implementado) | A | M | **Médio** | Kiosk TV + badges para líder | Sem login/visão do colaborador |
 | R11 | Alteração de claims fora das Functions (console/scripts) | B | M | **Médio** | Functions protegem self/último-admin | Console Auth pode remover role do último admin manualmente |
-| R12 | Sem ambiente de staging/monitoramento de erros | M | M | **Médio** | CI roda lint+test+build | Sem pre-prod, sem alertas de erro de Functions |
+| R12 | Sem ambiente de staging/monitoramento de erros | M | M | **Médio** | CI roda lint+test+build+rules | Sem pre-prod, sem alertas de erro de Functions |
 
 ---
 
 ## 3. Segurança e acesso (residual)
 
-- **R1 — Conta de líder = superfície ampla.** Todos os líderes leem `members` completo (nomes, e-mails, scores) de todos os times e gravam avaliações. Uma credencial comprometida (sem MFA) permite alterar avaliações de qualquer pessoa e expor PII. Ação recomendada: **exigir MFA para usuários com role**; avaliar filtrar leitura por time no líder (`team == request.auth.token.team`).
-- **R6 — App Check ausente.** A config do Firebase é pública por natureza (web). Sem App Check, um cliente scriptado com a config pode gravar documentos que respeitem as Rules (ex.: uma avaliação com shape válido e revision correta). Impacto limitado pela lógica de revisão/transação, mas vale habilitar App Check (reCAPTCHA) na escrita.
-- **R11 — Bypass administrativo.** O console Firebase Auth e o `manage-roles.mjs` (IAM/gcloud) podem remover a role do último admin, travando o bootstrap futuro. As Functions estão protegidas; os caminhos diretos não. Ação: processo/documento alertando; auditoria periódica de claims.
-- **Positivo já validado:** Rules fail-closed em `/{document=**}`; `email_verified` obrigatório; `hasOnly`/`affectedKeys` impedem mass assignment; claims não são autoatribuíveis; senhas nunca mais em argumento CLI.
+- **R1 — Conta de líder = superfície ampla.** Todos os líderes leem `members`
+  completo (nomes, e-mails, scores) de todos os times e gravam avaliações. Uma
+  credencial comprometida (sem MFA) permite alterar avaliações de qualquer
+  pessoa e expor PII. Ação recomendada: **MFA para contas com role**; avaliar
+  filtrar leitura por time (`team == request.auth.token.team`).
+- **R6 — App Check ausente.** A config do Firebase é pública por natureza.
+  Sem App Check, um cliente scriptado pode gravar documentos que respeitem as
+  Rules. Impacto limitado por shape-strict nas rules + zod; vale habilitar App
+  Check (reCAPTCHA v3, gratuito) nas escritas.
+- **R11 — Bypass administrativo.** Console Firebase Auth e `manage-roles.mjs`
+  podem remover a role do último admin. As Functions estão protegidas; os
+  caminhos diretos não.
+- **Positivo:** rules fail-closed; `email_verified` obrigatório;
+  `hasOnly`/`affectedKeys` impedem mass assignment; claims não são
+  autoatribuíveis; senhas nunca em argumento CLI.
 
 ## 4. Integridade e disponibilidade de dados
 
-- **R2 — Sem backup.** Não há exportação agendada do Firestore para GCS nem soft-delete de membros. A exclusão em cascata (`onMemberDeleted`) é intencional, mas irreversível. Ação: configurar **backup diário automático do Firestore** (Cloud Scheduler + export) e definir janela de recuperação.
-- **Concorrência controlada:** transação + `revision` evitam sobrescrita perdida; após conflito o app agora recarrega automaticamente (fix M-09). Resíduo: offline persistence (`persistentLocalCache`) permite editar com dados velhos — o conflito na hora do save já protege.
-- **Mudança de schema:** `firestore.rules` e Zod evoluem juntos (times, status, dueDate). Regra prática: alterar ambos no mesmo PR e **publicar rules e funções no mesmo deploy** para não quebrar clientes antigos.
+- **R2 — Soft-delete implementado (rev. 2).** `deleteMemberFromFirestore` agora
+  **arquiva** (marca `deleted: true` + `deletedAt` + `deletedBy`); o histórico
+  de avaliações é preservado; listas filtram arquivados; admin restaura pela
+  seção "Membros Arquivados" na Trilha de Auditoria. Regras validadas no
+  emulador (arquivar/restaurar/negar líder). **Resíduo:** exclusão definitiva
+  (purge) continua possível via console Firestore; backup diário do banco
+  continua recomendado (erro de operador ou regra mal publicada ainda pode
+  causar perda).
+- **Concorrência:** transação + `revision` evitam sobrescrita perdida; conflito
+  recarrega a avaliação (M-09).
+- **Limite de expressões:** rules agora ficam folgadas do orçamento de 1.000;
+  os 49 testes cobrem os caminhos de escrita mais caros.
 
-## 5. Continuidade operacional
+## 5. Limitação técnica documentada (rules + listas)
 
-- **R4 — Publicação manual de Rules.** Sem Java no ambiente não dá para validar `firestore.rules` no emulador localmente; o CI não cobre rules. Ação: adicionar no CI um job que rode `firebase emulators:exec` (imagem com Java) apenas no deploy, ou um `rules-unit-testing` mínimo; no mínimo, checklist manual antes de `firebase deploy --only firestore`.
-- **R5 — Webhook Teams.** O trigger `onMemberStatusChanged` só notifica se `TEAMS_WEBHOOK_URL` estiver em `functions/.env`. Sem isso, as quedas continuam silenciosas. Ação: criar o webhook do Teams e publicar o parâmetro.
-- **R12 — Sem staging/monitoramento.** O app aponta direto para produção. Recomenda-se: ambiente de staging separado (ou ao menos testar com emulador), e alertas de erro no Firebase Console/Cloud Monitoring (functions > errors).
+A linguagem de rules do Firestore **não permite validação elemento a elemento
+de listas** (não há `all()`/`any()` nem indexação; `list.all` não existe —
+provado no emulador). Portanto:
 
-## 6. Privacidade e conformidade (LGPD)
+- `history` e `pdiGoals`: rules garantem **lista + limite de tamanho** (50/100).
+  A integridade dos elementos é garantida **no cliente** (schemas zod estritos,
+  sem `.passthrough()`).
+- `criteriaScores`: rules garantem o **conjunto exato de chaves** (31);
+  a faixa de valores 0..5 é garantida **no cliente** (zod).
+- Os testes de rules incluem casos que **documentam a limitação** (escrita de
+  elemento malformado passa na regra), para que a lacuna não seja esquecida.
 
-- **R3 — Retenção eterna de PII.** `auditLogs` guarda `memberName`, `actorEmail` e nunca é expurgado; `members` guarda e-mails. Para um ISP brasileiro tratando dados de colaboradores, convém: (a) política de retenção definida (ex.: expurgar auditLogs > X anos); (b) fluxo de "esquecer" o colaborador (anonimizar nome/e-mail ao excluir); (c) registrar base legal do processamento. As Rules já restringem leitura a admin para auditLogs — bom, mas não resolve retenção.
-- PII fica em `us-central` (padrão do projeto) — documentar a região no DPA.
+**Fechamento definitivo (recomendado, decisão pendente):** migrar o save de
+avaliação para uma **Cloud Function callable** (`saveEvaluation`) que valide
+tudo com zod no servidor; as regras então negam escrita direta de
+`history`/`pdiGoals`/`criteriaScores` por clientes. Custo: o fluxo de save
+passa a depender de functions deployadas (hoje o app funciona sem elas) e há
+trabalho de refactor (função + cliente + testes + regras).
 
-## 7. O que precisa de ação EXTERNA (não é bug, é operação/produto)
+## 6. Continuidade operacional
+
+- **R4 — Resolvido em grande parte (rev. 2).** Rules testadas no emulador no CI
+  (`firestore-rules` job, Java via setup-java) e deploy em `main` via
+  `firebase deploy --only hosting,firestore,functions` quando
+  `vars.ENABLE_DEPLOY == 'true'`. O gate continua existindo **por motivo
+  explícito**: o secret `FIREBASE_SERVICE_ACCOUNT` e a role de IAM ainda não
+  foram configurados no GitHub; sem eles o deploy falharia. Até lá, o deploy
+  manual (`firebase deploy --only firestore:<database>`) é o caminho.
+- **R5 — Webhook Teams.** O trigger só notifica se `TEAMS_WEBHOOK_URL` estiver
+  em `functions/.env`. Criar o webhook do Teams e publicar o parâmetro.
+- **R12 — Sem staging/monitoramento.** Alertas de erro de Functions no console.
+
+## 7. Privacidade e conformidade (LGPD)
+
+- **R3 — Retenção eterna de PII.** `auditLogs` guarda `memberName`/`actorEmail`
+  e nunca é expurgado; `members` guarda e-mails. Recomenda-se: política de
+  retenção (expurgar auditLogs antigos), fluxo de anonimização ao excluir, e
+  região de dados documentada (`us-central`).
+- Soft-delete ajuda: um "esquecimento" pode começar pelo arquivamento +
+  anonimização, mantendo apenas o mínimo para integridade do histórico.
+
+## 8. O que precisa de ação EXTERNA (operação/produto)
 
 | Prioridade | Ação | Onde/Como |
 |---|---|---|
-| Alta | Publicar Rules e Functions após este PR | `firebase deploy --only firestore:ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93` e `firebase deploy --only functions` (com `functions/.env` com `BOOTSTRAP_ADMIN_EMAIL` e opcionalmente `TEAMS_WEBHOOK_URL`) |
-| Alta | Publicar Hosting (o `dist/` já foi buildado) e validar CSP em produção | `firebase deploy --only hosting`; testar avatares, fontes, gráficos |
+| Alta | Publicar Rules e Functions (este PR contém correções que afetam produção) | `firebase deploy --only firestore:ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93` e `firebase deploy --only functions` (com `functions/.env`: `BOOTSTRAP_ADMIN_EMAIL`, opcional `TEAMS_WEBHOOK_URL`) |
+| Alta | Publicar Hosting (`dist/` já buildado) e validar CSP | `firebase deploy --only hosting`; testar avatares, fontes, gráficos |
 | Média | Habilitar deploy no CI | Variável `ENABLE_DEPLOY=true` + secret `FIREBASE_SERVICE_ACCOUNT` no GitHub |
 | Média | Backup diário do Firestore | Cloud Scheduler → export para GCS |
-| Média | MFA obrigatório para contas com role | Console Firebase Auth (configuração de MFA) + revisão de política |
-| Média | App Check nas escritas | Firebase Console → App Check → reCAPTCHA |
-| Média | P-01: visão do colaborador (login próprio + `linkedUid` + rule de self-read) | Decisão de produto; implica revisão de segurança da regra de leitura individual (epopeia separada) |
-| Baixa | Teste em iPhone real do PWA (ícones SVG vs PNG + apple-touch-icon) | Gerar PNGs 192/512/180 e atualizar manifest/index.html |
+| Média | MFA obrigatório para contas com role | Console Firebase Auth |
+| Média | App Check nas escritas | Firebase Console → App Check → reCAPTCHA v3 |
+| Média | Decidir sobre `saveEvaluation` como callable (fechar lacuna de elementos das listas) | Epopeia separada; requer aprovação (muda arquitetura de escrita) |
+| Média | P-01: visão do colaborador (`linkedUid` + rule de self-read, **sem usar e-mail como chave** — UID não muda) | Decisão de produto; revisão de segurança da regra |
+| Baixa | Teste do PWA em iPhone real (ícones PNG + apple-touch-icon) | Gerar PNGs 192/512/180 e atualizar manifest/index.html |
 
-## 8. O que foi CORRIGIDO e validado nesta rodada (commit `d05ef56`)
+## 9. O que foi CORRIGIDO e validado nesta rodada (rev. 2)
 
-- **A-01** Rules: validação por elemento de `history` e `pdiGoals` (`validHistoryEntry`/`validPdiGoal`) — líder não corrompe mais o doc.
-- **A-02** Rules: `cycle` imutável em update de avaliação — unicidade membro/ciclo preservada.
-- **M-01/M-02** `manage-roles.mjs`: role obrigatória em `create-user`; remoção do `emailVerified: true` forçado.
-- **M-06** `setUserRole`: impede auto-remoção e remoção do último admin.
-- **M-07** Zod: `.passthrough()` → strip (campos extras deixam de ser propagados em reescrita).
-- **M-08** CSP restritivo no Hosting.
-- **M-09** Conflito de revisão recarrega a avaliação automaticamente.
-- **M-10** Erros do Firestore tipados (`FirestoreOperationError` com code/operationType/path).
-- **M-03** CI/CD: lint+test+build+audit (app e functions) + deploy opcional de hosting.
-- **M-05** Testes dos handlers: 18 novos casos (auth, roles, bootstrap, webhook) → total 26 testes em functions, 21 no app.
-- **L-03/L-05/L-06/L-11** badge growth, e-mail não fabricado, senha via prompt, leaderName truncado.
-- **P-02** Tela "Trilha de Auditoria" (admin) lendo `auditLogs`.
-- **P-03** Trigger `onMemberStatusChanged` + webhook Teams.
-- **P-04** PDI com `dueDate` e selo "Vencida".
-- **P-06** Slide de reconhecimento ("quem subiu de nível") no Kiosk.
-- **L-01/L-02** `metadata.json` e `firebase-blueprint.json` atualizados; runbook revisado.
+- **Rules testadas automaticamente** no Firestore Emulator (49 testes, `npm run test:rules`) — validação de auth, roles, membros, evaluations, auditLogs, soft-delete e wildcard.
+- **Fix do `list.all()`** (inexistente em rules) — escritas de membro voltam a funcionar.
+- **Fix do orçamento de 1.000 expressões** em `validEvaluation`/`validCriteriaScores` — salvar avaliação passa a funcionar.
+- **Soft-delete de membros:** arquivar em vez de excluir; restauração admin na Trilha de Auditoria; regras + tipos + schemas + testes.
+- **CI:** novo job `firestore-rules` (setup-java Temurin 21) e deploy de `hosting,firestore,functions` em main (gate `ENABLE_DEPLOY`).
+- **Java local:** JDK 21 Temurin portátil em `%LOCALAPPDATA%\Temp\opencode\jdk` (resolver o obstáculo do emulador; CI usa setup-java).
 
-Validação executada: `lint` (tsc --noEmit) OK na raiz e em functions; `npm test` 21/21 na raiz e 26/26 em functions; `npm run build` OK. **Nota:** as Rules não foram validadas no emulador (Java ausente) — revisão manual feita; publicar e testar em produção.
+Validação executada (rev. 2): `npm run lint` OK (raiz e functions); `npm test` 21/21 (raiz) e 26/26 (functions); `npm run build` OK; `npm run test:rules` 49/49 no emulador.
 
-## 9. Riscos aceitos conscientemente
+## 10. Riscos aceitos conscientemente
 
-- Sobreposição de leader/admin ver todas as PII (aceito enquanto a equipe é pequena e de confiança).
-- Falta de staging (aceito pelo porte; CI cobre regressão de build/teste).
-- Dependências moderadas do `functions` (aceitas; fail no CI apenas para high/critical).
+- Validação de elementos de `history`/`pdiGoals`/faixa de `criteriaScores` apenas no cliente zod (até a decisão do callable `saveEvaluation`).
+- Sobreposição de leader/admin ver todas as PII (equipe pequena e de confiança).
+- Falta de staging (porte do projeto; CI cobre regressão).
+- Dependências moderadas do `functions` (fail no CI apenas para high/critical).

@@ -5,6 +5,7 @@ import {
   updateMemberInFirestore,
   addMemberToFirestore,
   deleteMemberFromFirestore,
+  restoreMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
   logoutLeader,
   isEvaluationConflictError,
@@ -160,9 +161,18 @@ export default function App() {
       await deleteMemberFromFirestore(memberId);
       setMembers((previous) => rankMembers(previous.filter((member) => member.id !== memberId)));
       setSelectedEvaluationMember((selected) => selected?.id === memberId ? null : selected);
-      toast.info(`Colaborador ${target?.name || ''} removido.`);
+      toast.info(`Colaborador ${target?.name || ''} arquivado (pode ser restaurado na Trilha de Auditoria).`);
     } catch {
-      toast.error('Não foi possível remover o colaborador.');
+      toast.error('Não foi possível arquivar o colaborador.');
+    }
+  };
+
+  const handleRestoreMember = async (memberId: string) => {
+    try {
+      await restoreMemberFromFirestore(memberId);
+      toast.success('Colaborador restaurado.');
+    } catch {
+      toast.error('Não foi possível restaurar o colaborador.');
     }
   };
 
@@ -284,7 +294,7 @@ export default function App() {
           />
         )}
         {activeTab === 'audit' && authRole === 'admin' && (
-          <AuditLogsView members={members} />
+          <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
         )}
       </main>
     </>

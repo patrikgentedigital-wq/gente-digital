@@ -1,9 +1,9 @@
 import React from 'react';
-import { Lock, Trophy, BarChart3, Users, Tv, UserPlus } from 'lucide-react';
+import { Lock, Trophy, BarChart3, Users, Tv, UserPlus, ShieldCheck } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'ranking' | 'dashboard' | 'teams' | 'leader';
-  setActiveTab: (tab: 'ranking' | 'dashboard' | 'teams' | 'leader') => void;
+  activeTab: 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit';
+  setActiveTab: (tab: 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit') => void;
   onOpenLeaderModal: () => void;
   onOpenKioskMode?: () => void;
   onOpenMemberForm?: () => void;
@@ -159,6 +159,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Lock className="w-3.5 h-3.5" />
             <span>Avaliar Integrantes</span>
           </button>
+
+          {role === 'admin' && (
+            <button
+              type="button"
+              aria-current={activeTab === 'audit' ? 'page' : undefined}
+              onClick={() => setActiveTab('audit')}
+              className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === 'audit'
+                  ? 'bg-[#E3A73B] text-[#1a1200] font-bold shadow-md'
+                  : 'text-[#A9B7CE] hover:text-white hover:bg-[#0F1E38]'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Trilha de Auditoria</span>
+            </button>
+          )}
         </nav>
       </div>
     </header>

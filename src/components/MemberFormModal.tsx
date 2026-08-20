@@ -80,7 +80,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       status,
       avatarUrl: avatarUrl.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
       evaluationStatus: memberToEdit?.evaluationStatus || 'Pendente',
-      email: email.trim() || `${name.trim().toLowerCase().replace(/\s+/g, '.')}@gentedigital.com.br`,
+      email: email.trim(),
       pdiGoals: memberToEdit?.pdiGoals || [],
       history: memberToEdit?.history || [],
     };

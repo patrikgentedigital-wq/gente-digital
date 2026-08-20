@@ -35,6 +35,7 @@ import {
   getDefaultEvaluationCycle,
   getEvaluationCycles,
   hasCompleteCriteriaScores,
+  isPdiGoalOverdue,
   normalizeCriteriaScores,
 } from '../lib/evaluation';
 
@@ -98,10 +99,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [pdiGoals, setPdiGoals] = useState<PdiGoal[]>([]);
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [newGoalDeadline, setNewGoalDeadline] = useState('');
+  const [newGoalDueDate, setNewGoalDueDate] = useState('');
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
   const [evaluationRevision, setEvaluationRevision] = useState(0);
   const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const runOrConfirmDiscard = (action: () => void) => {
     if (isDirty) {
@@ -157,7 +160,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cycle, memberId, onLoadEvaluation]);
+  }, [cycle, memberId, onLoadEvaluation, reloadToken]);
+
+  const reloadEvaluation = () => {
+    setReloadToken((token) => token + 1);
+  };
 
 
   const toggleCategory = (catId: number) => {
@@ -208,18 +215,24 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       toast.error('Reduza o tamanho do título ou prazo da meta.');
       return;
     }
+    if (newGoalDueDate && !/^\d{4}-\d{2}-\d{2}$/.test(newGoalDueDate)) {
+      toast.error('Informe a data de vencimento no formato correto.');
+      return;
+    }
 
     const newGoal: PdiGoal = {
       id: `pdi_${crypto.randomUUID()}`,
       title: newGoalTitle.trim(),
       deadline: newGoalDeadline || 'Próximo Ciclo',
       status: 'pending',
+      ...(newGoalDueDate ? { dueDate: newGoalDueDate } : {}),
     };
 
     setIsDirty(true);
     setPdiGoals((prev) => [...prev, newGoal]);
     setNewGoalTitle('');
     setNewGoalDeadline('');
+    setNewGoalDueDate('');
     setShowAddGoal(false);
     toast.info('Meta do PDI adicionada.');
   };
@@ -266,7 +279,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
         'Avaliação Concluída'
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === 'evaluation-conflict') {
+        toast.info('Conflito detectado. Carregando a versão mais recente da avaliação...');
+        reloadEvaluation();
+        return;
+      }
       // The parent reports persistence errors and keeps the draft in memory.
     }
   };
@@ -534,7 +552,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
         {showAddGoal && (
           <form onSubmit={handleAddGoal} className="bg-[#14294A] p-3 rounded-xl border border-[#22365C] mb-4 space-y-3 animate-in fade-in">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
               <div className="sm:col-span-2">
                 <input
                   type="text"
@@ -553,6 +571,15 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   onChange={(e) => setNewGoalDeadline(e.target.value)}
                   placeholder="Prazo (Ex: 30 dias)"
                   maxLength={100}
+                  className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4fb579]"
+                />
+              </div>
+              <div>
+                <input
+                  type="date"
+                  value={newGoalDueDate}
+                  onChange={(e) => setNewGoalDueDate(e.target.value)}
+                  title="Data de vencimento"
                   className="w-full bg-[#0F1E38] border border-[#22365C] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4fb579]"
                 />
               </div>
@@ -608,6 +635,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
+                  {isPdiGoalOverdue(g) && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#ffb4c0] bg-[#3A1620] border border-[#e2687a]/40 px-2 py-0.5 rounded">
+                      Vencida
+                    </span>
+                  )}
                   <span className="text-[11px] font-mono text-[#A9B7CE] bg-[#14294A] px-2 py-0.5 rounded border border-[#22365C]">
                     {g.deadline}
                   </span>

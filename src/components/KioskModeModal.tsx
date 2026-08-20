@@ -53,7 +53,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   useEffect(() => {
     if (!isOpen || !isPlaying) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 3);
+      setCurrentSlide((prev) => (prev + 1) % 4);
     }, 10000);
     return () => clearInterval(interval);
   }, [isOpen, isPlaying]);
@@ -71,6 +71,16 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   const growthLeaders = sortedMembers
     .filter((m) => m.previousRank && m.previousRank > m.rank)
     .sort((a, b) => (b.previousRank! - b.rank) - (a.previousRank! - a.rank))
+    .slice(0, 6);
+
+  // Level-up recognition (members who improved vs previous cycle)
+  const levelUpLeaders = sortedMembers
+    .filter((m) => m.history && m.history.length > 0 && m.score > m.history[m.history.length - 1].score)
+    .sort((a, b) => {
+      const aDelta = a.score - (a.history?.[a.history.length - 1].score ?? 0);
+      const bDelta = b.score - (b.history?.[b.history.length - 1].score ?? 0);
+      return bDelta - aDelta;
+    })
     .slice(0, 6);
 
   // Teams summary calculations
@@ -126,7 +136,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 bg-[#0F1E38] px-3 py-1.5 rounded-xl border border-[#22365C]">
             <button
-              onClick={() => setCurrentSlide((prev) => (prev === 0 ? 2 : prev - 1))}
+              onClick={() => setCurrentSlide((prev) => (prev === 0 ? 3 : prev - 1))}
               className="p-1 text-[#A9B7CE] hover:text-white transition-colors cursor-pointer"
               title="Slide anterior"
             >
@@ -140,14 +150,14 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
             <button
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % 3)}
+              onClick={() => setCurrentSlide((prev) => (prev + 1) % 4)}
               className="p-1 text-[#A9B7CE] hover:text-white transition-colors cursor-pointer"
               title="Próximo slide"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
             <div className="flex gap-1.5 ml-2">
-              {[0, 1, 2].map((idx) => (
+              {[0, 1, 2, 3].map((idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
@@ -364,6 +374,51 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+          {/* SLIDE 3: RECONHECIMENTO — SUBIU DE NÍVEL */}
+        {currentSlide === 3 && (
+          <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 bg-[#E3A73B]/10 text-[#E3A73B] px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-[#E3A73B]/20 mb-2">
+                <Sparkles className="w-3.5 h-3.5" /> Reconhecimento do Ciclo
+              </div>
+              <h2 className="text-3xl font-display font-black text-white">Parabéns, quem subiu de nível!</h2>
+              <p className="text-sm text-[#A9B7CE] mt-1">Colaboradores que elevaram a pontuação em relação ao ciclo anterior</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto w-full pt-4">
+              {levelUpLeaders.map((m) => {
+                const prevScore = m.history?.[m.history.length - 1]?.score ?? m.score;
+                const delta = m.score - prevScore;
+                return (
+                  <div
+                    key={m.id}
+                    className="bg-[#0F1E38] border border-[#E3A73B]/40 hover:border-[#E3A73B] rounded-2xl p-5 flex items-center gap-4 shadow-xl transition-all"
+                  >
+                    <div className="relative">
+                      <img src={m.avatarUrl} alt={m.name} className="w-16 h-16 rounded-2xl object-cover border border-[#E3A73B]/40" />
+                      <div className="absolute -bottom-2 -right-2 bg-[#3A2A10] border border-[#E3A73B]/50 text-[#E3A73B] font-mono font-bold text-xs px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
+                        <Zap className="w-3 h-3" />
+                        <span>+{delta}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-white text-base truncate">{m.name}</h4>
+                      <p className="text-xs text-[#A9B7CE] truncate">{m.role} • Time {m.team}</p>
+                      <div className="flex items-center gap-3 mt-2 font-mono text-xs">
+                        <span className="text-[#6C7C99]">Nível: <strong className={m.score > 140 ? 'text-[#4fb579]' : 'text-white'}>{m.status}</strong></span>
+                        <span className="text-[#E3A73B] font-bold">{m.score} pts</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {levelUpLeaders.length === 0 && (
+              <p className="text-center text-sm text-[#6C7C99]">Ainda não há evoluções registradas neste ciclo.</p>
+            )}
           </div>
         )}
           </>

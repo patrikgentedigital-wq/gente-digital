@@ -20,6 +20,7 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -113,6 +114,7 @@ export interface FirestoreErrorInfo {
   error: string;
   operationType: string;
   path: string | null;
+  code: string | null;
   authInfo: {
     userId?: string | null;
   };
@@ -129,18 +131,41 @@ export class EvaluationConflictError extends Error {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: string, path: string | null): never {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-    },
-    operationType,
-    path,
-  };
+export class FirestoreOperationError extends Error {
+  public readonly error: string;
+  public readonly operationType: string;
+  public readonly path: string | null;
+  public readonly code: string | null;
+  public readonly authInfo: { userId?: string | null };
 
-  console.error('Firestore error:', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  constructor(error: unknown, operationType: string, path: string | null) {
+    const message = error instanceof Error ? error.message : String(error);
+    super(message);
+    this.name = 'FirestoreOperationError';
+    this.error = message;
+    this.operationType = operationType;
+    this.path = path;
+    this.code = error instanceof Error && 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+      ? (error as { code: string }).code
+      : null;
+    this.authInfo = { userId: auth.currentUser?.uid };
+  }
+
+  toInfo(): FirestoreErrorInfo {
+    return {
+      error: this.error,
+      operationType: this.operationType,
+      path: this.path,
+      code: this.code,
+      authInfo: this.authInfo,
+    };
+  }
+}
+
+export function handleFirestoreError(error: unknown, operationType: string, path: string | null): never {
+  const err = new FirestoreOperationError(error, operationType, path);
+  console.error('Firestore error:', JSON.stringify(err.toInfo()));
+  throw err;
 }
 
 export function subscribeToMembers(
@@ -233,6 +258,50 @@ export async function getEvaluationFromFirestore(evaluationId: string): Promise<
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, `evaluations/${evaluationId}`);
   }
+}
+
+export function subscribeToAuditLogs(
+  onData: (logs: EvaluationAuditLog[]) => void,
+  onError?: (error: unknown) => void,
+  maxResults = 200,
+) {
+  const logsRef = collection(db, 'auditLogs');
+  const logsQuery = query(logsRef, orderBy('createdAt', 'desc'), limit(maxResults));
+
+  return onSnapshot(
+    logsQuery,
+    (snapshot) => {
+      const logs: EvaluationAuditLog[] = [];
+      snapshot.forEach((logSnapshot) => {
+        const data = logSnapshot.data();
+        logs.push({
+          id: logSnapshot.id,
+          action: 'evaluation_saved',
+          evaluationId: typeof data.evaluationId === 'string' ? data.evaluationId : '',
+          memberId: typeof data.memberId === 'string' ? data.memberId : '',
+          memberName: typeof data.memberName === 'string' ? data.memberName : '',
+          cycle: typeof data.cycle === 'string' ? data.cycle : '',
+          revision: typeof data.revision === 'number' ? data.revision : 0,
+          score: typeof data.score === 'number' ? data.score : 0,
+          status: (['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] as const).includes(data.status)
+            ? data.status
+            : 'Atenção',
+          previousScore: typeof data.previousScore === 'number' ? data.previousScore : undefined,
+          previousStatus: (['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] as const).includes(data.previousStatus)
+            ? data.previousStatus
+            : undefined,
+          actorId: typeof data.actorId === 'string' ? data.actorId : '',
+          actorEmail: typeof data.actorEmail === 'string' ? data.actorEmail : '',
+          actorName: typeof data.actorName === 'string' ? data.actorName : '',
+          createdAt: data.createdAt,
+        });
+      });
+      onData(logs);
+    },
+    (error) => {
+      onError?.(error);
+    },
+  );
 }
 
 export async function saveEvaluationAndMemberInFirestore({

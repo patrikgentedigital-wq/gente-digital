@@ -84,6 +84,24 @@ service cloud.firestore {
         validCriteriaScore(scores, '6-5');
     }
 
+    function validHistoryEntry(entry) {
+      return entry is map &&
+        entry.keys().hasOnly(['month', 'score']) &&
+        ('month' in entry && entry.month is string && entry.month.size() > 0 && entry.month.size() <= 64) &&
+        ('score' in entry && entry.score is number && entry.score >= 0 && entry.score <= 155);
+    }
+
+    function validPdiGoal(goal) {
+      return goal is map &&
+        goal.keys().hasOnly(['id', 'title', 'deadline', 'status', 'description', 'dueDate']) &&
+        ('id' in goal && validId(goal.id)) &&
+        ('title' in goal && goal.title is string && goal.title.size() > 0 && goal.title.size() <= 200) &&
+        ('deadline' in goal && goal.deadline is string && goal.deadline.size() <= 100) &&
+        ('status' in goal && goal.status in ['pending', 'completed']) &&
+        (!('description' in goal) || (goal.description is string && goal.description.size() <= 1000)) &&
+        (!('dueDate' in goal) || (goal.dueDate is string && goal.dueDate.size() <= 64));
+    }
+
     function validMember(data, memberId) {
       return data.keys().hasOnly([
           'id', 'name', 'role', 'team', 'teamColor', 'rank', 'previousRank',
@@ -106,8 +124,8 @@ service cloud.firestore {
         (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048 && (data.avatarUrl == '' || data.avatarUrl.matches('^https://.+')))) &&
         (!('email' in data) || (data.email is string && data.email.size() <= 254)) &&
         (!('currentRating' in data) || (data.currentRating is number && data.currentRating >= 0 && data.currentRating <= 5)) &&
-        (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
+        (!('history' in data) || (data.history is list && data.history.size() <= 100 && data.history.all(validHistoryEntry))) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50 && data.pdiGoals.all(validPdiGoal))) &&
         (!('selfEvaluationScores' in data) || (data.selfEvaluationScores is map && data.selfEvaluationScores.keys().size() <= 31)) &&
         (!('evaluationHistory' in data) || (data.evaluationHistory is list && data.evaluationHistory.size() <= 100)) &&
         (!('updatedAt' in data) || data.updatedAt is timestamp);
@@ -122,8 +140,8 @@ service cloud.firestore {
         data.status in ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] &&
         validStatusForScore(data.score, data.status) &&
         data.evaluationStatus in ['Pendente', 'Forms Respondido', 'Concluído'] &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
-        (!('history' in data) || (data.history is list && data.history.size() <= 100)) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50 && data.pdiGoals.all(validPdiGoal))) &&
+        (!('history' in data) || (data.history is list && data.history.size() <= 100 && data.history.all(validHistoryEntry))) &&
         (!('updatedAt' in data) || data.updatedAt is timestamp);
     }
 
@@ -146,7 +164,7 @@ service cloud.firestore {
         validCriteriaScores(data.criteriaScores, true) &&
         (!('memberName' in data) || (data.memberName is string && data.memberName.size() <= 100)) &&
         (!('leaderName' in data) || (data.leaderName is string && data.leaderName.size() <= 100)) &&
-        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50)) &&
+        (!('pdiGoals' in data) || (data.pdiGoals is list && data.pdiGoals.size() <= 50 && data.pdiGoals.all(validPdiGoal))) &&
         (!('selfScores' in data) || (data.selfScores is map && data.selfScores.keys().size() <= 31)) &&
         (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('updatedAt' in data) || data.updatedAt is timestamp);
@@ -167,6 +185,7 @@ service cloud.firestore {
       allow update: if isLeaderOrAdmin() &&
         validEvaluation(request.resource.data, evaluationId) &&
         request.resource.data.memberId == resource.data.memberId &&
+        request.resource.data.cycle == resource.data.cycle &&
         (('revision' in resource.data && request.resource.data.revision == resource.data.revision + 1) ||
           (!('revision' in resource.data) && request.resource.data.revision == 1)) &&
         (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);

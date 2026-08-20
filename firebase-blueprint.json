@@ -5,34 +5,96 @@
       "description": "Collaborator performance record, team assignment, and ranking data",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
+        "id": { "type": "string", "maxLength": 128 },
         "name": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 120 },
         "team": { "type": "string", "maxLength": 100 },
-        "score": { "type": "number" },
+        "teamColor": { "type": "string", "maxLength": 32 },
         "rank": { "type": "number" },
         "previousRank": { "type": "number" },
+        "score": { "type": "number", "minimum": 0, "maximum": 155 },
+        "maxScore": { "type": "number", "const": 155 },
+        "status": { "type": "string", "enum": ["Voando", "Caminho Certo", "Atenção", "Alarme"] },
         "avatarUrl": { "type": "string" },
-        "proofImageUrl": { "type": "string" },
-        "evaluationStatus": { "type": "string" },
-        "isLeader": { "type": "boolean" },
-        "summary": { "type": "string", "maxLength": 1000 }
+        "evaluationStatus": { "type": "string", "enum": ["Pendente", "Forms Respondido", "Concluído"] },
+        "email": { "type": "string", "maxLength": 254 },
+        "currentRating": { "type": "number", "minimum": 0, "maximum": 5 },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "month": { "type": "string" },
+              "score": { "type": "number", "minimum": 0, "maximum": 155 }
+            },
+            "required": ["month", "score"]
+          }
+        },
+        "pdiGoals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string", "maxLength": 200 },
+              "deadline": { "type": "string", "maxLength": 100 },
+              "status": { "type": "string", "enum": ["pending", "completed"] },
+              "description": { "type": "string", "maxLength": 1000 },
+              "dueDate": { "type": "string" }
+            },
+            "required": ["id", "title", "deadline", "status"]
+          }
+        },
+        "selfEvaluationScores": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 5 } },
+        "evaluationHistory": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "name", "team", "score", "rank"]
+      "required": ["id", "name", "role", "team", "score", "rank", "maxScore", "status", "evaluationStatus"]
     },
     "Evaluation": {
       "title": "Evaluation",
-      "description": "Detailed evaluation form responses submitted for a member",
+      "description": "Detailed evaluation form responses submitted for a member per cycle",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "memberId": { "type": "string" },
+        "id": { "type": "string", "maxLength": 128 },
+        "memberId": { "type": "string", "maxLength": 128 },
         "memberName": { "type": "string", "maxLength": 100 },
         "leaderName": { "type": "string", "maxLength": 100 },
-        "score": { "type": "number" },
-        "status": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "score": { "type": "number", "minimum": 0, "maximum": 155 },
+        "status": { "type": "string", "enum": ["Voando", "Caminho Certo", "Atenção", "Alarme"] },
+        "cycle": { "type": "string", "maxLength": 64 },
+        "comments": { "type": "string", "maxLength": 5000 },
+        "pdiGoals": { "type": "array" },
+        "criteriaScores": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 5 } },
+        "selfScores": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 5 } },
+        "revision": { "type": "number", "minimum": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "memberId", "score"]
+      "required": ["id", "memberId", "score", "status", "cycle", "comments", "criteriaScores", "revision"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "Immutable write-only-by-rule audit trail of saved evaluations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "const": "evaluation_saved" },
+        "evaluationId": { "type": "string" },
+        "memberId": { "type": "string" },
+        "memberName": { "type": "string", "maxLength": 100 },
+        "cycle": { "type": "string", "maxLength": 64 },
+        "revision": { "type": "number" },
+        "score": { "type": "number" },
+        "status": { "type": "string", "enum": ["Voando", "Caminho Certo", "Atenção", "Alarme"] },
+        "previousScore": { "type": "number" },
+        "previousStatus": { "type": "string", "enum": ["Voando", "Caminho Certo", "Atenção", "Alarme"] },
+        "actorId": { "type": "string" },
+        "actorEmail": { "type": "string" },
+        "actorName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "action", "evaluationId", "memberId", "memberName", "cycle", "revision", "score", "status", "actorId", "actorEmail", "actorName", "createdAt"]
     }
   },
   "firestore": {
@@ -42,7 +104,11 @@
     },
     "/evaluations/{evaluationId}": {
       "schema": { "$ref": "#/entities/Evaluation" },
-      "description": "Completed performance evaluation forms"
+      "description": "One persisted evaluation per member/cycle"
+    },
+    "/auditLogs/{auditId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable audit trail of evaluation saves"
     }
   }
 }

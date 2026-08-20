@@ -25,12 +25,13 @@ const pdiGoalSchema = z.object({
   deadline: z.string().max(100),
   status: z.enum(['pending', 'completed']),
   description: z.string().max(1000).optional(),
-}).passthrough();
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
 
 const historyEntrySchema = z.object({
   month: z.string().min(1).max(64),
   score: z.number().finite().min(0).max(155),
-}).passthrough();
+});
 
 const evaluationHistoryEntrySchema = z.object({
   id: documentIdSchema,
@@ -43,7 +44,7 @@ const evaluationHistoryEntrySchema = z.object({
   criteriaScores: z.record(z.string(), z.number().finite().min(0).max(5)).optional(),
   selfScores: z.record(z.string(), z.number().finite().min(0).max(5)).optional(),
   pdiGoals: z.array(pdiGoalSchema).max(50).optional(),
-}).passthrough();
+});
 
 const criteriaScoresSchema = z.record(
   z.string().regex(/^[1-6]-[0-5]$/),
@@ -100,7 +101,7 @@ const teamMemberSchema = z.object({
   selfEvaluationScores: criteriaScoresSchema.optional(),
   evaluationHistory: z.array(evaluationHistoryEntrySchema).max(100).default([]),
   updatedAt: z.unknown().optional(),
-}).passthrough().superRefine((member, context) => {
+}).superRefine((member, context) => {
   if (member.status !== statusForScore(member.score)) {
     context.addIssue({
       code: 'custom',
@@ -125,7 +126,7 @@ const evaluationPayloadSchema = z.object({
   revision: z.number().finite().int().min(0).max(1000000).default(0),
   createdAt: z.unknown().optional(),
   updatedAt: z.unknown().optional(),
-}).passthrough().superRefine((evaluation, context) => {
+}).superRefine((evaluation, context) => {
   if (evaluation.status !== statusForScore(evaluation.score)) {
     context.addIssue({
       code: 'custom',

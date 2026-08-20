@@ -89,6 +89,12 @@ export function makeEvaluationId(memberId: string, cycle: string) {
   return `evaluation_${memberId}_${cycleId}`;
 }
 
+export function isPdiGoalOverdue(goal: { status: 'pending' | 'completed'; dueDate?: string }, referenceDate = new Date()) {
+  if (goal.status !== 'pending' || !goal.dueDate) return false;
+  const today = referenceDate.toISOString().slice(0, 10);
+  return goal.dueDate < today;
+}
+
 export function sumCriteriaScores(scores: Record<string, number>, keys: string[]) {
   if (keys.some((key) => typeof scores[key] !== 'number')) return null;
   return keys.reduce((total, key) => total + scores[key], 0);

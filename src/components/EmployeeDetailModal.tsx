@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { TeamMember } from '../types';
 import type { EvaluationPayload } from '../lib/firebaseLoader';
 import { CRITERIA_CATEGORIES } from '../data/catalogData';
-import { getCategoryScorePercent } from '../lib/evaluation';
+import { getCategoryScorePercent, isPdiGoalOverdue } from '../lib/evaluation';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { useDialog } from '../hooks/useDialog';
 import {
@@ -293,7 +293,14 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                       {g.title}
                     </span>
                   </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                  {isPdiGoalOverdue(g) && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#ffb4c0] bg-[#3A1620] border border-[#e2687a]/40 px-2 py-0.5 rounded">
+                      Vencida
+                    </span>
+                  )}
                   <span className="text-[10px] font-mono text-[#6C7C99] shrink-0">{g.deadline}</span>
+                </div>
                 </div>
               ))}
             </div>

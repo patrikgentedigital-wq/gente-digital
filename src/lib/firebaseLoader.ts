@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import type { TeamMember } from '../types';
+import type { EvaluationAuditLog, TeamMember } from '../types';
 import type { FirestoreDataValidationError } from './firestoreSchemas';
 import type { EvaluationPayload } from './firebase';
 
@@ -56,6 +56,29 @@ export function subscribeToMembers(
     .then((firebase) => {
       if (disposed) return;
       unsubscribe = firebase.subscribeToMembers(onData, onError, onInvalidData);
+    })
+    .catch((error) => {
+      if (!disposed) onError?.(error);
+    });
+
+  return () => {
+    disposed = true;
+    unsubscribe?.();
+  };
+}
+
+export function subscribeToAuditLogs(
+  onData: (logs: EvaluationAuditLog[]) => void,
+  onError?: (error: unknown) => void,
+  maxResults?: number,
+): () => void {
+  let disposed = false;
+  let unsubscribe: (() => void) | undefined;
+
+  void loadFirebase()
+    .then((firebase) => {
+      if (disposed) return;
+      unsubscribe = firebase.subscribeToAuditLogs(onData, onError, maxResults);
     })
     .catch((error) => {
       if (!disposed) onError?.(error);

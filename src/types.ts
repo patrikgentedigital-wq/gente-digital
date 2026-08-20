@@ -25,6 +25,7 @@ export interface PdiGoal {
   deadline: string;
   status: 'pending' | 'completed';
   description?: string;
+  dueDate?: string;
 }
 
 export interface EvaluationHistoryEntry {

@@ -19,6 +19,7 @@ const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
+const AuditLogsView = lazy(() => import('./components/AuditLogsView').then((module) => ({ default: module.AuditLogsView })));
 import { LeaderLoginModal } from './components/LeaderLoginModal';
 import { InfoModal, InfoModalType } from './components/InfoModal';
 import { ToastContainer } from './components/ToastContainer';
@@ -34,7 +35,7 @@ import {
 export default function App() {
   const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
   const { members, setMembers, membersError } = useMembers(authUser, authRole);
-  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader'>('ranking');
+  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
@@ -197,7 +198,7 @@ export default function App() {
           id: makeEvaluationId(memberId, cycle),
           memberId,
           memberName: targetMember.name,
-          leaderName: currentLeader || authUser.email || 'Líder',
+          leaderName: (currentLeader || authUser.email || 'Líder').slice(0, 100),
           score: newTotalScore,
           status: newStatus,
           cycle,
@@ -281,6 +282,9 @@ export default function App() {
             onLoadEvaluation={loadEvaluation}
             currentLeader={currentLeader}
           />
+        )}
+        {activeTab === 'audit' && authRole === 'admin' && (
+          <AuditLogsView members={members} />
         )}
       </main>
     </>

@@ -1,6 +1,5 @@
 {
   "name": "Gente Digital",
   "description": "Plataforma de gamificação, ranking e avaliação de desempenho para equipes.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": []
 }

@@ -1,5 +1,5 @@
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
-import { onDocumentDeleted } from 'firebase-functions/v2/firestore';
+import { onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { logger } from 'firebase-functions/logger';
 import { defineString } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
@@ -15,6 +15,7 @@ import {
 initializeApp();
 
 const BOOTSTRAP_ADMIN_EMAIL = defineString('BOOTSTRAP_ADMIN_EMAIL', { default: '' });
+const TEAMS_WEBHOOK_URL = defineString('TEAMS_WEBHOOK_URL', { default: '' });
 
 async function requireAdmin(uid: string) {
   const caller = await getAuth().getUser(uid);
@@ -22,6 +23,21 @@ async function requireAdmin(uid: string) {
     throw new HttpsError('permission-denied', 'Apenas um administrador pode executar esta operação.');
   }
   return caller;
+}
+
+async function countAdmins(): Promise<number> {
+  let count = 0;
+  let page = await getAuth().listUsers(1000);
+  for (;;) {
+    for (const user of page.users) {
+      if (user.customClaims?.role === ROLE_ADMIN) {
+        count += 1;
+      }
+    }
+    if (!page.pageToken) break;
+    page = await getAuth().listUsers(1000, page.pageToken);
+  }
+  return count;
 }
 
 async function applyRole(uid: string, role: RoleInput['role']) {
@@ -55,6 +71,16 @@ export const setUserRole = onCall(async (request) => {
   }
 
   const target = await getAuth().getUserByEmail(input.email);
+
+  if (input.role === null && target.customClaims?.role === ROLE_ADMIN) {
+    if (target.uid === admin.uid) {
+      throw new HttpsError('invalid-argument', 'Você não pode remover a própria role de administrador.');
+    }
+    if ((await countAdmins()) <= 1) {
+      throw new HttpsError('failed-precondition', 'Não é possível remover a role do último administrador do projeto.');
+    }
+  }
+
   const result = await applyRole(target.uid, input.role);
 
   logger.info(
@@ -125,3 +151,58 @@ export const onMemberDeleted = onDocumentDeleted(
   logger.info(`onMemberDeleted: ${deletedCount} avaliação(ões) removida(s) para o membro ${memberId}`);
   return { memberId, deletedCount };
 });
+
+const STATUS_ORDER: Record<string, number> = {
+  Voando: 4,
+  'Caminho Certo': 3,
+  Atenção: 2,
+  Alarme: 1,
+};
+
+export const onMemberStatusChanged = onDocumentUpdated(
+  { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID, timeoutSeconds: 30 },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) {
+      return { skipped: 'no-data' };
+    }
+
+    const beforeStatus = STATUS_ORDER[before.status] ?? 0;
+    const afterStatus = STATUS_ORDER[after.status] ?? 0;
+    if (afterStatus >= beforeStatus) {
+      return { skipped: 'status-not-worsened' };
+    }
+
+    const webhookUrl = TEAMS_WEBHOOK_URL.value();
+    if (!webhookUrl) {
+      logger.info(`onMemberStatusChanged: TEAMS_WEBHOOK_URL não configurado — notificação ignorada para ${after.name}`);
+      return { skipped: 'webhook-not-configured' };
+    }
+
+    const message = {
+      '@type': 'MessageCard',
+      '@context': 'http://schema.org/extensions',
+      summary: `Alerta de performance: ${after.name} caiu para ${after.status}`,
+      title: `⚠️ ${after.name} caiu para ${after.status}`,
+      text:
+        `O status de performance de **${after.name}** (equipe ${after.team}) piorou de ` +
+        `**${before.status}** para **${after.status}** (score ${before.score} → ${after.score}).`,
+    };
+
+    try {
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(message),
+      });
+      if (!res.ok) {
+        logger.warn(`onMemberStatusChanged: webhook respondeu HTTP ${res.status}`);
+      }
+      return { notified: res.ok };
+    } catch (error) {
+      logger.error('onMemberStatusChanged: falha ao enviar webhook', error);
+      return { notified: false, error: 'webhook-failed' };
+    }
+  },
+);

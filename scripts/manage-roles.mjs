@@ -64,7 +64,6 @@ async function setRole(email, role) {
     body: JSON.stringify({
       localId: user.localId,
       customAttributes,
-      emailVerified: true, // Auto-verifies email
     }),
   });
   const updateData = await updateRes.json();
@@ -76,10 +75,9 @@ async function setRole(email, role) {
   console.log(`\n✅ Sucesso!`);
   console.log(`- E-mail: ${email}`);
   console.log(`- Role atribuída: ${role}`);
-  console.log(`- E-mail verificado: Sim`);
 }
 
-async function createUser(email, password, role = 'admin') {
+async function createUser(email, password, role) {
   const token = getAccessToken();
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -96,7 +94,6 @@ async function createUser(email, password, role = 'admin') {
     body: JSON.stringify({
       email,
       password,
-      emailVerified: true,
       customAttributes,
     }),
   });
@@ -129,8 +126,17 @@ async function createUser(email, password, role = 'admin') {
 const args = process.argv.slice(2);
 const command = args[0];
 
+const VALID_ROLES = ['admin', 'leader', 'null'];
+
 if (command === 'create-user' && args[1] && args[2]) {
-  await createUser(args[1], args[2], args[3] || 'admin');
+  const role = args[3];
+  if (!role || !VALID_ROLES.includes(role)) {
+    console.error('❌ Role obrigatória para create-user: admin, leader ou null.');
+    console.log(`Uso: node scripts/manage-roles.mjs create-user <email> <senha> <admin|leader|null>`);
+    process.exitCode = 1;
+  } else {
+    await createUser(args[1], args[2], role);
+  }
 } else if (command === 'set-role' && args[1] && args[2]) {
   await setRole(args[1], args[2]);
 } else if (command === 'list' || !command) {
@@ -138,6 +144,6 @@ if (command === 'create-user' && args[1] && args[2]) {
 } else {
   console.log(`\nUso do utilitário:`);
   console.log(`  node scripts/manage-roles.mjs list`);
-  console.log(`  node scripts/manage-roles.mjs create-user <email> <senha> [admin|leader]`);
+  console.log(`  node scripts/manage-roles.mjs create-user <email> <senha> <admin|leader|null>`);
   console.log(`  node scripts/manage-roles.mjs set-role <email> <admin|leader|null>`);
 }

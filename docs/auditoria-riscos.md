@@ -1,8 +1,8 @@
 # Auditoria de Riscos — Gente Digital
 
-Data: 2026-08-20 (rev. 3, callable saveEvaluation) · Projeto: `gen-lang-client-0169317507` · Banco Firestore nomeado: `ai-studio-gentedigital-...`
+Data: 2026-08-21 (rev. 4, callable saveEvaluation) · Projeto: `gen-lang-client-0169317507` · Banco Firestore nomeado: `ai-studio-gentedigital-...`
 
-> Este documento foca em **o que pode dar errado**. A rev. 3 fecha a última
+> Este documento foca em **o que pode dar errado**. A rev. 4 mantém a última
 > lacuna de integridade: o save de avaliações agora passa pela **Cloud Function
 > callable `saveEvaluation`** com validação zod elemento a elemento no servidor,
 > e as Firestore Rules proíbem escrita direta de avaliações/auditLogs por
@@ -44,10 +44,10 @@ Legenda: Prob. = probabilidade (A/M/B), Imp. = impacto (A/M/B), Sev. = severidad
 |---|-------|-------|------|------|---------------------|-----|
 | R1 | Conta de líder comprometida lê PII de todos e grava avaliações | M | A | **Alto** | Rules exigem login+email verificado; líder não apaga/exclui | Sem MFA; líder vê todos os times; sem App Check |
 | R2 | Exclusão de membro apaga histórico irreversivelmente | B | A | **Médio** | **Soft-delete (rev. 2): arquivo reversível + restauração admin** | Purge definitivo existe fora do app (console); backup diário ainda recomendado |
-| R3 | Retenção indefinida de PII em `auditLogs`/membros (LGPD) | M | M | **Médio** | Nada expurga registros | Sem política de retenção/deleção |
+| R3 | Retenção indefinida de PII em `auditLogs`/membros (LGPD) | M | M | **Médio** | Job diário `purgeExpiredAuditLogs` configurável por `AUDIT_LOG_RETENTION_DAYS` | Prazo ainda depende de política LGPD aprovada |
 | R4 | Regra do Firestore publicada com erro derruba escritas em produção | M | A | **Baixo→Médio** | **49 testes no emulador + CI (rev. 2)**; deploy automático em main via `ENABLE_DEPLOY` | Falha residual só se deploy manual fora do CI |
 | R5 | `TEAMS_WEBHOOK_URL` ausente deixa alertas silenciosos | A | B | **Baixo** | Trigger faz skip+log se ausente | Ninguém é notificado até configurar |
-| R6 | Abuso de escrita por cliente headless (sem App Check) | B | M | **Médio** | Rules validam shape/campos; zod no cliente | Config pública; App Check recomendado (reCAPTCHA v3, grátis) |
+| R6 | Abuso de escrita por cliente headless (sem App Check) | B | M | **Médio** | Rules validam shape/campos; zod no servidor; frontend suporta App Check | Enforcement do App Check ainda precisa ser ativado no Console |
 | R7 | CSP quebra recursos do app (imagens/estilos) em produção | B | M | **Médio** | CSP restritivo adicionado | Validar no deploy real |
 | R8 | Dependências transitivas do `functions` (moderadas) | A | B | **Baixo** | `npm audit` no CI (fail ≥ high) | Moderadas não bloqueiam |
 | R9 | Escala: subscriptions de coleção inteira + bundle pesado (recharts) | B | M | **Médio** | Escala atual pequena | `onSnapshot` de `members` inteiro; bundle ~104KB gzip só recharts |
@@ -64,10 +64,10 @@ Legenda: Prob. = probabilidade (A/M/B), Imp. = impacto (A/M/B), Sev. = severidad
   credencial comprometida (sem MFA) permite alterar avaliações de qualquer
   pessoa e expor PII. Ação recomendada: **MFA para contas com role**; avaliar
   filtrar leitura por time (`team == request.auth.token.team`).
-- **R6 — App Check ausente.** A config do Firebase é pública por natureza.
-  Sem App Check, um cliente scriptado pode gravar documentos que respeitem as
-  Rules. Impacto limitado por shape-strict nas rules + zod; vale habilitar App
-  Check (reCAPTCHA v3, gratuito) nas escritas.
+- **R6 — App Check opcional no código.** O frontend inicializa App Check quando
+  `VITE_FIREBASE_APPCHECK_SITE_KEY` está configurada, e a CSP já permite o
+  reCAPTCHA. O enforcement nas escritas continua sendo uma ativação operacional
+  no Firebase Console.
 - **R11 — Bypass administrativo.** Console Firebase Auth e `manage-roles.mjs`
   podem remover a role do último admin. As Functions estão protegidas; os
   caminhos diretos não.
@@ -130,10 +130,11 @@ publicadas sem as functions, salvar avaliação falha até o deploy das function
 
 ## 7. Privacidade e conformidade (LGPD)
 
-- **R3 — Retenção eterna de PII.** `auditLogs` guarda `memberName`/`actorEmail`
-  e nunca é expurgado; `members` guarda e-mails. Recomenda-se: política de
-  retenção (expurgar auditLogs antigos), fluxo de anonimização ao excluir, e
-  região de dados documentada (`us-central`).
+- **R3 — Retenção configurável.** `auditLogs` guarda `memberName`/`actorEmail`
+  e o job diário pode expurgar registros antigos quando
+  `AUDIT_LOG_RETENTION_DAYS` recebe o prazo aprovado. `members` ainda guarda
+  e-mails enquanto o colaborador existir; anonimização deve seguir a política
+  de atendimento à LGPD.
 - Soft-delete ajuda: um "esquecimento" pode começar pelo arquivamento +
   anonimização, mantendo apenas o mínimo para integridade do histórico.
 
@@ -145,31 +146,35 @@ publicadas sem as functions, salvar avaliação falha até o deploy das function
 | Alta | Publicar Hosting (`dist/` já buildado) e validar CSP | `firebase deploy --only hosting`; testar avatares, fontes, gráficos |
 | Média | Habilitar deploy no CI | Variável `ENABLE_DEPLOY=true` + secret `FIREBASE_SERVICE_ACCOUNT` no GitHub |
 | Média | Backup diário do Firestore | Cloud Scheduler → export para GCS |
+| Média | Definir `AUDIT_LOG_RETENTION_DAYS` conforme a política LGPD | `functions/.env` e deploy das Functions |
 | Média | MFA obrigatório para contas com role | Console Firebase Auth |
 | Média | App Check nas escritas | Firebase Console → App Check → reCAPTCHA v3 |
 | Média | P-01: visão do colaborador (`linkedUid` + rule de self-read, **sem usar e-mail como chave** — UID não muda) | Decisão de produto; revisão de segurança da regra |
 | Baixa | Teste do PWA em iPhone real (ícones PNG + apple-touch-icon) | Gerar PNGs 192/512/180 e atualizar manifest/index.html |
 
-## 9. O que foi CORRIGIDO e validado nesta rodada (rev. 3)
+## 9. O que foi CORRIGIDO e validado nesta rodada (rev. 4)
 
 - **Callable `saveEvaluation`** (functions/src/index.ts + evaluationSchemas.ts):
   validação zod elemento a elemento no servidor (pdiGoals, history,
-  criteriaScores completos 0..5, consistência score↔status, revisão otimista),
-  grava avaliação + membro + auditLog em transação; ator do auditLog vem do
-  token de autenticação.
-- **Rules endurecidas e simplificadas** (35 testes no emulador): membros
-  escritos só por admin; evaluations/auditLogs escritos só via função; leitura
-  de evaluations por líder/admin; auditLogs só admin.
+  criteriaScores completos 0..5 e sem chaves extras, score igual à soma dos
+  critérios, ID determinístico, PDI/histórico consistentes, consistência
+  score↔status, revisão otimista), grava avaliação + membro + auditLog em
+  transação; ator e nome do membro são derivados de dados confiáveis.
+- **Rules endurecidas e simplificadas** (testes no emulador): membros escritos
+  só por admin e sem exclusão definitiva pelo cliente; evaluations/auditLogs
+  escritos só via função; leitura de evaluations por líder/admin; auditLogs só
+  admin.
 - **Cliente** chama a callable (`httpsCallable`); conflito de revisão mapeado
   para `EvaluationConflictError` (recarrega a avaliação como antes); erros
   tipados preservados.
-- **CSP**: `connect-src` agora permite `https://*.cloudfunctions.net`.
-- **13 novos testes de functions** para a callable (auth/roles, validação por
-  elemento, conflito, membro ausente, gravações corretas) — total 39.
+- **App Check opcional**: site key reCAPTCHA v3 no frontend, enforcement
+  configurável nas callables por `ENFORCE_APP_CHECK` e CSP compatível.
+- **Retenção configurável**: job diário `purgeExpiredAuditLogs`, ativado apenas
+  quando `AUDIT_LOG_RETENTION_DAYS` recebe um prazo aprovado.
 
-Validação executada (rev. 3): `npm run lint` OK (raiz e functions); `npm test`
-21/21 (raiz) e 39/39 (functions); `npm run build` OK; `npm run test:rules`
-35/35 no emulador.
+Validação executada (rev. 4): `npm run lint` OK (raiz e functions); `npm test`
+34/34 (raiz) e 44/44 (functions); `npm run build` OK; `npm run test:rules`
+deve ser executado no emulador antes do deploy.
 
 ## 10. Riscos aceitos conscientemente
 

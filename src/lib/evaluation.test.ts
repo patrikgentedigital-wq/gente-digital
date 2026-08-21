@@ -6,6 +6,7 @@ import {
   getDefaultEvaluationCycle,
   getPerformanceStatus,
   hasCompleteCriteriaScores,
+  isPdiGoalOverdue,
   makeEvaluationId,
   normalizeCriteriaScores,
   sumCriteriaScores,
@@ -60,5 +61,12 @@ describe('evaluation domain rules', () => {
 
   it('normalizes persisted score maps before rendering or exporting', () => {
     expect(normalizeCriteriaScores({ '1-0': 4, '1-1': 'invalid', '99-1': 5 })).toEqual({ '1-0': 4 });
+  });
+
+  it('compares PDI deadlines using the local calendar date', () => {
+    const localDate = new Date(2026, 2, 10, 23, 30);
+
+    expect(isPdiGoalOverdue({ status: 'pending', dueDate: '2026-03-10' }, localDate)).toBe(false);
+    expect(isPdiGoalOverdue({ status: 'pending', dueDate: '2026-03-09' }, localDate)).toBe(true);
   });
 });

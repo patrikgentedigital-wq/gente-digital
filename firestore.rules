@@ -94,14 +94,18 @@ service cloud.firestore {
       allow read: if isLeaderOrAdmin();
       allow create: if isAdmin() && validMember(request.resource.data, memberId);
       allow update: if isAdmin() && validMember(request.resource.data, memberId);
-      allow delete: if isAdmin() && validId(memberId);
+      // Exclusão definitiva não faz parte do fluxo do produto. O app usa
+      // soft-delete para preservar histórico e permitir restauração.
+      allow delete: if false;
     }
 
     match /evaluations/{evaluationId} {
       allow read: if isLeaderOrAdmin();
       // Criação/atualização apenas via Cloud Function saveEvaluation (Admin SDK).
       allow create, update: if false;
-      allow delete: if isAdmin() && validId(evaluationId);
+      // Avaliações só podem ser removidas por rotinas administrativas fora
+      // do cliente, como o trigger de purge executado com Admin SDK.
+      allow delete: if false;
     }
 
     match /auditLogs/{auditId} {

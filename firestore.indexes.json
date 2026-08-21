@@ -1,22 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "members",
-      "queryScope": "COLLECTION",
-      "density": "DENSE",
-      "fields": [
-        { "fieldPath": "score", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "members",
-      "queryScope": "COLLECTION",
-      "density": "DENSE",
-      "fields": [
-        { "fieldPath": "deleted", "order": "ASCENDING" },
-        { "fieldPath": "score", "order": "DESCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

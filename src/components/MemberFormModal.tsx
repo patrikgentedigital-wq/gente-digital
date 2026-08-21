@@ -9,7 +9,7 @@ interface MemberFormModalProps {
   onClose: () => void;
   memberToEdit?: TeamMember | null;
   onSaveMember: (memberData: TeamMember) => Promise<void> | void;
-  onDeleteMember?: (memberId: string) => void;
+  onDeleteMember?: (memberId: string) => Promise<void> | void;
 }
 
 export const MemberFormModal: React.FC<MemberFormModalProps> = ({
@@ -59,10 +59,11 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
     e.preventDefault();
     if (!name.trim() || !role.trim()) return;
 
+    const finalScore = isEditing ? (memberToEdit?.score ?? score) : score;
     let status: TeamMember['status'] = 'Caminho Certo';
-    if (score > 140) status = 'Voando';
-    else if (score > 130) status = 'Caminho Certo';
-    else if (score >= 120) status = 'Atenção';
+    if (finalScore > 140) status = 'Voando';
+    else if (finalScore > 130) status = 'Caminho Certo';
+    else if (finalScore >= 120) status = 'Atenção';
     else status = 'Alarme';
 
     const memberId = memberToEdit?.id || `member_${crypto.randomUUID()}`;
@@ -75,7 +76,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       teamColor: selectedTeamData?.color || '#3B6FE0',
       rank: memberToEdit?.rank || 99,
       previousRank: memberToEdit?.previousRank,
-      score,
+      score: finalScore,
       maxScore: 155,
       status,
       avatarUrl: avatarUrl.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
@@ -83,6 +84,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       email: email.trim(),
       pdiGoals: memberToEdit?.pdiGoals || [],
       history: memberToEdit?.history || [],
+      deleted: false,
     };
 
     try {
@@ -93,10 +95,14 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
     }
   };
 
-  const handleDelete = () => {
-    if (memberToEdit && onDeleteMember) {
-      onDeleteMember(memberToEdit.id);
+  const handleDelete = async () => {
+    if (!memberToEdit || !onDeleteMember) return;
+
+    try {
+      await onDeleteMember(memberToEdit.id);
       onClose();
+    } catch {
+      // Keep the confirmation open so the user can retry after a persistence error.
     }
   };
 
@@ -140,10 +146,10 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
           <div className="bg-danger-soft border border-danger/40 p-4 rounded-xl flex flex-col gap-3">
             <div className="flex items-center gap-2 text-danger font-bold text-xs">
               <AlertTriangle className="w-4 h-4" />
-              <span>Confirmar exclusão de {memberToEdit?.name}?</span>
+              <span>Confirmar arquivamento de {memberToEdit?.name}?</span>
             </div>
             <p className="text-xs text-danger-pale leading-relaxed">
-              Esta ação removerá o colaborador do ranking e do Firestore.
+              O colaborador será arquivado e deixará de aparecer no ranking. O histórico poderá ser restaurado por um administrador.
             </p>
             <div className="flex justify-end gap-2 mt-1">
               <button
@@ -155,11 +161,11 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={() => void handleDelete()}
                 className="px-3 py-1.5 rounded-lg text-xs font-bold bg-danger hover:bg-danger-hover text-white flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Confirmar Exclusão
+                Confirmar Arquivamento
               </button>
             </div>
           </div>
@@ -272,17 +278,23 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             {/* Score slider */}
             <div className="space-y-1 bg-surface-2 p-3 rounded-xl border border-line">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-muted font-semibold">Pontuação Inicial:</span>
-                <span className="font-mono font-bold text-accent">{score} / 155 pts</span>
+                <span className="text-muted font-semibold">{isEditing ? 'Pontuação atual:' : 'Pontuação inicial:'}</span>
+                <span className="font-mono font-bold text-accent">{isEditing ? memberToEdit?.score : score} / 155 pts</span>
               </div>
               <input
                 type="range"
                 min="0"
                 max="155"
-                value={score}
+                value={isEditing ? memberToEdit?.score ?? 0 : score}
+                disabled={isEditing}
                 onChange={(e) => setScore(Number(e.target.value))}
-                className="w-full accent-accent cursor-pointer"
+                className="w-full accent-accent enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               />
+              {isEditing && (
+                <p className="text-[11px] text-faint">
+                  A pontuação de um colaborador existente só muda por uma avaliação completa da liderança.
+                </p>
+              )}
             </div>
 
             {/* Form actions */}
@@ -294,7 +306,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                   className="text-xs text-danger hover:text-danger-light font-semibold flex items-center gap-1.5 p-2 rounded-lg hover:bg-danger-soft transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Excluir Colaborador
+                  Arquivar Colaborador
                 </button>
               ) : (
                 <div />

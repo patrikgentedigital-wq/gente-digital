@@ -6,9 +6,10 @@ deste repositório (`functions/`).
 
 ## Papéis
 
-- `role=leader`: consulta e cria/atualiza avaliações. Ao salvar, atualiza no
-  membro apenas os campos de avaliação (ver `docs/firebase-auth-roles.md`).
-- `role=admin`: gerencia membros (CRUD completo) e exclui avaliações.
+- `role=leader`: consulta dados e salva avaliações exclusivamente pela callable
+  `saveEvaluation`, que valida o payload no servidor.
+- `role=admin`: gerencia membros, arquiva/restaura colaboradores e também pode
+  salvar avaliações. Exclusões definitivas pelo cliente são bloqueadas.
 - Sem claim `role`: nenhum acesso (nem leitura) a `members`/`evaluations`.
 
 ## Requisitos de Permissão no Google Cloud (IAM)
@@ -32,10 +33,22 @@ projeto selecionado (`.firebaserc` já aponta para `gen-lang-client-0169317507`)
 cat > functions/.env <<'EOF'
 BOOTSTRAP_ADMIN_EMAIL=lider@gentedigital.com.br
 # TEAMS_WEBHOOK_URL=https://outlook.office.com/webhook/...  # opcional: alertas de queda de status
+AUDIT_LOG_RETENTION_DAYS=0  # defina conforme a política LGPD aprovada
+ENFORCE_APP_CHECK=false  # mude para true após configurar a site key reCAPTCHA
 EOF
 
 firebase deploy --only functions
 ```
+
+Como o salvamento de avaliações depende da callable, publique Functions antes
+das Rules, ou publique tudo em uma única operação:
+
+```sh
+firebase deploy --only functions,firestore,hosting
+```
+
+Os hooks definidos em `firebase.json` compilam `functions/` e o frontend antes
+do deploy.
 
 As Rules do Firestore usam o banco nomeado do projeto. Para publicar somente
 as Rules desse banco:
@@ -52,6 +65,15 @@ removido do `.env`.
 postia um cartão no Teams quando um colaborador piora de status (ex.: de
 "Caminho Certo" para "Atenção"). Sem o parâmetro, o trigger apenas ignora e
 registra em log.
+
+`AUDIT_LOG_RETENTION_DAYS` controla o job diário `purgeExpiredAuditLogs`. O
+valor `0` mantém os logs e desativa o purge; configure um prazo aprovado pela
+organização antes de ativá-lo.
+
+`ENFORCE_APP_CHECK=true` faz a callable de salvamento rejeitar chamadas sem App
+Check. Antes de ativar, configure `VITE_FIREBASE_APPCHECK_SITE_KEY` no Hosting
+e valide o domínio publicado. As callables de bootstrap e gerenciamento de
+roles continuam disponíveis para o runbook administrativo.
 
 ## 2. Bootstrap do primeiro admin
 
@@ -125,8 +147,15 @@ Crie contas de teste e confira a matriz no emulador (ou produção):
 | Ler members/evaluations | ok | ok | negado |
 | Salvar avaliação (inclui update parcial do member) | ok | ok | negado |
 | Editar nome/e-mail/avatar do member | negado | ok | negado |
-| Criar/excluir member | negado | ok | negado |
-| Excluir avaliação | negado | ok | negado |
+| Criar member | negado | ok | negado |
+| Arquivar/restaurar member | negado | ok | negado |
+| Exclusão definitiva de member | negado | negado | negado |
+| Excluir avaliação pelo cliente | negado | negado | negado |
+
+Para reduzir abuso de credenciais, habilite MFA para as contas com role no
+Firebase Authentication e configure App Check reCAPTCHA v3. O frontend aceita
+a site key em `VITE_FIREBASE_APPCHECK_SITE_KEY`; a exigência deve ser ativada no
+Console após validar o domínio publicado.
 
 ## 5. Rollback
 

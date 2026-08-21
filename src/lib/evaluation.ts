@@ -91,7 +91,11 @@ export function makeEvaluationId(memberId: string, cycle: string) {
 
 export function isPdiGoalOverdue(goal: { status: 'pending' | 'completed'; dueDate?: string }, referenceDate = new Date()) {
   if (goal.status !== 'pending' || !goal.dueDate) return false;
-  const today = referenceDate.toISOString().slice(0, 10);
+  const today = [
+    referenceDate.getFullYear(),
+    String(referenceDate.getMonth() + 1).padStart(2, '0'),
+    String(referenceDate.getDate()).padStart(2, '0'),
+  ].join('-');
   return goal.dueDate < today;
 }
 

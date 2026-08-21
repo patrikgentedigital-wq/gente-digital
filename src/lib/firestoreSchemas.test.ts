@@ -27,6 +27,7 @@ describe('Firestore runtime schemas', () => {
 
     expect(parsed.history).toEqual([]);
     expect(parsed.pdiGoals).toEqual([]);
+    expect(parsed.deleted).toBe(false);
     expect(() => parseTeamMember(validMember, 'other-member')).toThrow(FirestoreDataValidationError);
   });
 
@@ -65,6 +66,22 @@ describe('Firestore runtime schemas', () => {
       pdiGoals: [],
       criteriaScores: { '1-0': 5 },
       revision: 1,
+    }, 'evaluation_member-1_janeiro_2026')).toThrow(FirestoreDataValidationError);
+  });
+
+  it('rejects criteria maps with unknown keys', () => {
+    const criteriaScores = Object.fromEntries(CRITERIA_SCORE_KEYS.map((key) => [key, 5]));
+    expect(() => parseEvaluationPayload({
+      id: 'evaluation_member-1_janeiro_2026',
+      memberId: validMember.id,
+      memberName: validMember.name,
+      leaderName: 'Djemerson',
+      score: 155,
+      status: 'Voando',
+      cycle: 'Janeiro/2026',
+      comments: 'Completa',
+      pdiGoals: [],
+      criteriaScores: { ...criteriaScores, '9-9': 5 },
     }, 'evaluation_member-1_janeiro_2026')).toThrow(FirestoreDataValidationError);
   });
 });

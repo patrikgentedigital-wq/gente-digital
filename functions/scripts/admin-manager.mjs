@@ -39,6 +39,18 @@ async function setRole(email, role) {
   const user = await auth.getUserByEmail(email);
   const claims = { ...user.customClaims };
   if (role === 'null') {
+    if (claims.role === 'admin') {
+      let adminCount = 0;
+      let page = await auth.listUsers(1000);
+      for (;;) {
+        adminCount += page.users.filter((candidate) => candidate.customClaims?.role === 'admin').length;
+        if (!page.pageToken) break;
+        page = await auth.listUsers(1000, page.pageToken);
+      }
+      if (adminCount <= 1) {
+        throw new Error('Não é possível remover a role do último administrador.');
+      }
+    }
     delete claims.role;
   } else {
     claims.role = role;
@@ -60,6 +72,10 @@ async function verifyEmail(email) {
 async function createUser(email, password, role = 'admin') {
   if (!email || !password) {
     console.error('Uso: node admin-manager.mjs create-user <email> <senha> [admin|leader]');
+    process.exit(1);
+  }
+  if (!['admin', 'leader', 'null'].includes(role)) {
+    console.error('Role inválida. Use admin, leader ou null.');
     process.exit(1);
   }
   const user = await auth.createUser({
@@ -115,6 +131,7 @@ async function main() {
     }
   } catch (err) {
     console.error('❌ Erro:', err.message);
+    process.exitCode = 1;
   }
 }
 

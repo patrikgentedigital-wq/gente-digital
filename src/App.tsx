@@ -9,6 +9,7 @@ import {
   saveEvaluationAndMemberInFirestore,
   logoutLeader,
   isEvaluationConflictError,
+  isEvaluationServiceUnavailableError,
 } from './lib/firebaseLoader';
 import type { EvaluationPayload } from './lib/firebaseLoader';
 import { useAuthSession } from './hooks/useAuthSession';
@@ -37,7 +38,7 @@ import {
 
 export default function App() {
   const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
-  const { members, setMembers, membersError } = useMembers(authUser, authRole);
+  const { members, setMembers, membersError, membersLoading } = useMembers(authUser, authRole);
   const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
@@ -146,9 +147,11 @@ export default function App() {
     try {
       await updateMemberInFirestore(updated);
       setMembers((previous) => rankMembers(previous.map((member) =>
-        member.id === updated.id ? updated : member
+        member.id === updated.id ? { ...member, avatarUrl: newAvatarUrl } : member
       )));
-      setSelectedEvaluationMember((selected) => selected?.id === updated.id ? updated : selected);
+      setSelectedEvaluationMember((selected) => selected?.id === updated.id
+        ? { ...selected, avatarUrl: newAvatarUrl }
+        : selected);
       setImageModalMember(null);
       toast.success('Foto do perfil atualizada com sucesso!');
     } catch {
@@ -165,9 +168,32 @@ export default function App() {
 
       setMembers((previous) => rankMembers(
         isExisting
-          ? previous.map((member) => member.id === memberData.id ? memberData : member)
+          ? previous.map((member) => member.id === memberData.id
+            ? {
+              ...member,
+              name: memberData.name,
+              role: memberData.role,
+              team: memberData.team,
+              teamColor: memberData.teamColor,
+              avatarUrl: memberData.avatarUrl,
+              email: memberData.email,
+            }
+            : member)
           : [...previous, memberData],
       ));
+      if (isExisting) {
+        setSelectedEvaluationMember((selected) => selected?.id === memberData.id
+          ? {
+            ...selected,
+            name: memberData.name,
+            role: memberData.role,
+            team: memberData.team,
+            teamColor: memberData.teamColor,
+            avatarUrl: memberData.avatarUrl,
+            email: memberData.email,
+          }
+          : selected);
+      }
       toast.success(isExisting ? 'Dados do colaborador atualizados.' : 'Colaborador cadastrado.');
     } catch {
       toast.error('Não foi possível persistir os dados do colaborador.');
@@ -185,6 +211,7 @@ export default function App() {
       toast.info(`Colaborador ${target?.name || ''} arquivado (pode ser restaurado na Trilha de Auditoria).`);
     } catch {
       toast.error('Não foi possível arquivar o colaborador.');
+      throw new Error('member-archive-failed');
     }
   };
 
@@ -243,11 +270,12 @@ export default function App() {
         member.id === memberId ? updatedMember : member
       )));
       setSelectedEvaluationMember(updatedMember);
-      toast.success(`Avaliação de ${targetMember.name} salva com sucesso.`);
       return savedRevision;
     } catch (error) {
       if (isEvaluationConflictError(error)) {
         toast.error('Esta avaliação foi alterada por outra pessoa. Recarregue os dados antes de salvar novamente.');
+      } else if (isEvaluationServiceUnavailableError(error)) {
+        toast.error('O serviço de avaliações ainda não está publicado. Solicite o deploy das Cloud Functions.');
       } else {
         toast.error('A avaliação não foi salva. Nenhum dado local foi confirmado.');
       }
@@ -302,18 +330,24 @@ export default function App() {
             }}
           />
         )}
-        {activeTab === 'leader' && selectedEvaluationMember && (
-          <EvaluationView
-            members={members}
-            selectedMember={selectedEvaluationMember}
-            onSelectMember={setSelectedEvaluationMember}
-            onSaveEvaluation={handleSaveEvaluation}
-            onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
-            onOpenReportModal={openReportModal}
-            onLoadEvaluation={loadEvaluation}
-            currentLeader={currentLeader}
-          />
-        )}
+         {activeTab === 'leader' && (
+           selectedEvaluationMember ? (
+             <EvaluationView
+               members={members}
+               selectedMember={selectedEvaluationMember}
+               onSelectMember={setSelectedEvaluationMember}
+               onSaveEvaluation={handleSaveEvaluation}
+               onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
+               onOpenReportModal={openReportModal}
+               onLoadEvaluation={loadEvaluation}
+               currentLeader={currentLeader}
+             />
+           ) : (
+             <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-muted" role="status">
+               {membersLoading ? 'Carregando colaboradores...' : membersError || 'Nenhum colaborador disponível para avaliação.'}
+             </div>
+           )
+         )}
         {activeTab === 'audit' && authRole === 'admin' && (
           <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
         )}

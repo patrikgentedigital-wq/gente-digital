@@ -37,10 +37,22 @@ const evaluationHistoryEntrySchema = z.object({
   pdiGoals: z.array(pdiGoalSchema).max(50).optional(),
 });
 
-const criteriaScoresSchema = z.record(
-  z.string().regex(/^[1-6]-[0-5]$/),
-  z.number().finite().min(0).max(5),
-);
+const criteriaScoresSchema = z
+  .record(
+    z.string().regex(/^[1-6]-[0-5]$/),
+    z.number().finite().min(0).max(5),
+  )
+  .superRefine((scores, context) => {
+    for (const key of Object.keys(scores)) {
+      if (!CRITERIA_SCORE_KEYS.includes(key)) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'critério desconhecido',
+        });
+      }
+    }
+  });
 
 const completeCriteriaScoresSchema = criteriaScoresSchema.superRefine((scores, context) => {
   for (const key of Object.keys(scores)) {

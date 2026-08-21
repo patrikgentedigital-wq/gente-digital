@@ -1,10 +1,9 @@
 import { initializeApp, cert, applicationDefault } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
-// Backfill: adds `deleted: false` to every member document created before
-// soft-delete existed. Required BEFORE deploying the app version that filters
-// the members query with `where('deleted', '==', false)` — otherwise legacy
-// documents (without the field) would disappear from the leaderboard.
+// Optional normalization: adds `deleted: false` to every member document
+// created before soft-delete existed. The current app also handles missing
+// values safely, so this is not a prerequisite for deployment.
 //
 // Usage (in the functions/ directory):
 //   GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json node scripts/backfill-members-deleted.mjs
@@ -41,7 +40,7 @@ async function main() {
       skipped += 1;
       continue;
     }
-    await doc.ref.update({ deleted: false, updatedAt: new Date() });
+    await doc.ref.update({ deleted: false, updatedAt: FieldValue.serverTimestamp() });
     updated += 1;
     console.log(`membro ${doc.id} atualizado com deleted:false`);
   }

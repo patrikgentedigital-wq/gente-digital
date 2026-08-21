@@ -38,6 +38,8 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
       const err = error as { message?: string; code?: string };
       if (err?.message === 'EMAIL_NOT_VERIFIED') {
         setErrorMsg('Confirme o e-mail da conta antes de acessar a área do líder.');
+      } else if (err?.message === 'ROLE_NOT_AUTHORIZED') {
+        setErrorMsg('Sua conta está autenticada, mas não possui uma role autorizada nesta plataforma.');
       } else if (err?.code === 'auth/invalid-credential') {
         setErrorMsg('E-mail ou senha inválidos.');
       } else {

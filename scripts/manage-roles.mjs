@@ -34,6 +34,11 @@ async function listUsers() {
 }
 
 async function setRole(email, role) {
+  if (!VALID_ROLES.includes(role)) {
+    console.error('Role inválida. Use admin, leader ou null.');
+    return;
+  }
+
   const token = getAccessToken();
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -55,9 +60,39 @@ async function setRole(email, role) {
     return;
   }
 
+  let claims = {};
+  try {
+    claims = user.customAttributes ? JSON.parse(user.customAttributes) : {};
+  } catch {
+    console.error(`❌ Claims inválidas para o usuário "${email}".`);
+    return;
+  }
+
+  if (role === 'null' && claims.role === 'admin') {
+    const usersRes = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:batchGet?maxResults=1000`,
+      { headers },
+    );
+    const usersData = await usersRes.json();
+    const adminCount = (usersData.users || []).filter((candidate) => {
+      try {
+        const candidateClaims = candidate.customAttributes ? JSON.parse(candidate.customAttributes) : {};
+        return candidateClaims.role === 'admin';
+      } catch {
+        return false;
+      }
+    }).length;
+    if (adminCount <= 1) {
+      console.error('❌ Não é possível remover a role do último administrador.');
+      return;
+    }
+  }
+
   // 2. Set custom claims
   const updateUrl = `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:update`;
-  const customAttributes = role && role !== 'null' ? JSON.stringify({ role }) : '{}';
+  if (role === 'null') delete claims.role;
+  else claims.role = role;
+  const customAttributes = JSON.stringify(claims);
   const updateRes = await fetch(updateUrl, {
     method: 'POST',
     headers,

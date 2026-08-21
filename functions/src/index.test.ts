@@ -31,11 +31,13 @@ const hoisted = vi.hoisted(() => {
     mockParams: {
       BOOTSTRAP_ADMIN_EMAIL: '',
       TEAMS_WEBHOOK_URL: '',
+      AUDIT_LOG_RETENTION_DAYS: '0',
+      ENFORCE_APP_CHECK: 'false',
     } as Record<string, string>,
   };
 });
 
-const { mockAuth, mockParams, mockTx } = hoisted;
+const { mockAuth, mockDb, mockParams, mockTx } = hoisted;
 
 vi.mock('firebase-admin/app', () => ({ initializeApp: vi.fn() }));
 vi.mock('firebase-admin/auth', () => ({ getAuth: () => mockAuth }));
@@ -46,7 +48,7 @@ vi.mock('firebase-admin/firestore', () => ({
 
 vi.mock('firebase-functions/v2/https', () => ({
   HttpsError: hoisted.HttpsError,
-  onCall: <T>(fn: T): T => fn,
+  onCall: <T>(_options: unknown, fn: T): T => fn,
 }));
 
 vi.mock('firebase-functions/v2/firestore', () => ({
@@ -54,10 +56,19 @@ vi.mock('firebase-functions/v2/firestore', () => ({
   onDocumentUpdated: (_opts: unknown, fn: (event: never) => unknown) => fn,
 }));
 
+vi.mock('firebase-functions/v2/scheduler', () => ({
+  onSchedule: (_opts: unknown, fn: () => unknown) => fn,
+}));
+
 vi.mock('firebase-functions/params', () => ({
   defineString: (name: string) => {
     const param = () => mockParams[name];
     param.value = () => mockParams[name];
+    return param;
+  },
+  defineBoolean: (name: string) => {
+    const param = () => mockParams[name] === 'true';
+    param.value = () => mockParams[name] === 'true';
     return param;
   },
 }));
@@ -67,6 +78,7 @@ import {
   bootstrapFirstAdmin as bootstrapFirstAdminRaw,
   onMemberStatusChanged as onMemberStatusChangedRaw,
   saveEvaluation as saveEvaluationRaw,
+  purgeExpiredAuditLogs as purgeExpiredAuditLogsRaw,
 } from './index';
 
 type CallableRequestLike = { auth: { uid: string } | null; data: unknown };
@@ -87,6 +99,7 @@ type AuthUser = { uid: string; email: string; emailVerified: boolean; customClai
 const setUserRole = setUserRoleRaw as unknown as (request: CallableRequestLike) => Promise<RoleResult>;
 const bootstrapFirstAdmin = bootstrapFirstAdminRaw as unknown as (request: CallableRequestLike) => Promise<RoleResult>;
 const onMemberStatusChanged = onMemberStatusChangedRaw as unknown as (event: StatusChangeEvent) => Promise<unknown>;
+const purgeExpiredAuditLogs = purgeExpiredAuditLogsRaw as unknown as () => Promise<unknown>;
 const saveEvaluation = saveEvaluationRaw as unknown as (
   request: CallableRequestWithToken,
 ) => Promise<{ revision: number }>;
@@ -104,6 +117,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockParams.BOOTSTRAP_ADMIN_EMAIL = '';
   mockParams.TEAMS_WEBHOOK_URL = '';
+  mockParams.AUDIT_LOG_RETENTION_DAYS = '0';
+  mockParams.ENFORCE_APP_CHECK = 'false';
   mockAuth.getUser.mockImplementation(async (uid: string) => users[uid] ?? null);
   mockAuth.getUserByEmail.mockImplementation(async (email: string) =>
     Object.values(users).find((user) => user.email === email) ?? null,
@@ -302,8 +317,16 @@ describe('onMemberStatusChanged trigger', () => {
   });
 });
 
+describe('purgeExpiredAuditLogs trigger', () => {
+  it('does not remove data until a retention policy is configured', async () => {
+    await expect(purgeExpiredAuditLogs()).resolves.toBeUndefined();
+    expect(mockDb.collection).not.toHaveBeenCalled();
+  });
+});
+
 describe('saveEvaluation callable', () => {
   const criteriaScores: Record<string, number> = {};
+  let criteriaIndex = 0;
   for (const key of [
     '1-0', '1-1', '1-2', '1-3', '1-4',
     '2-0', '2-1', '2-2', '2-3', '2-4',
@@ -312,7 +335,7 @@ describe('saveEvaluation callable', () => {
     '5-0', '5-1', '5-2', '5-3', '5-4',
     '6-0', '6-1', '6-2', '6-3', '6-4', '6-5',
   ]) {
-    criteriaScores[key] = 3;
+    criteriaScores[key] = criteriaIndex++ < 29 ? 5 : 0;
   }
 
   const pdiGoals = [
@@ -329,7 +352,7 @@ describe('saveEvaluation callable', () => {
       history: [{ month: '2026-Q2', score: 145 }],
     },
     evaluation: {
-      id: 'eval_member1_2026Q2',
+      id: 'evaluation_member1_2026_q2',
       memberId: 'member1',
       memberName: 'Ana Souza',
       leaderName: 'Carlos Lima',
@@ -349,10 +372,11 @@ describe('saveEvaluation callable', () => {
   };
 
   const memberRef = { __path: 'members/member1', name: 'members', id: 'member1' };
-  const evaluationRef = { __path: 'evaluations/eval_member1_2026Q2', name: 'evaluations', id: 'eval_member1_2026Q2' };
+  const evaluationRef = { __path: 'evaluations/evaluation_member1_2026_q2', name: 'evaluations', id: 'evaluation_member1_2026_q2' };
 
   function mockTransaction(options: {
     memberExists?: boolean;
+    memberArchived?: boolean;
     existingEvaluation?: Record<string, unknown> | null;
   } = {}) {
     const memberExists = options.memberExists ?? true;
@@ -360,10 +384,16 @@ describe('saveEvaluation callable', () => {
       if (ref.__path === 'members/member1') {
         return {
           exists: memberExists,
-          data: () => ({ id: 'member1', name: 'Ana Souza', score: 140, status: 'Atenção' }),
+          data: () => ({
+            id: 'member1',
+            name: 'Ana Souza',
+            score: 140,
+            status: 'Atenção',
+            ...(options.memberArchived ? { deleted: true } : {}),
+          }),
         };
       }
-      if (ref.__path === 'evaluations/eval_member1_2026Q2') {
+       if (ref.__path === 'evaluations/evaluation_member1_2026_q2') {
         if (!options.existingEvaluation) return { exists: false, data: () => undefined };
         return { exists: true, data: () => options.existingEvaluation };
       }
@@ -461,6 +491,41 @@ describe('saveEvaluation callable', () => {
     );
   });
 
+  it('rejects a criteria map with a valid-looking but unknown key', async () => {
+    const withUnknownKey = { ...criteriaScores, '1-5': 5 };
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: { ...basePayload, evaluation: { ...basePayload.evaluation, criteriaScores: withUnknownKey } },
+      }),
+      'invalid-argument',
+      /critério desconhecido/,
+    );
+  });
+
+  it('rejects a score that does not equal the criteria total', async () => {
+    const inconsistentScores = { ...criteriaScores, '1-0': 4 };
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: { ...basePayload, evaluation: { ...basePayload.evaluation, criteriaScores: inconsistentScores } },
+      }),
+      'invalid-argument',
+      /soma dos critérios/,
+    );
+  });
+
+  it('rejects a non-deterministic evaluation id', async () => {
+    await expectHttpsError(
+      () => saveEvaluation({
+        auth: leaderAuth,
+        data: { ...basePayload, evaluation: { ...basePayload.evaluation, id: 'another-evaluation' } },
+      }),
+      'invalid-argument',
+      /determinístico/,
+    );
+  });
+
   it('rejects evaluation/member score divergence', async () => {
     await expectHttpsError(
       () => saveEvaluation({
@@ -477,6 +542,15 @@ describe('saveEvaluation callable', () => {
     await expectHttpsError(
       () => saveEvaluation({ auth: leaderAuth, data: basePayload }),
       'not-found',
+    );
+  });
+
+  it('rejects evaluations for archived members', async () => {
+    mockTransaction({ memberArchived: true });
+    await expectHttpsError(
+      () => saveEvaluation({ auth: leaderAuth, data: basePayload }),
+      'failed-precondition',
+      /arquivado/,
     );
   });
 
@@ -506,11 +580,11 @@ describe('saveEvaluation callable', () => {
     );
     expect(mockTx.set).toHaveBeenCalledWith(
       evaluationRef,
-      expect.objectContaining({ id: 'eval_member1_2026Q2', revision: 1 }),
+      expect.objectContaining({ id: 'evaluation_member1_2026_q2', revision: 1 }),
       { merge: true },
     );
     expect(mockTx.set).toHaveBeenCalledWith(
-      { __path: 'auditLogs/audit_eval_member1_2026Q2_1', name: 'auditLogs', id: 'audit_eval_member1_2026Q2_1' },
+       { __path: 'auditLogs/audit_evaluation_member1_2026_q2_1', name: 'auditLogs', id: 'audit_evaluation_member1_2026_q2_1' },
       expect.objectContaining({
         action: 'evaluation_saved',
         actorId: 'leader1',
@@ -526,7 +600,7 @@ describe('saveEvaluation callable', () => {
 
     expect(result).toEqual({ revision: 2 });
     expect(mockTx.set).toHaveBeenCalledWith(
-      { __path: 'auditLogs/audit_eval_member1_2026Q2_2', name: 'auditLogs', id: 'audit_eval_member1_2026Q2_2' },
+       { __path: 'auditLogs/audit_evaluation_member1_2026_q2_2', name: 'auditLogs', id: 'audit_evaluation_member1_2026_q2_2' },
       expect.objectContaining({
         revision: 2,
         previousScore: 140,

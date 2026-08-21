@@ -134,4 +134,10 @@ export function isEvaluationConflictError(error: unknown): boolean {
   return error instanceof Error && error.name === 'EvaluationConflictError';
 }
 
+export function isEvaluationServiceUnavailableError(error: unknown): boolean {
+  if (!(error instanceof Error) || !('code' in error)) return false;
+  const code = (error as { code?: unknown }).code;
+  return code === 'functions/not-found' || code === 'functions/unavailable';
+}
+
 export type { EvaluationPayload } from './firebase';

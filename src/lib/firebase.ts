@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import {
   getAuth,
   browserLocalPersistence,
@@ -21,7 +22,6 @@ import {
   collection,
   getDoc,
   setDoc,
-  deleteDoc,
   updateDoc,
   onSnapshot,
   query,
@@ -51,6 +51,7 @@ export enum OperationType {
 }
 
 const EXPECTED_PROJECT_ID = 'gen-lang-client-0169317507';
+export const FIREBASE_FUNCTIONS_REGION = 'us-central1';
 
 const resolvedFirebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
@@ -61,6 +62,8 @@ const resolvedFirebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId,
 };
+
+const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY?.trim();
 
 if (resolvedFirebaseConfig.projectId !== EXPECTED_PROJECT_ID) {
   throw new Error(
@@ -74,6 +77,17 @@ if (!resolvedFirebaseConfig.firestoreDatabaseId) {
 
 const { firestoreDatabaseId, ...firebaseOptions } = resolvedFirebaseConfig;
 const app = initializeApp(firebaseOptions);
+
+if (appCheckSiteKey) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    });
+  } catch (error) {
+    console.warn('App Check indisponível; confirme a chave reCAPTCHA configurada.', error);
+  }
+}
 
 export const auth = getAuth(app);
 export const db = (() => {
@@ -95,6 +109,11 @@ export async function loginWithEmailAndPassword(email: string, password: string)
   if (!credential.user.emailVerified) {
     await firebaseSignOut(auth);
     throw new Error('EMAIL_NOT_VERIFIED');
+  }
+
+  if (!await getCurrentUserRole(credential.user)) {
+    await firebaseSignOut(auth);
+    throw new Error('ROLE_NOT_AUTHORIZED');
   }
 
   return credential;
@@ -183,7 +202,6 @@ export function subscribeToMembers(
   const membersRef = collection(db, 'members');
   const membersQuery = query(
     membersRef,
-    where('deleted', '==', false),
     orderBy('score', 'desc'),
   );
 
@@ -230,11 +248,18 @@ export async function addMemberToFirestore(newMember: TeamMember) {
 
 export async function updateMemberInFirestore(updatedMember: TeamMember) {
   try {
-    const validatedMember = validateTeamMember(updatedMember);
-    await setDoc(doc(db, 'members', updatedMember.id), {
-      ...validatedMember,
+    validateTeamMember(updatedMember);
+    await updateDoc(doc(db, 'members', updatedMember.id), {
+      // Profile edits must not carry stale score/evaluation fields over a
+      // concurrent saveEvaluation transaction.
+      name: updatedMember.name,
+      role: updatedMember.role,
+      team: updatedMember.team,
+      teamColor: updatedMember.teamColor,
+      avatarUrl: updatedMember.avatarUrl,
+      email: updatedMember.email,
       updatedAt: serverTimestamp(),
-    }, { merge: true });
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, `members/${updatedMember.id}`);
   }
@@ -370,7 +395,7 @@ export async function saveEvaluationAndMemberInFirestore({
   expectedRevision?: number;
 }): Promise<number> {
   try {
-    const functions = getFunctions(app);
+    const functions = getFunctions(app, FIREBASE_FUNCTIONS_REGION);
     const callable = httpsCallable<
       {
         member: {

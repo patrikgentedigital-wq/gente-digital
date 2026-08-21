@@ -1,7 +1,8 @@
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { logger } from 'firebase-functions/logger';
-import { defineString } from 'firebase-functions/params';
+import { defineBoolean, defineString } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
@@ -21,6 +22,9 @@ initializeApp();
 
 const BOOTSTRAP_ADMIN_EMAIL = defineString('BOOTSTRAP_ADMIN_EMAIL', { default: '' });
 const TEAMS_WEBHOOK_URL = defineString('TEAMS_WEBHOOK_URL', { default: '' });
+const AUDIT_LOG_RETENTION_DAYS = defineString('AUDIT_LOG_RETENTION_DAYS', { default: '0' });
+const ENFORCE_APP_CHECK = defineBoolean('ENFORCE_APP_CHECK', { default: false });
+const FUNCTION_REGION = 'us-central1';
 
 async function requireAdmin(uid: string) {
   const caller = await getAuth().getUser(uid);
@@ -59,7 +63,7 @@ async function applyRole(uid: string, role: RoleInput['role']) {
   return { uid: target.uid, email: target.email, role: claims.role ?? null };
 }
 
-export const setUserRole = onCall(async (request) => {
+export const setUserRole = onCall({ region: FUNCTION_REGION }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Faça login para executar esta operação.');
   }
@@ -94,7 +98,7 @@ export const setUserRole = onCall(async (request) => {
   return result;
 });
 
-export const bootstrapFirstAdmin = onCall(async (request) => {
+export const bootstrapFirstAdmin = onCall({ region: FUNCTION_REGION }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Faça login para executar esta operação.');
   }
@@ -134,6 +138,7 @@ const FIRESTORE_DATABASE_ID = 'ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2c
 
 class EvaluationConflictSignal extends Error {}
 class MemberNotFoundSignal extends Error {}
+class MemberArchivedSignal extends Error {}
 
 function isPerformanceStatus(value: unknown): value is (typeof PERFORMANCE_STATUSES)[number] {
   return typeof value === 'string' && (PERFORMANCE_STATUSES as readonly string[]).includes(value);
@@ -142,7 +147,7 @@ function isPerformanceStatus(value: unknown): value is (typeof PERFORMANCE_STATU
 // Único caminho de escrita de avaliações/membros(somente leitura de avaliação)/auditLogs:
 // valida o payload elemento a elemento com zod (o que as rules não conseguem),
 // preserva a checagem otimista de revisão e grava a trilha de auditoria.
-export const saveEvaluation = onCall(async (request) => {
+export const saveEvaluation = onCall({ region: FUNCTION_REGION, enforceAppCheck: ENFORCE_APP_CHECK }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Faça login para salvar avaliações.');
   }
@@ -164,6 +169,9 @@ export const saveEvaluation = onCall(async (request) => {
   }
   const { member, evaluation, expectedRevision } = parsed.data;
   const actorEmail = typeof token.email === 'string' ? token.email : '';
+  const actorName = typeof token.name === 'string' && token.name.trim()
+    ? token.name.trim().slice(0, 100)
+    : actorEmail || request.auth.uid;
 
   const db = getFirestore(FIRESTORE_DATABASE_ID);
   const memberRef = db.collection('members').doc(member.id);
@@ -177,6 +185,13 @@ export const saveEvaluation = onCall(async (request) => {
       if (!memberSnap.exists) {
         throw new MemberNotFoundSignal();
       }
+      const currentMember = memberSnap.data() ?? {};
+      if (currentMember.deleted === true) {
+        throw new MemberArchivedSignal();
+      }
+      const currentMemberName = typeof currentMember.name === 'string'
+        ? currentMember.name
+        : evaluation.memberName;
 
       const existingEval = await tx.get(evaluationRef);
       const previous = existingEval.exists ? existingEval.data() : undefined;
@@ -201,8 +216,8 @@ export const saveEvaluation = onCall(async (request) => {
         {
           id: evaluation.id,
           memberId: evaluation.memberId,
-          memberName: evaluation.memberName,
-          leaderName: evaluation.leaderName,
+          memberName: currentMemberName,
+          leaderName: actorName,
           score: evaluation.score,
           status: evaluation.status,
           cycle: evaluation.cycle,
@@ -222,7 +237,7 @@ export const saveEvaluation = onCall(async (request) => {
         action: 'evaluation_saved',
         evaluationId: evaluation.id,
         memberId: evaluation.memberId,
-        memberName: evaluation.memberName,
+        memberName: currentMemberName,
         cycle: evaluation.cycle,
         revision: auditRevision,
         score: evaluation.score,
@@ -231,7 +246,7 @@ export const saveEvaluation = onCall(async (request) => {
         ...(isPerformanceStatus(previous?.status) ? { previousStatus: previous.status } : {}),
         actorId: request.auth!.uid,
         actorEmail,
-        actorName: evaluation.leaderName,
+        actorName,
         createdAt: now,
       });
 
@@ -252,13 +267,16 @@ export const saveEvaluation = onCall(async (request) => {
     if (error instanceof MemberNotFoundSignal) {
       throw new HttpsError('not-found', `Membro ${member.id} não encontrado.`);
     }
+    if (error instanceof MemberArchivedSignal) {
+      throw new HttpsError('failed-precondition', 'Não é possível avaliar um membro arquivado.');
+    }
     logger.error('saveEvaluation: falha inesperada', error);
     throw new HttpsError('internal', 'Falha ao salvar a avaliação.');
   }
 });
 
 export const onMemberDeleted = onDocumentDeleted(
-  { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID },
+  { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID, region: FUNCTION_REGION },
   async (event) => {
     const memberId = event.params.memberId;
     const db = getFirestore(FIRESTORE_DATABASE_ID);
@@ -290,7 +308,7 @@ const STATUS_ORDER: Record<string, number> = {
 };
 
 export const onMemberStatusChanged = onDocumentUpdated(
-  { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID, timeoutSeconds: 30 },
+  { document: 'members/{memberId}', database: FIRESTORE_DATABASE_ID, region: FUNCTION_REGION, timeoutSeconds: 30 },
   async (event) => {
     const before = event.data?.before.data();
     const after = event.data?.after.data();
@@ -334,5 +352,39 @@ export const onMemberStatusChanged = onDocumentUpdated(
       logger.error('onMemberStatusChanged: falha ao enviar webhook', error);
       return { notified: false, error: 'webhook-failed' };
     }
+  },
+);
+
+// A retenção é configurável porque o prazo deve seguir a política LGPD da
+// organização. Com valor 0, a rotina não apaga dados por padrão.
+export const purgeExpiredAuditLogs = onSchedule(
+  { schedule: 'every 24 hours', timeZone: 'Etc/UTC', region: FUNCTION_REGION },
+  async () => {
+    const retentionDays = Number.parseInt(AUDIT_LOG_RETENTION_DAYS.value(), 10);
+    if (!Number.isInteger(retentionDays) || retentionDays <= 0) {
+      logger.info('purgeExpiredAuditLogs: AUDIT_LOG_RETENTION_DAYS não configurado; nada foi removido.');
+      return;
+    }
+
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const db = getFirestore(FIRESTORE_DATABASE_ID);
+    let deletedCount = 0;
+
+    for (;;) {
+      const snapshot = await db
+        .collection('auditLogs')
+        .where('createdAt', '<', cutoff)
+        .orderBy('createdAt')
+        .limit(500)
+        .get();
+      if (snapshot.empty) break;
+
+      const batch = db.batch();
+      snapshot.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      deletedCount += snapshot.size;
+    }
+
+    logger.info(`purgeExpiredAuditLogs: ${deletedCount} registro(s) removido(s)`);
   },
 );

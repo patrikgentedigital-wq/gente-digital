@@ -6,7 +6,7 @@ Plataforma interna de ranking, análise de desempenho e avaliação de equipes.
 
 - React + Vite + TypeScript
 - Firebase Authentication e Firestore
-- Cloud Functions para provisionamento de roles
+- Cloud Functions para provisionamento de roles e gravação autoritativa de avaliações
 - Tailwind CSS, Recharts e Vitest
 
 ## Desenvolvimento local
@@ -22,6 +22,10 @@ O projeto usa a configuração pública do Firebase em
 `firebase-applet-config.json`. Para sobrescrever valores localmente, copie
 `.env.example` para `.env.local`.
 
+Para habilitar o App Check no frontend, informe `VITE_FIREBASE_APPCHECK_SITE_KEY`
+com a site key reCAPTCHA v3 cadastrada no Firebase Console. Depois, ative a
+exigência de App Check no Firebase apenas após validar o domínio publicado.
+
 ## Validação
 
 ```sh
@@ -35,6 +39,17 @@ npm run lint
 npm test
 npm run build
 ```
+
+Para publicar o app, as Cloud Functions precisam ser publicadas junto com as
+Rules porque o salvamento de avaliações usa a callable `saveEvaluation`:
+
+```sh
+firebase deploy --only functions,firestore,hosting
+```
+
+Os hooks de deploy executam os builds do frontend e de `functions/` antes da
+publicação. O Firestore aceita membros legados sem o campo `deleted`; eles são
+tratados como ativos até serem arquivados.
 
 ## Roles e autorização
 

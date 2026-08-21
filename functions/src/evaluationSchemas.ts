@@ -32,19 +32,53 @@ const CRITERIA_KEYS = [
   '6-0', '6-1', '6-2', '6-3', '6-4', '6-5',
 ] as const;
 
+function isKnownCriteriaKey(value: string): boolean {
+  return (CRITERIA_KEYS as readonly string[]).includes(value);
+}
+
 const criteriaValueSchema = z.number().finite().min(0).max(5);
 
 const completeCriteriaScoresSchema = z
   .record(z.string().regex(/^[1-6]-[0-5]$/), criteriaValueSchema)
-  .refine(
-    (scores) => CRITERIA_KEYS.every((key) => key in scores),
-    { message: 'criteriaScores incompleto: todos os 31 critérios são obrigatórios' },
-  );
+  .superRefine((scores, context) => {
+    for (const key of Object.keys(scores)) {
+      if (!isKnownCriteriaKey(key)) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'critério desconhecido',
+        });
+      }
+    }
+    for (const key of CRITERIA_KEYS) {
+      if (!(key in scores)) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'critério obrigatório ausente',
+        });
+      }
+    }
+  });
 
-const partialCriteriaScoresSchema = z.record(
-  z.string().regex(/^[1-6]-[0-5]$/),
-  criteriaValueSchema,
-);
+const partialCriteriaScoresSchema = z
+  .record(z.string().regex(/^[1-6]-[0-5]$/), criteriaValueSchema)
+  .superRefine((scores, context) => {
+    for (const key of Object.keys(scores)) {
+      if (!isKnownCriteriaKey(key)) {
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'critério desconhecido',
+        });
+      }
+    }
+  });
+
+export function makeEvaluationId(memberId: string, cycle: string): string {
+  const cycleId = cycle.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return `evaluation_${memberId}_${cycleId}`;
+}
 
 export function statusForScore(score: number): (typeof PERFORMANCE_STATUSES)[number] {
   if (score > 140) return 'Voando';
@@ -96,12 +130,45 @@ export const saveEvaluationInputSchema = z
     message: 'evaluation.memberId deve ser igual a member.id',
     path: ['evaluation', 'memberId'],
   })
+  .refine((data) => data.evaluation.id === makeEvaluationId(data.member.id, data.evaluation.cycle), {
+    message: 'evaluation.id deve ser determinístico para o membro e ciclo informados',
+    path: ['evaluation', 'id'],
+  })
   .refine(
     (data) =>
       data.evaluation.score === data.member.score && data.evaluation.status === data.member.status,
     {
       message: 'score/status da avaliação divergem do membro',
       path: ['evaluation', 'score'],
+    },
+  )
+  .refine((data) => data.member.evaluationStatus === 'Concluído', {
+    message: 'uma avaliação salva deve concluir o status do membro',
+    path: ['member', 'evaluationStatus'],
+  })
+  .refine(
+    (data) => Math.abs(
+      Object.values(data.evaluation.criteriaScores).reduce((total, score) => total + score, 0) - data.evaluation.score,
+    ) < 1e-9,
+    {
+      message: 'a pontuação da avaliação deve ser a soma dos critérios',
+      path: ['evaluation', 'score'],
+    },
+  )
+  .refine(
+    (data) => data.member.pdiGoals.length === data.evaluation.pdiGoals.length &&
+      data.member.pdiGoals.every((goal, index) => JSON.stringify(goal) === JSON.stringify(data.evaluation.pdiGoals[index])),
+    {
+      message: 'as metas PDI do membro e da avaliação devem ser iguais',
+      path: ['evaluation', 'pdiGoals'],
+    },
+  )
+  .refine(
+    (data) => data.member.history.filter((entry) => entry.month === data.evaluation.cycle).length === 1 &&
+      data.member.history.some((entry) => entry.month === data.evaluation.cycle && entry.score === data.evaluation.score),
+    {
+      message: 'o histórico do membro deve conter uma entrada para o ciclo e score atuais',
+      path: ['member', 'history'],
     },
   );
 

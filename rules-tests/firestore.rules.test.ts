@@ -228,9 +228,9 @@ describe('escrita de membros (apenas admin; líder usa a callable saveEvaluation
     await assertFails(leaderCtx().firestore().collection('members').doc('member1').delete());
   });
 
-  it('permite delete de membro por admin', async () => {
+  it('bloqueia exclusão definitiva de membro por admin', async () => {
     await seedMembers();
-    await assertSucceeds(adminCtx().firestore().collection('members').doc('member1').delete());
+    await assertFails(adminCtx().firestore().collection('members').doc('member1').delete());
   });
 });
 
@@ -337,13 +337,13 @@ describe('evaluations (escrita apenas via Cloud Function)', () => {
     );
   });
 
-  it('bloqueia delete de avaliação por líder e permite por admin', async () => {
+  it('bloqueia delete de avaliação pelo cliente, inclusive admin', async () => {
     await seedMembers();
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await ctx.firestore().collection('evaluations').doc('eval1').set(evaluationDoc('eval1'));
     });
     await assertFails(leaderCtx().firestore().collection('evaluations').doc('eval1').delete());
-    await assertSucceeds(adminCtx().firestore().collection('evaluations').doc('eval1').delete());
+    await assertFails(adminCtx().firestore().collection('evaluations').doc('eval1').delete());
   });
 });
 

@@ -31,7 +31,7 @@ projeto selecionado (`.firebaserc` já aponta para `gen-lang-client-0169317507`)
 ```sh
 # Funções leem parâmetros via .env em functions/. Crie o arquivo:
 cat > functions/.env <<'EOF'
-BOOTSTRAP_ADMIN_EMAIL=lider@gentedigital.com.br
+BOOTSTRAP_ADMIN_EMAIL=admin@example.com
 # TEAMS_WEBHOOK_URL=https://outlook.office.com/webhook/...  # opcional: alertas de queda de status
 AUDIT_LOG_RETENTION_DAYS=0  # defina conforme a política LGPD aprovada
 ENFORCE_APP_CHECK=false  # mude para true após configurar a site key reCAPTCHA
@@ -85,10 +85,10 @@ roles continuam disponíveis para o runbook administrativo.
    via prompt, sem aparecer no histórico do shell):
 
 ```sh
-npm run provision -- bootstrap lider@gentedigital.com.br
+npm run provision -- bootstrap admin@example.com
 ```
 
-Saída esperada: `Admin provisionado: lider@gentedigital.com.br (role=admin)`.
+Saída esperada: `Admin provisionado: admin@example.com (role=admin)`.
 
 Se falhar: confirme que o e-mail está verificado, que o parâmetro
 `BOOTSTRAP_ADMIN_EMAIL` está publicado e que ainda não existe outro admin.
@@ -99,13 +99,13 @@ Com o primeiro admin autenticado (a senha do admin é pedida via prompt):
 
 ```sh
 # Promover líder
-npm run provision -- set-role admin@x.com leader fernanda@gentedigital.com.br
+npm run provision -- set-role admin@x.com leader lider1@example.com
 
 # Promover admin
-npm run provision -- set-role admin@x.com admin alexandre@gentedigital.com.br
+npm run provision -- set-role admin@x.com admin lider2@example.com
 
 # Remover papel (desligar acesso)
-npm run provision -- set-role admin@x.com null diego@gentedigital.com.br
+npm run provision -- set-role admin@x.com null lider3@example.com
 ```
 
 Proteções implementadas na função `setUserRole`:

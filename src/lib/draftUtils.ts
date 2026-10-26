@@ -88,3 +88,17 @@ export function isEmptyDraft(input: EvaluationDraftInput): boolean {
   const hasAnyScore = Object.values(input.scores).some((value) => typeof value === 'number' && value > 0);
   return !hasAnyScore && !input.leaderComments.trim() && input.pdiGoals.length === 0;
 }
+/** Remove todos os rascunhos locais (ex.: no logout, para não vazar em máquina compartilhada). */
+export function clearAllDrafts(): void {
+  if (!hasLocalStorage()) return;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(KEY_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Ignora: armazenamento indisponível.
+  }
+}

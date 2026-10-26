@@ -25,6 +25,7 @@ const TEAMS_WEBHOOK_URL = defineString('TEAMS_WEBHOOK_URL', { default: '' });
 const AUDIT_LOG_RETENTION_DAYS = defineString('AUDIT_LOG_RETENTION_DAYS', { default: '0' });
 const ENFORCE_APP_CHECK = defineBoolean('ENFORCE_APP_CHECK', { default: false });
 const FUNCTION_REGION = 'us-central1';
+const FIRESTORE_DATABASE_ID = 'ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93';
 
 async function requireAdmin(uid: string) {
   const caller = await getAuth().getUser(uid);
@@ -60,6 +61,9 @@ async function applyRole(uid: string, role: RoleInput['role']) {
   }
 
   await getAuth().setCustomUserClaims(target.uid, claims);
+  // As regras leem a claim do ID token; sem revogar, o acesso anterior
+  // continua válido até a expiração do token (~1h).
+  await getAuth().revokeRefreshTokens(target.uid);
   return { uid: target.uid, email: target.email, role: claims.role ?? null };
 }
 
@@ -90,7 +94,20 @@ export const setUserRole = onCall({ region: FUNCTION_REGION }, async (request) =
     }
   }
 
+  const previousRole = target.customClaims?.role ?? null;
   const result = await applyRole(target.uid, input.role);
+
+  // Trilha própria (não reaproveita auditLogs, que a UI interpreta como avaliações).
+  await getFirestore(FIRESTORE_DATABASE_ID).collection('roleAuditLogs').add({
+    action: 'role_changed',
+    targetUid: result.uid,
+    targetEmail: result.email ?? '',
+    previousRole,
+    newRole: input.role,
+    actorId: admin.uid,
+    actorEmail: admin.email ?? '',
+    createdAt: FieldValue.serverTimestamp(),
+  });
 
   logger.info(
     `setUserRole: role ${input.role ?? '(removida)'} aplicada a ${result.email} por ${admin.email}`,
@@ -133,8 +150,6 @@ export const bootstrapFirstAdmin = onCall({ region: FUNCTION_REGION }, async (re
   logger.info(`bootstrapFirstAdmin: primeiro admin provisionado (${result.email})`);
   return result;
 });
-
-const FIRESTORE_DATABASE_ID = 'ai-studio-gentedigital-cb816dee-4739-4dd8-8612-2cfe4702cf93';
 
 class EvaluationConflictSignal extends Error {}
 class MemberNotFoundSignal extends Error {}
@@ -202,12 +217,22 @@ export const saveEvaluation = onCall({ region: FUNCTION_REGION, enforceAppCheck:
 
       const now = FieldValue.serverTimestamp();
 
+      // O histórico vem do servidor: o cliente só pode inserir/atualizar a
+      // entrada do ciclo avaliado, nunca reescrever ciclos anteriores.
+      const storedHistory: Array<{ month: string; score: number }> = Array.isArray(currentMember.history)
+        ? currentMember.history
+        : [];
+      const mergedHistory = [
+        ...storedHistory.filter((entry) => entry?.month !== evaluation.cycle),
+        { month: evaluation.cycle, score: evaluation.score },
+      ].slice(-100);
+
       tx.update(memberRef, {
         score: member.score,
         status: member.status,
         evaluationStatus: member.evaluationStatus,
         pdiGoals: member.pdiGoals,
-        history: member.history,
+        history: mergedHistory,
         updatedAt: now,
       });
 

@@ -34,6 +34,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import type { EvaluationAuditLog, PerformanceStatus, TeamMember, PdiGoal } from '../types';
+import { clearAllDrafts } from './draftUtils';
 import {
   FirestoreDataValidationError,
   parseEvaluationPayload,
@@ -129,6 +130,7 @@ export async function getCurrentUserRole(user: User): Promise<AppRole | null> {
 }
 
 export async function logoutLeader() {
+  clearAllDrafts();
   return firebaseSignOut(auth);
 }
 

@@ -13,12 +13,15 @@ const hoisted = vi.hoisted(() => {
     getUser: vi.fn(),
     getUserByEmail: vi.fn(),
     setCustomUserClaims: vi.fn(),
+    revokeRefreshTokens: vi.fn(),
     listUsers: vi.fn(),
   };
+  const mockAdd = vi.fn();
   const mockTx = { get: vi.fn(), update: vi.fn(), set: vi.fn() };
   const mockDb = {
     collection: vi.fn((name: string) => ({
       doc: (id: string) => ({ __path: `${name}/${id}`, name, id }),
+      add: hoisted.mockAdd,
     })),
     batch: vi.fn(),
     runTransaction: (cb: (tx: unknown) => Promise<unknown>) => cb(hoisted.mockTx),
@@ -28,6 +31,7 @@ const hoisted = vi.hoisted(() => {
     mockAuth,
     mockDb,
     mockTx,
+    mockAdd,
     mockParams: {
       BOOTSTRAP_ADMIN_EMAIL: '',
       TEAMS_WEBHOOK_URL: '',
@@ -125,6 +129,8 @@ beforeEach(() => {
   );
   mockAuth.listUsers.mockResolvedValue({ users: Object.values(users), pageToken: undefined });
   mockAuth.setCustomUserClaims.mockResolvedValue(undefined);
+  mockAuth.revokeRefreshTokens.mockResolvedValue(undefined);
+  hoisted.mockAdd.mockResolvedValue(undefined);
 });
 
 async function expectHttpsError(action: () => Promise<unknown>, code: string, messageRegex?: RegExp) {
@@ -198,6 +204,10 @@ describe('setUserRole handler', () => {
 
     expect(result.role).toBe('leader');
     expect(mockAuth.setCustomUserClaims).toHaveBeenCalledWith('leader1', { role: 'leader' });
+    expect(mockAuth.revokeRefreshTokens).toHaveBeenCalledWith('leader1');
+    expect(hoisted.mockAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'role_changed', targetUid: 'leader1', newRole: 'leader', actorId: 'admin1' }),
+    );
   });
 
   it('promotes a target to admin', async () => {
@@ -378,6 +388,7 @@ describe('saveEvaluation callable', () => {
     memberExists?: boolean;
     memberArchived?: boolean;
     existingEvaluation?: Record<string, unknown> | null;
+    storedHistory?: Array<{ month: string; score: number }>;
   } = {}) {
     const memberExists = options.memberExists ?? true;
     mockTx.get.mockImplementation(async (ref: { __path: string }) => {
@@ -389,6 +400,7 @@ describe('saveEvaluation callable', () => {
             name: 'Ana Souza',
             score: 140,
             status: 'Atenção',
+            ...(options.storedHistory ? { history: options.storedHistory } : {}),
             ...(options.memberArchived ? { deleted: true } : {}),
           }),
         };
@@ -590,6 +602,18 @@ describe('saveEvaluation callable', () => {
         actorId: 'leader1',
         actorEmail: 'leader@empresa.com.br',
         revision: 1,
+      }),
+    );
+  });
+
+  it('keeps stored history for past cycles and ignores client-forged entries', async () => {
+    mockTransaction({ storedHistory: [{ month: '2026-Q1', score: 120 }] });
+    await saveEvaluation({ auth: leaderAuth, data: basePayload });
+
+    expect(mockTx.update).toHaveBeenCalledWith(
+      memberRef,
+      expect.objectContaining({
+        history: [{ month: '2026-Q1', score: 120 }, { month: '2026-Q2', score: 145 }],
       }),
     );
   });

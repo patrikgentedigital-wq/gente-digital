@@ -114,6 +114,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /roleAuditLogs/{logId} {
+      allow read: if isAdmin();
+      // Append-only via Cloud Function setUserRole (Admin SDK).
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

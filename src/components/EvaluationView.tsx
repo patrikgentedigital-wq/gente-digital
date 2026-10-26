@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
-  Sparkles,
   Target,
   Plus,
   Trash2,
@@ -339,19 +338,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     <>
       <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
       {/* Header Bar */}
-      <div className="bg-surface border border-line p-6 rounded-2xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
-        <div>
-          <div className="font-mono text-xs text-accent uppercase tracking-wider font-bold mb-1 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            Lançamento Oficial de Avaliação
-          </div>
-          <h2 className="font-display font-bold text-2xl text-white">Avaliação da Liderança & PDI</h2>
-          <p className="text-xs text-muted mt-0.5">
-            Lance as notas validadas, plano de desenvolvimento e acompanhe a teia de competências.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
+      <div className="bg-surface p-6 rounded-3xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-2.5 md:ml-auto">
           <button
              onClick={() => onOpenReportModal(selectedMember, {
                criteriaScores: Object.fromEntries(
@@ -369,10 +357,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* Selectors Bar: Filtro por Time, Colaborador & Ciclo */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-surface border border-line p-4 rounded-xl mb-6 shadow-lg">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-surface p-4 rounded-xl mb-6 shadow-lg">
         {/* Team Filter */}
         <div className="md:col-span-3">
-          <label className="block text-xs font-mono font-semibold text-muted mb-2 uppercase flex items-center gap-1.5">
+          <label className="block text-xs font-mono font-semibold text-muted mb-2 flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-accent" />
             Filtrar Time
           </label>
@@ -390,7 +378,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 }
               });
             }}
-            className="w-full bg-surface-2 border border-line text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
+            className="w-full bg-surface-2 border border-line text-ink font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
           >
             <option value="all">Todos os Times ({members.length})</option>
             {TEAMS.map((t) => {
@@ -406,7 +394,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
         {/* Selected Member */}
         <div className="md:col-span-5">
-          <label className="block text-xs font-mono font-semibold text-muted mb-2 uppercase">
+          <label className="block text-xs font-mono font-semibold text-muted mb-2 ">
             Colaborador Avaliado
           </label>
           <div className="flex gap-2">
@@ -416,7 +404,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 const m = members.find((x) => x.id === e.target.value);
                 if (m) runOrConfirmDiscard(() => onSelectMember(m));
               }}
-              className="flex-1 bg-surface-2 border border-line text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
+              className="flex-1 bg-surface-2 border border-line text-ink font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
             >
               {(teamFilter === 'all'
                 ? members
@@ -442,7 +430,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
         {/* Cycle */}
         <div className="md:col-span-4">
-          <label className="block text-xs font-mono font-semibold text-muted mb-2 uppercase">
+          <label className="block text-xs font-mono font-semibold text-muted mb-2 ">
             Ciclo de Avaliação
           </label>
           <div className="relative">
@@ -453,7 +441,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 const nextCycle = e.target.value;
                 runOrConfirmDiscard(() => setCycle(nextCycle));
               }}
-              className="w-full bg-surface-2 border border-line text-white font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-accent"
+              className="w-full bg-surface-2 border border-line text-ink font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-accent"
             >
               {availableEvaluationCycles.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -466,9 +454,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* Section Progress */}
-      <div className="bg-surface border border-line p-4 rounded-xl mb-6 shadow-lg">
+      <div className="bg-surface p-4 rounded-xl mb-6 shadow-lg">
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-xs font-mono font-semibold text-muted uppercase flex items-center gap-1.5">
+          <span className="text-xs font-mono font-semibold text-muted flex items-center gap-1.5">
             <Compass className="w-3.5 h-3.5 text-accent" />
             Progresso da Avaliação
           </span>
@@ -482,7 +470,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               key={section.id}
               type="button"
               onClick={() => document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className={`flex-1 rounded-lg border px-2 py-1.5 text-[10px] font-bold font-mono uppercase tracking-wide transition-colors cursor-pointer text-left truncate ${
+              className={`flex-1 rounded-lg border px-2 py-1.5 text-[10px] font-bold font-mono transition-colors cursor-pointer text-left truncate ${
                 section.done
                   ? 'bg-success-soft border-success/40 text-success'
                   : 'bg-app border-line text-muted hover:border-accent/50'
@@ -495,11 +483,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* Radar Chart Summary Section */}
-      <div className="bg-surface border border-line p-5 rounded-2xl mb-6 shadow-xl">
+      <div className="bg-surface p-5 rounded-3xl mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-accent" />
-            <h3 className="font-display font-bold text-sm text-white">
+            <h3 className="font-display font-bold text-sm text-ink">
               Teia de Competências da Liderança
             </h3>
           </div>
@@ -516,20 +504,20 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} outerRadius="70%">
-                <PolarGrid stroke="#22365C" />
-                <PolarAngleAxis dataKey="category" stroke="#A9B7CE" tick={{ fill: '#A9B7CE', fontSize: 11 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#22365C" tick={{ fill: '#6C7C99', fontSize: 10 }} />
+                <PolarGrid stroke="#d2d2d7" />
+                <PolarAngleAxis dataKey="category" stroke="#6e6e73" tick={{ fill: '#6e6e73', fontSize: 11 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#d2d2d7" tick={{ fill: '#86868b', fontSize: 10 }} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0F1E38',
-                    borderColor: '#22365C',
+                    backgroundColor: '#ffffff',
+                    borderColor: '#d2d2d7',
                     borderRadius: '12px',
                     color: '#fff',
                     fontSize: '12px',
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <Radar name="Avaliação do Líder" dataKey="lider" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
+                <Radar name="Avaliação do Líder" dataKey="lider" stroke="#0071e3" fill="#0071e3" fillOpacity={0.4} />
               </RadarChart>
             </ResponsiveContainer>
           )}
@@ -585,7 +573,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                         <div className="flex items-center gap-2 shrink-0">
                           <button
                             onClick={() => updateScore(key, -1)}
-                            className="w-7 h-7 rounded-lg border border-line bg-app hover:border-accent text-white font-mono text-base font-bold flex items-center justify-center cursor-pointer transition-colors"
+                            className="w-7 h-7 rounded-lg border border-line bg-app hover:border-accent text-ink font-mono text-base font-bold flex items-center justify-center cursor-pointer transition-colors"
                           >
                             −
                           </button>
@@ -594,7 +582,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                           </span>
                           <button
                             onClick={() => updateScore(key, 1)}
-                            className="w-7 h-7 rounded-lg border border-line bg-app hover:border-accent text-white font-mono text-base font-bold flex items-center justify-center cursor-pointer transition-colors"
+                            className="w-7 h-7 rounded-lg border border-line bg-app hover:border-accent text-ink font-mono text-base font-bold flex items-center justify-center cursor-pointer transition-colors"
                           >
                             +
                           </button>
@@ -610,12 +598,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* PDI (Plano de Desenvolvimento Individual) Section */}
-      <div id="eval-pdi" className="bg-surface border border-line p-5 rounded-xl mt-6 shadow-xl scroll-mt-4">
+      <div id="eval-pdi" className="bg-surface p-5 rounded-xl mt-6 scroll-mt-4">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <Target className="w-5 h-5 text-success" />
             <div>
-              <h3 className="font-display font-bold text-sm text-white">
+              <h3 className="font-display font-bold text-sm text-ink">
                 PDI • Plano de Desenvolvimento Individual
               </h3>
               <p className="text-[11px] text-muted">Metas e compromissos alinhados para o próximo ciclo</p>
@@ -641,7 +629,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   onChange={(e) => setNewGoalTitle(e.target.value)}
                   placeholder="Ex: Realizar certificação IXC Avançado e reduzir tempo de resposta"
                   maxLength={200}
-                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-success"
+                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none focus:border-success"
                   required
                 />
               </div>
@@ -652,7 +640,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   onChange={(e) => setNewGoalDeadline(e.target.value)}
                   placeholder="Prazo (Ex: 30 dias)"
                   maxLength={100}
-                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-success"
+                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none focus:border-success"
                 />
               </div>
               <div>
@@ -661,7 +649,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   value={newGoalDueDate}
                   onChange={(e) => setNewGoalDueDate(e.target.value)}
                   title="Data de vencimento"
-                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-success"
+                  className="w-full bg-surface border border-line rounded-lg px-3 py-2 text-xs text-ink focus:outline-none focus:border-success"
                 />
               </div>
             </div>
@@ -717,7 +705,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   {isPdiGoalOverdue(g) && (
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-danger-ink bg-danger-soft border border-danger/40 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold text-danger-ink bg-danger-soft border border-danger/40 px-2 py-0.5 rounded">
                       Vencida
                     </span>
                   )}
@@ -739,8 +727,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* Leader Comments Box */}
-      <div id="eval-parecer" className="bg-surface border border-line p-4 rounded-xl mt-6 space-y-2 shadow-xl scroll-mt-4">
-        <label className="text-xs font-mono font-bold text-accent uppercase tracking-wider block">
+      <div id="eval-parecer" className="bg-surface p-4 rounded-xl mt-6 space-y-2 scroll-mt-4">
+        <label className="text-xs font-mono font-bold text-accent block">
           Comentários e Parecer da Liderança
         </label>
         <textarea
@@ -752,12 +740,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           maxLength={5000}
           rows={3}
           placeholder="Insira as principais considerações do feedback..."
-          className="w-full bg-app border border-line rounded-xl p-3 text-xs text-white focus:outline-none focus:border-accent resize-none"
+          className="w-full bg-app border border-line rounded-xl p-3 text-xs text-ink focus:outline-none focus:border-accent resize-none"
         />
       </div>
 
       {/* Sticky Bottom Total Bar */}
-      <div className="sticky bottom-4 mt-6 bg-surface/95 backdrop-blur-md border border-line rounded-xl p-4 px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xl z-30">
+      <div className="sticky bottom-4 mt-6 bg-surface/95 backdrop-blur-md border border-line rounded-xl p-4 px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-30">
         <div className="flex items-center gap-4 flex-wrap">
           <div>
             <div className="text-[11px] font-mono text-faint">Pontuação Final ({cycle})</div>

@@ -49,7 +49,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
         
         {/* Top Bar Action */}
         <div className="p-4 border-b border-line bg-surface-2 flex justify-between items-center print:hidden">
-          <div className="flex items-center gap-2 font-display font-bold text-sm text-white">
+          <div className="flex items-center gap-2 font-display font-bold text-sm text-ink">
             <Sparkles className="w-4 h-4 text-accent" />
             <span id="report-export-title">Relatório Consolidado de Desempenho</span>
           </div>
@@ -65,7 +65,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <button
               onClick={onClose}
               aria-label="Fechar relatório"
-              className="p-2 text-muted hover:text-white rounded-lg hover:bg-line transition-colors"
+              className="p-2 text-muted hover:text-ink rounded-lg hover:bg-line transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -90,10 +90,10 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 <div className="font-mono text-[10px] text-accent uppercase tracking-widest font-bold mb-0.5">
                   GENTE DIGITAL · RELATÓRIO INDIVIDUAL
                 </div>
-                <h2 className="text-2xl font-display font-bold text-white">{member.name}</h2>
+                <h2 className="text-2xl font-display font-bold text-ink">{member.name}</h2>
                 <p className="text-xs text-muted font-sans">{member.role}</p>
                 <div className="flex items-center gap-2 mt-2 font-mono text-[11px] text-faint">
-                  <span>Líder: <strong className="text-white">{member.team}</strong></span>
+                  <span>Líder: <strong className="text-ink">{member.team}</strong></span>
                   <span>•</span>
                   <span>Rank: <strong className="text-accent">#{member.rank}</strong></span>
                 </div>
@@ -113,7 +113,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
 
           {/* Category Breakdown */}
           <div className="space-y-3">
-            <h3 className="font-display font-bold text-sm text-white uppercase tracking-wider font-mono flex items-center gap-2">
+            <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wider font-mono flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-accent" />
               Pontuação por Categoria de Avaliação
             </h3>
@@ -126,7 +126,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 return (
                   <div key={cat.id} className="bg-surface-2/60 border border-line p-3.5 rounded-xl flex flex-col justify-between">
                     <div className="flex justify-between items-center text-xs mb-2">
-                      <span className="font-semibold text-white">{cat.id}. {cat.name}</span>
+                      <span className="font-semibold text-ink">{cat.id}. {cat.name}</span>
                       <span className="font-mono text-accent font-bold">
                         {sum === null ? '—' : `${sum}/${max}`}
                       </span>
@@ -159,7 +159,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <div className="space-y-8">
               <div className="border-b border-line w-3/4 mx-auto" />
               <div>
-                <p className="font-bold text-white">{member.name}</p>
+                <p className="font-bold text-ink">{member.name}</p>
                 <p className="text-[10px]">Assinatura do Colaborador</p>
               </div>
             </div>
@@ -167,7 +167,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <div className="space-y-8">
               <div className="border-b border-line w-3/4 mx-auto" />
               <div>
-                <p className="font-bold text-white">{member.team} (Líder)</p>
+                <p className="font-bold text-ink">{member.team} (Líder)</p>
                 <p className="text-[10px]">Validação de Liderança</p>
               </div>
             </div>

@@ -9,7 +9,7 @@ test.describe('smoke', () => {
     page.on('pageerror', (error) => consoleErrors.push(error.message));
 
     await page.goto('/');
-    await expect(page.getByText('Gente Digital · Análise de Desempenho')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ranking' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Entrar como líder' })).toBeVisible();
 
     expect(consoleErrors.filter((message) => !message.includes('favicon'))).toEqual([]);

@@ -39,13 +39,6 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
-      {/* Header */}
-      <div className="border-b border-line pb-5 mb-7">
-        <h2 className="text-2xl font-display font-bold text-white tracking-tight">Desempenho por Equipes</h2>
-        <p className="text-xs text-muted mt-1">
-          Visão consolidada de performance, lideranças e destaques individuais por time.
-        </p>
-      </div>
 
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -55,13 +48,13 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           return (
             <div
               key={leader}
-              className="bg-surface border border-line rounded-2xl p-5 flex flex-col justify-between gap-5 hover:border-accent/50 transition-all shadow-xl group"
+              className="bg-surface border border-line rounded-3xl p-5 flex flex-col justify-between gap-5 hover:border-accent/50 transition-all group"
             >
               <div>
                 {/* Title & Leader */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-display font-bold text-white group-hover:text-accent transition-colors">
+                    <h3 className="text-lg font-display font-bold text-ink group-hover:text-accent transition-colors">
                       Time {leader}
                     </h3>
                     <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
@@ -101,12 +94,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent uppercase font-mono">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent font-mono">
                         <Award className="w-3 h-3" /> Destaque
                       </div>
                       <button
                         onClick={() => onSelectMemberForDetail?.(topPerformer)}
-                        className="text-xs font-bold text-white truncate hover:text-accent hover:underline cursor-pointer block text-left"
+                        className="text-xs font-bold text-ink truncate hover:text-accent hover:underline cursor-pointer block text-left"
                         title="Ver Gráfico de Desempenho"
                       >
                         {topPerformer.name}

@@ -378,8 +378,8 @@ export default function App() {
         <main className="flex-1 flex items-center justify-center p-8 text-sm text-muted">Verificando sessão...</main>
       ) : authUser && !authRole ? (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
-            <h2 className="text-xl font-bold text-white">Acesso sem autorização</h2>
+          <div className="max-w-md rounded-3xl bg-surface p-8 text-center">
+            <h2 className="text-xl font-bold text-ink">Acesso sem autorização</h2>
             <p className="mt-2 text-sm text-muted">Sua conta está autenticada, mas ainda não possui uma role autorizada para esta plataforma.</p>
             <button
               type="button"
@@ -408,8 +408,8 @@ export default function App() {
         </Suspense>
       ) : (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
-            <h2 className="text-xl font-bold text-white">Acesso autenticado necessário</h2>
+          <div className="max-w-md rounded-3xl bg-surface p-8 text-center">
+            <h2 className="text-xl font-bold text-ink">Acesso autenticado necessário</h2>
             <p className="mt-2 text-sm text-muted">Os dados de colaboradores só são carregados após autenticação de um líder autorizado.</p>
             <button
               type="button"
@@ -475,8 +475,8 @@ export default function App() {
       />
 
       <footer className="border-t border-line bg-app py-6 px-6 mt-auto">
-        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 font-mono text-xs text-faint">
-          <div>© 2026 <strong className="text-accent">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
+        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-faint">
+          <div>© 2026 <strong className="text-ink font-semibold">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
           <div className="flex gap-4">
             <button
               type="button"

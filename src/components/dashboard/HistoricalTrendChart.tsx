@@ -30,11 +30,11 @@ const TrendTooltip: React.FC<TrendTooltipProps> = ({ active, payload, label }) =
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
-      <div className="bg-surface border border-line p-3 rounded-xl shadow-xl text-xs space-y-1">
+      <div className="bg-surface p-3 rounded-xl text-xs space-y-1">
         <p className="font-mono font-bold text-accent">
           {label}{entry?.year ? ` / ${entry.year}` : ''}
         </p>
-        <p className="text-white">
+        <p className="text-ink">
           Média Geral: <strong className="font-mono">{payload[0].value} pts</strong>
         </p>
       </div>
@@ -49,7 +49,7 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
   const hasWindow = Boolean(firstMonth && lastMonth);
 
   return (
-    <div className="bg-surface border border-line p-5 rounded-2xl space-y-3">
+    <div className="bg-surface p-5 rounded-3xl space-y-3">
       <div>
         <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-accent" />
@@ -65,15 +65,15 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
           <AreaChart data={timelineData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="scoreColor" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#E3A73B" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#E3A73B" stopOpacity={0.0} />
+                <stop offset="5%" stopColor="#0071e3" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#0071e3" stopOpacity={0.0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="#1F3356" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="month" stroke="#6C7C99" fontSize={11} tickLine={false} />
+            <CartesianGrid stroke="#e5e5ea" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="month" stroke="#86868b" fontSize={11} tickLine={false} />
             <YAxis
               domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
-              stroke="#6C7C99"
+              stroke="#86868b"
               fontSize={11}
               tickLine={false}
             />
@@ -82,7 +82,7 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
               type="monotone"
               dataKey="avg"
               connectNulls
-              stroke="#E3A73B"
+              stroke="#0071e3"
               strokeWidth={3}
               fillOpacity={1}
               fill="url(#scoreColor)"

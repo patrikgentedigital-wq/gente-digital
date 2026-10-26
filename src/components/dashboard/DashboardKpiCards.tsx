@@ -25,9 +25,9 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Card 1: Média Geral */}
-      <div className="bg-surface border border-line p-4 rounded-2xl relative overflow-hidden group">
+      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
         <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+          <span className="text-[11px] font-mono font-bold ">
             Média Geral da Empresa
           </span>
           <TrendingUp className="w-4 h-4 text-accent" />
@@ -45,15 +45,15 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
       </div>
 
       {/* Card 2: Nível Voando */}
-      <div className="bg-surface border border-line p-4 rounded-2xl relative overflow-hidden group">
+      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
         <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+          <span className="text-[11px] font-mono font-bold ">
             Taxa na Meta (&gt;140)
           </span>
           <Trophy className="w-4 h-4 text-accent" />
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-mono text-white">
+          <span className="text-3xl font-extrabold font-mono text-ink">
             {voandoPercent}%
           </span>
           <span className="text-xs text-faint font-mono">
@@ -66,15 +66,15 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
       </div>
 
       {/* Card 3: Total Colaboradores */}
-      <div className="bg-surface border border-line p-4 rounded-2xl relative overflow-hidden group">
+      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
         <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+          <span className="text-[11px] font-mono font-bold ">
             Colaboradores Avaliados
           </span>
           <Users className="w-4 h-4 text-primary" />
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-mono text-white">
+          <span className="text-3xl font-extrabold font-mono text-ink">
             {totalMembers}
           </span>
           <span className="text-xs text-faint font-mono">em 9 equipes</span>
@@ -85,9 +85,9 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
       </div>
 
       {/* Card 4: Equipe Destaque */}
-      <div className="bg-surface border border-line p-4 rounded-2xl relative overflow-hidden group">
+      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
         <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+          <span className="text-[11px] font-mono font-bold ">
             Equipe em Destaque
           </span>
           <Award className="w-4 h-4 text-accent" />
@@ -95,7 +95,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
         {bestTeam ? (
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-white truncate">
+              <span className="text-lg font-bold text-ink truncate">
                 Time {bestTeam.leader}
               </span>
               <span className="font-mono text-sm font-bold text-accent">

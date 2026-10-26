@@ -1,71 +1,106 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
-  --color-app: #0A1424;
-  --color-surface: #0F1E38;
-  --color-surface-2: #14294A;
-  --color-line: #22365C;
-  --color-line-soft: #1F3356;
-  --color-ink: #F2F5FA;
-  --color-muted: #A9B7CE;
-  --color-faint: #6C7C99;
-  --color-accent: #E3A73B;
-  --color-accent-ink: #1a1200;
-  --color-accent-hover: #eeb64f;
-  --color-primary: #3B6FE0;
-  --color-primary-hover: #1c3966;
-  --color-success: #4fb579;
-  --color-success-hover: #5fc78a;
-  --color-success-ink: #062412;
-  --color-success-soft: #132a1c;
-  --color-danger: #e2687a;
-  --color-danger-soft: #3A1620;
-  --color-danger-ink: #ffb4c0;
-  --color-warn: #d99a3d;
-  --color-warn-soft: #332715;
-  --color-gold-soft: #3A2E14;
-  --color-info: #38BDF8;
-  --color-overlay: #050912;
-  --color-overlay-2: #060D1A;
+  --color-app: #f5f5f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #efeff2;
+  --color-line: #d2d2d7;
+  --color-line-soft: #e5e5ea;
+  --color-ink: #1d1d1f;
+  --color-muted: #6e6e73;
+  --color-faint: #86868b;
+  --color-accent: #0071e3;
+  --color-accent-ink: #ffffff;
+  --color-accent-hover: #0077ed;
+  --color-primary: #0071e3;
+  --color-primary-hover: #e1ecfa;
+  --color-success: #248a3d;
+  --color-success-hover: #2da44e;
+  --color-success-ink: #ffffff;
+  --color-success-soft: #e3f6e8;
+  --color-danger: #d70015;
+  --color-danger-soft: #ffe5e8;
+  --color-danger-ink: #a1001a;
+  --color-warn: #b25e00;
+  --color-warn-soft: #fff1d6;
+  --color-gold-soft: #fff4d6;
+  --color-info: #0071e3;
+  --color-overlay: #000000;
+  --color-overlay-2: #000000;
+  --color-bronze: #a8672a;
+  --color-gold-deep: #e8f1fc;
+  --color-app-deep: #ececf0;
+  --color-line-deep: #d2d2d7;
+  --color-sky-deep: #0071e3;
+  --color-silver: #86868b;
+  --color-slate-deep: #86868b;
+  --color-slate-ink: #3a3a3c;
+  --color-amber-deep: #b25e00;
+  --color-amber-bg: #ff9f0a;
+  --color-amber-ink: #8a4b00;
+  --color-slate-faint: #86868b;
+  --color-success-strong: #248a3d;
+  --color-danger-strong: #d70015;
+  --color-danger-pale: #ffe5e8;
+  --color-danger-hover: #b80012;
+  --color-danger-light: #ff453a;
+  --color-success-pale: #e3f6e8;
+  --color-warn-pale: #fff1d6;
+}
+
+/* Modo TV e telas de apresentação mantêm o tema escuro. */
+.theme-dark {
+  --color-app: #000000;
+  --color-surface: #1c1c1e;
+  --color-surface-2: #2c2c2e;
+  --color-line: #3a3a3c;
+  --color-line-soft: #2c2c2e;
+  --color-ink: #f5f5f7;
+  --color-muted: #a1a1a6;
+  --color-faint: #86868b;
+  --color-accent: #2997ff;
+  --color-accent-ink: #000000;
+  --color-accent-hover: #4aa8ff;
+  --color-primary-hover: #3a3a3c;
+  --color-success: #30d158;
+  --color-success-hover: #4ae071;
+  --color-success-ink: #000000;
+  --color-success-soft: #12301c;
+  --color-danger: #ff453a;
+  --color-danger-soft: #3a1512;
+  --color-danger-ink: #ffb4ae;
+  --color-warn: #ff9f0a;
+  --color-warn-soft: #36260a;
+  --color-gold-soft: #36260a;
+  --color-info: #2997ff;
+  --color-overlay-2: #000000;
+  --color-gold-deep: #0a2a4d;
+  --color-slate-ink: #e5e5ea;
   --color-bronze: #cd7f32;
-  --color-gold-deep: #1c3057;
-  --color-app-deep: #080E1A;
-  --color-line-deep: #18263E;
-  --color-sky-deep: #0369a1;
-  --color-silver: #94a3b8;
-  --color-slate-deep: #334155;
-  --color-slate-ink: #e2e8f0;
-  --color-amber-deep: #d97706;
-  --color-amber-bg: #78350f;
-  --color-amber-ink: #fbbf24;
-  --color-slate-faint: #8293B0;
-  --color-success-strong: #2E9E52;
-  --color-danger-strong: #C43B4E;
-  --color-danger-pale: #ffebee;
-  --color-danger-hover: #c95062;
-  --color-danger-light: #ff8597;
-  --color-success-pale: #e6f8ee;
-  --color-warn-pale: #fef3c7;
 }
 
 @layer utilities {
   .font-display {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
   .font-sans {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
   .font-data-mono, .font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
   }
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
+  background: var(--color-app);
+  color: var(--color-ink);
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;

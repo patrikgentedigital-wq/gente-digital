@@ -16,7 +16,7 @@ export const ScoreBucketHistogram: React.FC<ScoreBucketHistogramProps> = ({
   totalMembers,
 }) => {
   return (
-    <div className="bg-surface border border-line p-5 rounded-2xl space-y-4 flex flex-col justify-between">
+    <div className="bg-surface p-5 rounded-3xl space-y-4 flex flex-col justify-between">
       <div>
         <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-success" />
@@ -35,7 +35,7 @@ export const ScoreBucketHistogram: React.FC<ScoreBucketHistogramProps> = ({
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-ink font-bold">{bucket.range} ({bucket.label})</span>
                 <span className="text-muted">
-                  <strong className="text-white">{bucket.count}</strong> ({pct}%)
+                  <strong className="text-ink">{bucket.count}</strong> ({pct}%)
                 </span>
               </div>
               <div className="w-full h-2.5 bg-app rounded-full overflow-hidden border border-line">

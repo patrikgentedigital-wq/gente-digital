@@ -20,7 +20,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
   onSelectMemberForDetail,
 }) => {
   return (
-    <div className="bg-surface border border-line p-5 rounded-2xl space-y-4">
+    <div className="bg-surface p-5 rounded-3xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-display font-bold text-base text-ink">
@@ -44,7 +44,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ backgroundColor: team.color }}
                 />
-                <span className="font-bold text-sm text-white group-hover:text-accent transition-colors">
+                <span className="font-bold text-sm text-ink group-hover:text-accent transition-colors">
                   Time {team.leader}
                 </span>
               </div>
@@ -56,7 +56,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs font-mono text-muted bg-surface p-2.5 rounded-lg border border-line">
               <div>
                 <span className="text-[10px] text-faint block">MEMBROS</span>
-                <span className="font-bold text-white">{team.count} colaboradores</span>
+                <span className="font-bold text-ink">{team.count} colaboradores</span>
               </div>
               <div>
                 <span className="text-[10px] text-faint block">NA META (&gt;140)</span>
@@ -69,7 +69,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
                 <span className="text-faint">Destaque do Time:</span>
                 <button
                   onClick={() => onSelectMemberForDetail(team.topMember!)}
-                  className="font-bold text-white hover:text-accent hover:underline cursor-pointer truncate max-w-[140px]"
+                  className="font-bold text-ink hover:text-accent hover:underline cursor-pointer truncate max-w-[140px]"
                 >
                   {team.topMember.name} ({team.topMember.score}p)
                 </button>

@@ -86,8 +86,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
-      <div className="bg-surface border border-line p-3 rounded-xl shadow-xl font-sans">
-        <p className="text-[11px] font-mono font-semibold text-muted uppercase mb-1">
+      <div className="bg-surface p-3 rounded-xl font-sans">
+        <p className="text-[11px] font-mono font-semibold text-muted mb-1">
           Mês: {label}
         </p>
         <p className="text-sm font-mono font-bold text-accent flex items-center gap-1">
@@ -140,7 +140,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
+        className="bg-surface border border-line w-full max-w-2xl rounded-3xl p-6 relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="employee-detail-title"
@@ -174,7 +174,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             </div>
 
             <div>
-              <h3 id="employee-detail-title" className="text-xl font-display font-bold text-white">{member.name}</h3>
+              <h3 id="employee-detail-title" className="text-xl font-display font-bold text-ink">{member.name}</h3>
               <p className="text-xs text-muted">{member.role}</p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] font-mono text-accent bg-gold-soft px-2 py-0.5 rounded border border-accent/30 font-bold">
@@ -191,7 +191,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Fechar detalhes do colaborador"
-            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+            className="text-faint hover:text-ink p-1 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -200,20 +200,20 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-app border border-line p-3.5 rounded-xl text-center">
-            <span className="text-[10px] font-mono text-faint uppercase block mb-1">PONTUAÇÃO ATUAL</span>
+            <span className="text-[10px] font-mono text-faint block mb-1">PONTUAÇÃO ATUAL</span>
             <span className="text-2xl font-bold text-accent font-mono">{member.score}</span>
             <span className="text-xs text-faint font-mono"> / {member.maxScore}</span>
           </div>
 
           <div className="bg-app border border-line p-3.5 rounded-xl text-center">
-            <span className="text-[10px] font-mono text-faint uppercase block mb-1">APROVEITAMENTO</span>
-            <span className="text-2xl font-bold text-white font-mono">
+            <span className="text-[10px] font-mono text-faint block mb-1">APROVEITAMENTO</span>
+            <span className="text-2xl font-bold text-ink font-mono">
               {Math.round((member.score / member.maxScore) * 100)}%
             </span>
           </div>
 
           <div className="bg-app border border-line p-3.5 rounded-xl text-center flex flex-col justify-center items-center">
-            <span className="text-[10px] font-mono text-faint uppercase block mb-1">STATUS</span>
+            <span className="text-[10px] font-mono text-faint block mb-1">STATUS</span>
             <span className="text-xs font-mono font-bold text-accent">
               {member.status}
             </span>
@@ -223,7 +223,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         {/* Competencies Radar Chart */}
         <div className="bg-app border border-line p-4.5 rounded-xl space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-xs font-mono font-bold text-accent flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5" />
               Teia de Competências & Dimensões
             </span>
@@ -238,19 +238,19 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData} outerRadius="70%">
-                  <PolarGrid stroke="#1F3356" />
-                  <PolarAngleAxis dataKey="category" stroke="#A9B7CE" tick={{ fill: '#A9B7CE', fontSize: 10 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#22365C" tick={{ fill: '#6C7C99', fontSize: 9 }} />
+                  <PolarGrid stroke="#e5e5ea" />
+                  <PolarAngleAxis dataKey="category" stroke="#6e6e73" tick={{ fill: '#6e6e73', fontSize: 10 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#d2d2d7" tick={{ fill: '#86868b', fontSize: 9 }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#0F1E38',
-                      borderColor: '#22365C',
+                      backgroundColor: '#ffffff',
+                      borderColor: '#d2d2d7',
                       borderRadius: '10px',
                       color: '#fff',
                       fontSize: '11px',
                     }}
                   />
-                  <Radar name="Aderência" dataKey="score" stroke="#E3A73B" fill="#E3A73B" fillOpacity={0.4} />
+                  <Radar name="Aderência" dataKey="score" stroke="#0071e3" fill="#0071e3" fillOpacity={0.4} />
                 </RadarChart>
               </ResponsiveContainer>
             )}
@@ -262,7 +262,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           <div className="flex items-center justify-between border-b border-line-soft pb-2">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-success" />
-              <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-ink ">
                 Plano de Desenvolvimento Individual (PDI)
               </span>
             </div>
@@ -290,7 +290,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                     )}
                     <span
                       className={`truncate ${
-                        g.status === 'completed' ? 'line-through text-faint' : 'text-white'
+                        g.status === 'completed' ? 'line-through text-faint' : 'text-ink'
                       }`}
                     >
                       {g.title}
@@ -298,7 +298,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                   {isPdiGoalOverdue(g) && (
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-danger-ink bg-danger-soft border border-danger/40 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold text-danger-ink bg-danger-soft border border-danger/40 px-2 py-0.5 rounded">
                       Vencida
                     </span>
                   )}
@@ -315,7 +315,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line-soft pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-accent" />
-              <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider">
+              <span className="text-xs font-mono font-bold text-ink ">
                 Badges & Conquistas
               </span>
               <span className="text-[10px] font-mono font-bold text-accent bg-gold-soft px-2 py-0.5 rounded border border-accent/40">
@@ -330,7 +330,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-md transition-colors cursor-pointer ${
                   badgeFilter === 'all'
                     ? 'bg-accent text-accent-ink'
-                    : 'text-muted hover:text-white'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 Todas ({badges.length})
@@ -340,7 +340,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-md transition-colors cursor-pointer ${
                   badgeFilter === 'unlocked'
                     ? 'bg-accent text-accent-ink'
-                    : 'text-muted hover:text-white'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 Desbloqueadas ({unlockedCount})
@@ -350,7 +350,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 className={`px-2.5 py-1 text-[11px] font-mono font-bold rounded-md transition-colors cursor-pointer ${
                   badgeFilter === 'locked'
                     ? 'bg-accent text-accent-ink'
-                    : 'text-muted hover:text-white'
+                    : 'text-muted hover:text-ink'
                 }`}
               >
                 Bloqueadas ({badges.length - unlockedCount})
@@ -397,7 +397,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                     <div className="flex items-center justify-between gap-1">
                       <span
                         className={`font-bold text-xs truncate ${
-                          isUnlocked ? 'text-white' : 'text-slate-faint'
+                          isUnlocked ? 'text-ink' : 'text-slate-faint'
                         }`}
                       >
                         {badge.name}
@@ -456,7 +456,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         {/* Performance Line Chart (Recharts) */}
         <div className="bg-app border border-line p-4.5 rounded-xl space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-xs font-mono font-bold text-accent flex items-center gap-1.5">
               <ChartIcon className="w-3.5 h-3.5" />
               Histórico de Desempenho ao Longo do Tempo
             </span>
@@ -466,36 +466,36 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           <div className="w-full h-48 pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={historyData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
-                <CartesianGrid stroke="#1F3356" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid stroke="#e5e5ea" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="month"
-                  stroke="#6C7C99"
+                  stroke="#86868b"
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#22365C' }}
+                  axisLine={{ stroke: '#d2d2d7' }}
                 />
                 <YAxis
                   domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
-                  stroke="#6C7C99"
+                  stroke="#86868b"
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#22365C' }}
+                  axisLine={{ stroke: '#d2d2d7' }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <ReferenceLine
                   y={140}
-                  stroke="#E3A73B"
+                  stroke="#0071e3"
                   strokeDasharray="4 4"
                   strokeOpacity={0.6}
-                  label={{ value: 'Meta (140)', fill: '#E3A73B', fontSize: 10, position: 'insideTopRight' }}
+                  label={{ value: 'Meta (140)', fill: '#0071e3', fontSize: 10, position: 'insideTopRight' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="score"
-                  stroke="#E3A73B"
+                  stroke="#0071e3"
                   strokeWidth={3}
-                  dot={{ fill: '#E3A73B', r: 4, stroke: '#0F1E38', strokeWidth: 2 }}
-                  activeDot={{ r: 6, fill: '#E3A73B', stroke: '#FFFFFF', strokeWidth: 2 }}
+                  dot={{ fill: '#0071e3', r: 4, stroke: '#ffffff', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: '#0071e3', stroke: '#FFFFFF', strokeWidth: 2 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -504,9 +504,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           {/* Monthly summary badges */}
           <div className="flex flex-wrap gap-2 pt-2 border-t border-line-soft">
             {historyData.map((h, idx) => (
-              <div key={idx} className="flex-1 min-w-[70px] bg-surface border border-line p-2 rounded-lg text-center">
+              <div key={idx} className="flex-1 min-w-[70px] bg-surface p-2 rounded-lg text-center">
                 <span className="text-[10px] font-mono text-faint block">{h.month}</span>
-                <span className="text-xs font-bold font-mono text-white">{h.score} pts</span>
+                <span className="text-xs font-bold font-mono text-ink">{h.score} pts</span>
               </div>
             ))}
           </div>
@@ -515,7 +515,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         {/* Direct Image Link Detail */}
         <div className="bg-app border border-line p-3.5 rounded-xl flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-mono font-bold text-accent uppercase block mb-0.5">
+            <span className="text-[10px] font-mono font-bold text-accent block mb-0.5">
               LINK DIRETO DA FOTO DO PERFIL
             </span>
             <p className="text-xs font-mono text-muted truncate">
@@ -529,7 +529,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 onClose();
                 onOpenImageModal(member);
               }}
-              className="px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-accent hover:text-accent-ink text-xs font-bold text-white border border-line transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-accent hover:text-accent-ink text-xs font-bold text-ink border border-line transition-all shrink-0 flex items-center gap-1.5 cursor-pointer"
             >
               <ImageIcon className="w-3.5 h-3.5" />
               Alterar URL
@@ -541,7 +541,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         <div className="flex justify-end gap-3 border-t border-line pt-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-line text-xs font-bold text-muted hover:text-white cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-line text-xs font-bold text-muted hover:text-ink cursor-pointer"
           >
             Fechar
           </button>

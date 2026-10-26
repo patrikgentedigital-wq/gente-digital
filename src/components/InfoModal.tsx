@@ -22,7 +22,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
     >
       <div
         ref={dialogRef}
-        className="relative w-full max-w-2xl bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl bg-surface border border-line rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="info-modal-title"
@@ -36,7 +36,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
               {type === 'privacy' ? <Shield className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
             </div>
             <div>
-              <h3 id="info-modal-title" className="font-display font-bold text-lg text-white">
+              <h3 id="info-modal-title" className="font-display font-bold text-lg text-ink">
                 {type === 'privacy' ? 'Política de Privacidade & Proteção de Dados' : 'Suporte & Ajuda da Plataforma'}
               </h3>
               <p className="text-xs text-muted font-mono">Gente Digital • Governança Interna</p>
@@ -46,7 +46,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
             type="button"
             onClick={onClose}
             aria-label="Fechar informações"
-            className="p-2 text-faint hover:text-white rounded-lg hover:bg-line transition-colors"
+            className="p-2 text-faint hover:text-ink rounded-lg hover:bg-line transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,7 +57,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           {type === 'privacy' ? (
             <>
               <div className="p-4 rounded-xl bg-app border border-line">
-                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                <h4 className="font-bold text-ink mb-2 flex items-center gap-2">
                   <Lock className="w-4 h-4 text-accent" />
                   Confidencialidade de Avaliações & Desempenho
                 </h4>
@@ -68,7 +68,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-white flex items-center gap-2">
+                <h4 className="font-bold text-ink flex items-center gap-2">
                   <Database className="w-4 h-4 text-success" />
                   Diretrizes de Segurança & LGPD
                 </h4>
@@ -88,7 +88,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           ) : (
             <>
               <div className="p-4 rounded-xl bg-app border border-line">
-                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                <h4 className="font-bold text-ink mb-2 flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-accent" />
                   Canais de Atendimento Interno
                 </h4>
@@ -100,7 +100,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-app border border-line">
-                  <div className="font-bold text-white text-xs mb-1 flex items-center gap-1.5">
+                  <div className="font-bold text-ink text-xs mb-1 flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-accent" />
                     Gente & Gestão (RH)
                   </div>
@@ -112,7 +112,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
                 </div>
 
                 <div className="p-4 rounded-xl bg-app border border-line">
-                  <div className="font-bold text-white text-xs mb-1 flex items-center gap-1.5">
+                  <div className="font-bold text-ink text-xs mb-1 flex items-center gap-1.5">
                     <Database className="w-4 h-4 text-primary" />
                     TI & Infraestrutura
                   </div>

@@ -4,7 +4,7 @@ import { TEAMS } from '../data/catalogData';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
-import { BarChart3, Filter, Download } from 'lucide-react';
+import { Filter, Download } from 'lucide-react';
 import { DashboardKpiCards } from './dashboard/DashboardKpiCards';
 import { TeamComparisonChart } from './dashboard/TeamComparisonChart';
 import { StatusDistributionChart } from './dashboard/StatusDistributionChart';
@@ -83,28 +83,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         name: 'Voando (>140 pts)',
         shortName: 'Voando',
         value: counts.Voando,
-        color: '#E3A73B',
+        color: '#0071e3',
         pct: Math.round((counts.Voando / (total || 1)) * 100),
       },
       {
         name: 'Caminho Certo (131-140 pts)',
         shortName: 'Caminho Certo',
         value: counts['Caminho Certo'],
-        color: '#4fb579',
+        color: '#34c759',
         pct: Math.round((counts['Caminho Certo'] / (total || 1)) * 100),
       },
       {
         name: 'Atenção (120-130 pts)',
         shortName: 'Atenção',
         value: counts.Atenção,
-        color: '#d99a3d',
+        color: '#ff9f0a',
         pct: Math.round((counts.Atenção / (total || 1)) * 100),
       },
       {
         name: 'Alarme (<120 pts)',
         shortName: 'Alarme',
         value: counts.Alarme,
-        color: '#e2687a',
+        color: '#ff3b30',
         pct: Math.round((counts.Alarme / (total || 1)) * 100),
       },
     ].filter((item) => item.value > 0);
@@ -114,25 +114,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         range: '145 - 155 pts',
         label: 'Excelência',
         count: members.filter((m) => m.score >= 145).length,
-        color: '#E3A73B',
+        color: '#0071e3',
       },
       {
         range: '135 - 144 pts',
         label: 'Alto Desempenho',
         count: members.filter((m) => m.score >= 135 && m.score < 145).length,
-        color: '#4fb579',
+        color: '#34c759',
       },
       {
         range: '125 - 134 pts',
         label: 'Em Desenvolvimento',
         count: members.filter((m) => m.score >= 125 && m.score < 135).length,
-        color: '#d99a3d',
+        color: '#ff9f0a',
       },
       {
         range: '< 125 pts',
         label: 'Atenção Especial',
         count: members.filter((m) => m.score < 125).length,
-        color: '#e2687a',
+        color: '#ff3b30',
       },
     ];
 
@@ -187,16 +187,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans space-y-6">
       {/* Title & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-        <div>
-          <h2 className="text-2xl font-display font-extrabold text-ink flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-accent" />
-            Dashboard Analytics de Desempenho
-          </h2>
-          <p className="text-xs text-muted mt-0.5">
-            Métricas consolidadas de performance, médias por equipe e distribuição de resultados.
-          </p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           <button
@@ -204,7 +195,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               exportMembersToCSV(members, 'dashboard-analytics-gente-digital.csv');
               toast.success('Métricas e dados do dashboard exportados para CSV!', 'Exportação Concluída');
             }}
-            className="flex items-center gap-1.5 bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-ink text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
             Exportar CSV

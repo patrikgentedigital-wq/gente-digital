@@ -60,7 +60,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
     >
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink"
+        className="bg-surface border border-line w-full max-w-md rounded-3xl p-6 relative flex flex-col gap-5 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="leader-login-title"
@@ -72,7 +72,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
               <Lock className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h3 id="leader-login-title" className="font-display font-bold text-xl text-white">Área do Líder</h3>
+              <h3 id="leader-login-title" className="font-display font-bold text-xl text-ink">Área do Líder</h3>
               <p className="text-xs text-muted">Autenticação via Firebase</p>
             </div>
           </div>
@@ -80,7 +80,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Fechar autenticação"
-            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors"
+            className="text-faint hover:text-ink p-1 rounded-lg hover:bg-surface-2 transition-colors"
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -109,7 +109,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="lider@gentedigital.com.br"
                 autoComplete="username"
-                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 required
               />
             </div>
@@ -125,7 +125,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
-                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 required
               />
             </div>

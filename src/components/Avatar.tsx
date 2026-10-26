@@ -62,8 +62,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <div
       aria-hidden="true"
-      className={`${sizeClass} ${shapeClass} flex items-center justify-center font-display font-bold text-white select-none ${className}`}
-      style={{ backgroundColor: teamColor || '#3B6FE0' }}
+      className={`${sizeClass} ${shapeClass} flex items-center justify-center font-display font-bold text-ink select-none ${className}`}
+      style={{ backgroundColor: teamColor || '#0071e3' }}
       title={name}
     >
       {getInitials(name) || '?'}

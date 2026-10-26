@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EvaluationAuditLog, TeamMember } from '../types';
 import { getArchivedMembersFromFirestore, subscribeToAuditLogs } from '../lib/firebaseLoader';
-import { FileSearch, ShieldCheck, AlertTriangle, ArchiveRestore, RotateCcw, Search, ChevronDown } from 'lucide-react';
+import { FileSearch, AlertTriangle, ArchiveRestore, RotateCcw, Search, ChevronDown } from 'lucide-react';
 import { Skeleton } from './Skeleton';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -110,23 +110,19 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
-      <div className="bg-surface border border-line p-6 rounded-2xl mb-6 shadow-xl">
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldCheck className="w-5 h-5 text-success" />
-          <h2 className="font-display font-bold text-2xl text-white">Trilha de Auditoria</h2>
-        </div>
+      <div className="bg-surface p-6 rounded-3xl mb-6">
         <p className="text-xs text-muted mt-0.5">
           Registro imutável de avaliações salvas: quem alterou o quê e quando.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-surface border border-line p-4 rounded-xl mb-6 shadow-lg">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-surface p-4 rounded-xl mb-6 shadow-lg">
         <label className="block">
-          <span className="block text-xs font-mono font-semibold text-muted mb-2 uppercase">Filtrar por membro</span>
+          <span className="block text-xs font-mono font-semibold text-muted mb-2 ">Filtrar por membro</span>
           <select
             value={memberFilter}
             onChange={(e) => setMemberFilter(e.target.value)}
-            className="w-full bg-surface-2 border border-line text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
+            className="w-full bg-surface-2 border border-line text-ink font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
           >
             <option value="all">Todos os membros</option>
             {[...members]
@@ -139,11 +135,11 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
           </select>
         </label>
         <label className="block">
-          <span className="block text-xs font-mono font-semibold text-muted mb-2 uppercase">Filtrar por ciclo</span>
+          <span className="block text-xs font-mono font-semibold text-muted mb-2 ">Filtrar por ciclo</span>
           <select
             value={cycleFilter}
             onChange={(e) => setCycleFilter(e.target.value)}
-            className="w-full bg-surface-2 border border-line text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
+            className="w-full bg-surface-2 border border-line text-ink font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
           >
             <option value="all">Todos os ciclos</option>
             {cycles.map((cycle) => (
@@ -154,7 +150,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
           </select>
         </label>
         <label className="block">
-          <span className="block text-xs font-mono font-semibold text-muted mb-2 uppercase">Buscar</span>
+          <span className="block text-xs font-mono font-semibold text-muted mb-2 ">Buscar</span>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
             <input
@@ -162,7 +158,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Membro, ator ou e-mail..."
-              className="w-full bg-surface-2 border border-line text-white font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-accent placeholder:text-faint"
+              className="w-full bg-surface-2 border border-line text-ink font-sans text-sm pl-9 pr-3 py-3 rounded-xl focus:outline-none focus:border-accent placeholder:text-faint"
             />
           </div>
         </label>
@@ -188,10 +184,10 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-surface border border-line rounded-xl overflow-x-auto shadow-xl">
+          <div className="hidden md:block bg-surface border border-line rounded-xl overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-faint border-b border-line">
+                <tr className="text-[10px] text-faint border-b border-line">
                   <th className="px-4 py-3 font-mono">Quando</th>
                   <th className="px-4 py-3 font-mono">Membro</th>
                   <th className="px-4 py-3 font-mono">Ciclo</th>
@@ -206,11 +202,11 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
                 {filteredLogs.map((log) => (
                   <tr key={log.id} className="border-b border-line-soft/60 hover:bg-surface-2/40">
                     <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTimestamp(log.createdAt)}</td>
-                    <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{memberName(log)}</td>
+                    <td className="px-4 py-3 text-ink font-medium whitespace-nowrap">{memberName(log)}</td>
                     <td className="px-4 py-3 text-muted whitespace-nowrap">{log.cycle}</td>
                     <td className="px-4 py-3 font-mono text-accent">#{log.revision}</td>
-                    <td className="px-4 py-3 font-mono text-white">{log.score}</td>
-                    <td className={`px-4 py-3 font-mono font-bold ${STATUS_COLORS[log.status] ?? 'text-white'}`}>{log.status}</td>
+                    <td className="px-4 py-3 font-mono text-ink">{log.score}</td>
+                    <td className={`px-4 py-3 font-mono font-bold ${STATUS_COLORS[log.status] ?? 'text-ink'}`}>{log.status}</td>
                     <td className="px-4 py-3 text-muted whitespace-nowrap">
                       {log.previousScore !== undefined || log.previousStatus !== undefined
                         ? `${log.previousScore ?? '—'} pts • ${log.previousStatus ?? '—'}`
@@ -230,7 +226,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
             {filteredLogs.map((log) => (
               <div key={log.id} className="bg-surface border border-line rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-white font-medium text-sm truncate">{memberName(log)}</span>
+                  <span className="text-ink font-medium text-sm truncate">{memberName(log)}</span>
                   <span className="font-mono text-accent text-xs shrink-0">#{log.revision}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 text-xs text-muted">
@@ -238,8 +234,8 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
                   <span>{log.cycle}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-sm text-white">{log.score} pts</span>
-                  <span className={`font-mono font-bold text-xs ${STATUS_COLORS[log.status] ?? 'text-white'}`}>{log.status}</span>
+                  <span className="font-mono text-sm text-ink">{log.score} pts</span>
+                  <span className={`font-mono font-bold text-xs ${STATUS_COLORS[log.status] ?? 'text-ink'}`}>{log.status}</span>
                   {log.previousScore !== undefined || log.previousStatus !== undefined ? (
                     <span className="text-[11px] text-faint">
                       antes: {log.previousScore ?? '—'} pts • {log.previousStatus ?? '—'}
@@ -271,10 +267,10 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
         </>
       )}
 
-      <div className="bg-surface border border-line p-6 rounded-2xl mt-6 shadow-xl">
+      <div className="bg-surface p-6 rounded-3xl mt-6">
         <div className="flex items-center gap-2 mb-1">
           <ArchiveRestore className="w-5 h-5 text-accent" />
-          <h3 className="font-display font-bold text-lg text-white">Membros Arquivados</h3>
+          <h3 className="font-display font-bold text-lg text-ink">Membros Arquivados</h3>
         </div>
         <p className="text-xs text-muted mt-0.5 mb-4">
           Exclusão é reversível: histórico de avaliações é preservado até a restauração.
@@ -294,7 +290,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
             <div className="hidden md:block overflow-x-auto rounded-xl border border-line">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="text-[10px] uppercase tracking-wider text-faint border-b border-line">
+                  <tr className="text-[10px] text-faint border-b border-line">
                     <th className="px-4 py-3 font-mono">Nome</th>
                     <th className="px-4 py-3 font-mono">Time</th>
                     <th className="px-4 py-3 font-mono">Score final</th>
@@ -305,7 +301,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
                 <tbody>
                   {archivedMembers.map((member) => (
                     <tr key={member.id} className="border-b border-line-soft/60 hover:bg-surface-2/40">
-                      <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{member.name}</td>
+                      <td className="px-4 py-3 text-ink font-medium whitespace-nowrap">{member.name}</td>
                       <td className="px-4 py-3 text-muted whitespace-nowrap">{member.team}</td>
                       <td className="px-4 py-3 font-mono text-accent">{member.score}</td>
                       <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTimestamp(member.deletedAt)}</td>
@@ -330,7 +326,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
               {archivedMembers.map((member) => (
                 <div key={member.id} className="bg-app border border-line rounded-xl p-3.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-white font-medium text-sm truncate">{member.name}</div>
+                    <div className="text-ink font-medium text-sm truncate">{member.name}</div>
                     <div className="text-[11px] text-muted truncate">
                       {member.team} • {member.score} pts • arquivado em {formatTimestamp(member.deletedAt)}
                     </div>

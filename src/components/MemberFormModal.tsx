@@ -73,7 +73,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       name: name.trim(),
       role: role.trim(),
       team,
-      teamColor: selectedTeamData?.color || '#3B6FE0',
+      teamColor: selectedTeamData?.color || '#0071e3',
       rank: memberToEdit?.rank || 99,
       previousRank: memberToEdit?.previousRank,
       score: finalScore,
@@ -110,7 +110,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
+        className="bg-surface border border-line w-full max-w-lg rounded-3xl p-6 relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="member-form-modal-title"
@@ -123,7 +123,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               {isEditing ? <Edit3 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
-              <h3 id="member-form-modal-title" className="font-display font-bold text-lg text-white">
+              <h3 id="member-form-modal-title" className="font-display font-bold text-lg text-ink">
                 {isEditing ? 'Editar Colaborador' : 'Novo Colaborador'}
               </h3>
               <p className="text-xs text-muted">
@@ -135,7 +135,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Fechar formulário de colaborador"
-            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors"
+            className="text-faint hover:text-ink p-1 rounded-lg hover:bg-surface-2 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -202,7 +202,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     }}
                     placeholder="https://exemplo.com/foto.jpg (ou gerador automático)"
                     maxLength={2048}
-                    className="w-full bg-surface border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface border border-line rounded-lg pl-8 pr-3 py-2 text-xs text-ink focus:outline-none focus:border-accent"
                   />
                 </div>
               </div>
@@ -217,7 +217,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: João da Silva"
                 maxLength={100}
-                className="w-full bg-surface-2 border border-line rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                className="w-full bg-surface-2 border border-line rounded-xl px-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 required
               />
             </div>
@@ -234,7 +234,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     onChange={(e) => setRole(e.target.value)}
                     placeholder="Ex: Suporte IXC N1"
                     maxLength={120}
-                    className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                     required
                   />
                 </div>
@@ -250,7 +250,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="nome@gentedigital.com.br"
                     maxLength={254}
-                    className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                    className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                   />
                 </div>
               </div>
@@ -264,7 +264,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                 <select
                   value={team}
                   onChange={(e) => setTeam(e.target.value as LeaderName)}
-                  className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                  className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 >
                   {TEAMS.map((t) => (
                     <option key={t.leader} value={t.leader}>

@@ -160,7 +160,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               className={`font-sans font-semibold text-xs px-4 py-2 rounded-lg transition-all cursor-pointer ${
                 view === 'geral'
                   ? 'bg-accent text-accent-ink shadow-sm font-bold'
-                  : 'text-muted hover:text-white'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               Ranking Geral
@@ -170,7 +170,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               className={`font-sans font-semibold text-xs px-4 py-2 rounded-lg transition-all cursor-pointer ${
                 view === 'equipe'
                   ? 'bg-accent text-accent-ink shadow-sm font-bold'
-                  : 'text-muted hover:text-white'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               Por Equipe
@@ -196,7 +196,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCSV}
-            className="bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            className="bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-ink text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             title="Exportar dados filtrados em CSV/Excel"
           >
             <Download className="w-3.5 h-3.5 text-accent" />
@@ -217,7 +217,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
       {/* Status Filter Chips */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 text-xs font-mono">
-        <span className="text-faint text-[11px] uppercase mr-1 flex items-center gap-1">
+        <span className="text-faint text-[11px] mr-1 flex items-center gap-1">
           <Filter className="w-3 h-3" /> Status:
         </span>
         {[
@@ -232,8 +232,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             onClick={() => setStatusFilter(f.id)}
             className={`px-3 py-1 rounded-lg border text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               statusFilter === f.id
-                ? 'bg-surface-2 border-accent text-white shadow-sm'
-                : 'bg-surface/60 border-line text-muted hover:text-white'
+                ? 'bg-surface-2 border-accent text-ink shadow-sm'
+                : 'bg-surface/60 border-line text-muted hover:text-ink'
             }`}
           >
             <span className={f.color || ''}>{f.label}</span>
@@ -246,9 +246,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-7 items-end">
           {/* #2 Rank (Left on desktop) */}
           {top3[1] && (
-            <div className="order-2 md:order-1 bg-gradient-to-b from-surface-2 to-surface border border-line rounded-2xl p-5 text-center relative group">
+            <div className="order-2 md:order-1 bg-gradient-to-b from-surface-2 to-surface border border-line rounded-3xl p-5 text-center relative group">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-xs text-faint tracking-wider font-bold">
+                <span className="font-mono text-xs text-faint font-bold">
                   #2
                 </span>
                 {renderRankTrend(2, top3[1].previousRank)}
@@ -291,9 +291,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
           {/* #1 Rank (Center on desktop - Gold highlight) */}
           {top3[0] && (
-            <div className="order-1 md:order-2 bg-gradient-to-b from-surface-2 to-surface border-2 border-accent rounded-2xl p-5 text-center relative shadow-[0_0_20px_rgba(227,167,59,0.25)] md:-translate-y-2 group">
+            <div className="order-1 md:order-2 bg-gradient-to-b from-surface-2 to-surface border-2 border-accent rounded-3xl p-5 text-center relative shadow-[0_0_20px_rgba(227,167,59,0.25)] md:-translate-y-2 group">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-xs text-accent tracking-wider font-bold">
+                <span className="font-mono text-xs text-accent font-bold">
                   #1 ★
                 </span>
                 {renderRankTrend(1, top3[0].previousRank)}
@@ -322,7 +322,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
               <button
                 onClick={() => onSelectMemberForDetail?.(top3[0]!)}
-                className="font-display font-bold text-lg text-white my-0.5 truncate hover:text-accent hover:underline cursor-pointer block mx-auto max-w-full"
+                className="font-display font-bold text-lg text-ink my-0.5 truncate hover:text-accent hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >
                 {top3[0].name}
@@ -336,9 +336,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
           {/* #3 Rank (Right on desktop) */}
           {top3[2] && (
-            <div className="order-3 bg-gradient-to-b from-surface-2 to-surface border border-line rounded-2xl p-5 text-center relative group">
+            <div className="order-3 bg-gradient-to-b from-surface-2 to-surface border border-line rounded-3xl p-5 text-center relative group">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-xs text-faint tracking-wider font-bold">
+                <span className="font-mono text-xs text-faint font-bold">
                   #3
                 </span>
                 {renderRankTrend(3, top3[2].previousRank)}
@@ -384,8 +384,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       {/* List Rows */}
       <div className="flex flex-col gap-2">
         {sortedData.length === 0 && (
-          <div className="bg-surface border border-line rounded-2xl p-8 text-center space-y-3 my-4">
-            <div className="text-accent font-mono text-sm font-bold uppercase tracking-wider">
+          <div className="bg-surface border border-line rounded-3xl p-8 text-center space-y-3 my-4">
+            <div className="text-accent font-mono text-sm font-bold ">
               Nenhum colaborador encontrado
             </div>
             <p className="text-xs text-muted max-w-md mx-auto">
@@ -486,7 +486,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
                 {/* Tier Badge */}
                 <div
-                  className={`font-mono text-[10.5px] font-bold tracking-wider px-2.5 py-1 rounded-md uppercase whitespace-nowrap ${tier.cls}`}
+                  className={`font-mono text-[10.5px] font-bold px-2.5 py-1 rounded-md whitespace-nowrap ${tier.cls}`}
                 >
                   {tier.label}
                 </div>
@@ -526,7 +526,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 </button>
                 <button
                   onClick={() => onSelectMemberForEvaluation(person)}
-                  className="px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-accent hover:text-accent-ink text-xs font-bold text-white transition-all border border-line cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-surface-2 hover:bg-accent hover:text-accent-ink text-xs font-bold text-ink transition-all border border-line cursor-pointer"
                   title="Avaliar Desempenho"
                 >
                   Avaliar
@@ -561,7 +561,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
         {/* Trend Legend */}
         <div className="flex items-center gap-3 text-xs text-faint">
-          <span className="text-[11px] font-mono font-semibold uppercase text-muted">Evolução:</span>
+          <span className="text-[11px] font-mono font-semibold text-muted">Evolução:</span>
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-0.5 font-mono text-[10px] font-bold text-success bg-success-soft px-1.5 py-0.5 rounded border border-success/30">
               <ArrowUp className="w-3 h-3 stroke-[2.5]" /> Subiu

@@ -1,4 +1,5 @@
 import React from 'react';
+import { clientErrorReporter } from '../lib/clientErrors';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -19,6 +20,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   override componentDidCatch(error: Error) {
     console.error('Erro capturado pelo ErrorBoundary:', error);
+    clientErrorReporter.report(error, 'boundary');
     this.props.onError?.(error);
   }
 

@@ -47,6 +47,7 @@ npm run build
 - Publicação: a Vercel publica a `main` em produção e as outras branches como
   preview. Os cabeçalhos de segurança estão em `vercel.json`.
 
-> `functions/`, `firestore.rules` e `docs/firebase-*` pertencem à versão antiga em
-> Firebase e ficam só como histórico.
+> A versão antiga em Firebase (Cloud Functions, regras do Firestore, scripts de contas)
+> foi removida do código; o que ela documentava está em `docs/historico-firebase/` e
+> o resto continua no histórico do git (por exemplo, `git show 5b6c34b:functions/src/index.ts`).
 

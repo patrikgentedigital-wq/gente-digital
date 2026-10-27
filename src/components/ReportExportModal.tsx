@@ -121,14 +121,14 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(criteria ?? []).map((cat) => {
+              {(criteria ?? []).map((cat, catIndex) => {
                 const { sum, max } = getCategoryScore(cat.id, criteriaScores, criteria ?? []);
                 const percent = sum === null ? 0 : Math.round((sum / max) * 100);
 
                 return (
                   <div key={cat.id} className="bg-surface-2/60 border border-line p-3.5 rounded-xl flex flex-col justify-between">
                     <div className="flex justify-between items-center text-xs mb-2">
-                      <span className="font-semibold text-ink">{cat.id}. {cat.name}</span>
+                      <span className="font-semibold text-ink">{catIndex + 1}. {cat.name}</span>
                       <span className="font-mono text-accent-text font-bold">
                         {sum === null ? '—' : `${sum}/${max}`}
                       </span>

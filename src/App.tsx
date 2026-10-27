@@ -1,21 +1,24 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
-  addMemberToFirestore,
-  deleteMemberFromFirestore,
+  addMember,
+  archiveMember,
+  countOpenClientErrors,
   describeEvaluationError,
-  getEvaluationFromFirestore,
+  getEvaluation,
   isEvaluationConflictError,
   isEvaluationCriteriaOutdatedError,
   logoutLeader,
-  restoreMemberFromFirestore,
-  saveEvaluationAndMemberInFirestore,
+  restoreMember,
+  saveEvaluation,
   initialAuthLink,
-  updateMemberInFirestore,
+  updateMember,
 } from './lib/backend';
 import type { EvaluationPayload } from './lib/backend';
 import { useTeamCriteria } from './hooks/useTeamCriteria';
 import { CriteriaEditorView } from './components/CriteriaEditorView';
+import { ClientErrorsPanel } from './components/ClientErrorsPanel';
+import { clientErrorReporter } from './lib/clientErrors';
 import { SetPasswordView } from './components/SetPasswordView';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
@@ -63,6 +66,22 @@ export default function App() {
   const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
+  const [openErrorCount, setOpenErrorCount] = useState(0);
+
+  const refreshErrorCount = useCallback(() => {
+    countOpenClientErrors().then(setOpenErrorCount);
+  }, []);
+
+  // O admin vê no menu quantos erros dos líderes ainda estão abertos; confere a cada minuto.
+  useEffect(() => {
+    if (authRole !== 'admin') {
+      setOpenErrorCount(0);
+      return;
+    }
+    refreshErrorCount();
+    const timer = window.setInterval(refreshErrorCount, 60_000);
+    return () => window.clearInterval(timer);
+  }, [authRole, refreshErrorCount]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -95,7 +114,7 @@ export default function App() {
   const reportCriteria = useTeamCriteria(reportModal?.member.team ?? null);
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
-    return getEvaluationFromFirestore(makeEvaluationId(memberId, cycle));
+    return getEvaluation(makeEvaluationId(memberId, cycle));
   }, []);
 
   useEffect(() => {
@@ -160,7 +179,7 @@ export default function App() {
     const updated = { ...imageModalMember, avatarUrl: newAvatarUrl };
 
     try {
-      await updateMemberInFirestore(updated);
+      await updateMember(updated);
       setMembers((previous) => rankMembers(previous.map((member) =>
         member.id === updated.id ? { ...member, avatarUrl: newAvatarUrl } : member
       )));
@@ -178,8 +197,8 @@ export default function App() {
     const isExisting = members.some((member) => member.id === memberData.id);
 
     try {
-      if (isExisting) await updateMemberInFirestore(memberData);
-      else await addMemberToFirestore(memberData);
+      if (isExisting) await updateMember(memberData);
+      else await addMember(memberData);
 
       setMembers((previous) => rankMembers(
         isExisting
@@ -220,7 +239,7 @@ export default function App() {
     const target = members.find((member) => member.id === memberId);
 
     try {
-      await deleteMemberFromFirestore(memberId);
+      await archiveMember(memberId);
       setMembers((previous) => rankMembers(previous.filter((member) => member.id !== memberId)));
       setSelectedEvaluationMember((selected) => selected?.id === memberId ? null : selected);
       toast.info(`Colaborador ${target?.name || ''} arquivado (pode ser restaurado na Trilha de Auditoria).`);
@@ -232,7 +251,7 @@ export default function App() {
 
   const handleRestoreMember = async (memberId: string) => {
     try {
-      await restoreMemberFromFirestore(memberId);
+      await restoreMember(memberId);
       toast.success('Colaborador restaurado.');
     } catch {
       toast.error('Não foi possível restaurar o colaborador.');
@@ -253,7 +272,7 @@ export default function App() {
 
     try {
       // A nota, o máximo e o status são calculados no servidor: o navegador não decide a classificação.
-      const saved = await saveEvaluationAndMemberInFirestore({
+      const saved = await saveEvaluation({
         member: targetMember,
         evaluation: { cycle, comments, pdiGoals, criteriaScores },
         expectedRevision,
@@ -284,6 +303,7 @@ export default function App() {
         toast.error(describeEvaluationError(error) ?? 'As perguntas da equipe mudaram. Recarregue a avaliação.');
         throw new Error('evaluation-save-failed');
       }
+      clientErrorReporter.report(error, 'save');
       toast.error(describeEvaluationError(error) ?? 'A avaliação não foi salva. Nenhum dado local foi confirmado.');
       throw new Error('evaluation-save-failed');
     }
@@ -357,7 +377,10 @@ export default function App() {
          )}
         {activeTab === 'criteria' && authRole && <CriteriaEditorView role={authRole} />}
         {activeTab === 'audit' && authRole === 'admin' && (
-          <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
+          <>
+            <ClientErrorsPanel onChange={refreshErrorCount} />
+            <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
+          </>
         )}
       </main>
     </>
@@ -379,6 +402,7 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         isAuthenticated={Boolean(authUser && authRole)}
         role={authRole}
+        openErrorCount={openErrorCount}
         onLogout={authUser ? () => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.')) : undefined}
       />
 

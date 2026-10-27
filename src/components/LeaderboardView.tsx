@@ -123,7 +123,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     }
 
     const sorted = [...filtered].sort(compareByPercent);
-    const podium = statusFilter === 'all' && !searchQuery.trim() ? sorted.slice(0, 3) : [];
+    // Sem nenhuma pontuação não há pódio: o 1º lugar seria só a ordem alfabética.
+    const podium = statusFilter === 'all' && !searchQuery.trim() && (sorted[0]?.score ?? 0) > 0 ? sorted.slice(0, 3) : [];
 
     return { sortedData: sorted, top3: podium };
   }, [members, view, selectedTeamLeader, statusFilter, searchQuery]);

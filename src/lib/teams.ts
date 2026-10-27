@@ -24,10 +24,9 @@ interface TeamSource {
 }
 
 /**
- * Lista de equipes a partir dos membros salvos no Firestore. A coleção `teams` só guarda as
- * equipes iniciais, então equipes novas (ex.: Mariza Leite) só existem no campo `team` dos membros.
- * As equipes conhecidas mantêm ordem e cor; as novas vêm depois, em ordem alfabética, com a
- * cor cadastrada no primeiro membro.
+ * Lista de equipes a partir dos membros carregados, sem depender de um cadastro à parte.
+ * As equipes do catálogo mantêm ordem e cor; as outras (ex.: Mariza Leite) vêm depois, em ordem
+ * alfabética, com a cor trazida pelo primeiro membro.
  */
 export function deriveTeams(
   members: readonly TeamSource[],

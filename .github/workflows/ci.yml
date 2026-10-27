@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# As chaves abaixo são públicas (URL e chave publicável do Supabase): a segurança vem da RLS no banco.
+env:
+  VITE_SUPABASE_URL: https://qngbgxzpzpxkbdpfbuay.supabase.co
+  VITE_SUPABASE_ANON_KEY: sb_publishable_Pg7KbDqs9Q875ysjUwIw6A_smK94qvS
+
 jobs:
   app:
     name: App (lint + test + build)
@@ -18,7 +23,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
 
       - name: Lint (typecheck)
@@ -30,57 +35,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Audit (root)
+      - name: Audit
         run: npm audit --audit-level=high
-
-  functions:
-    name: Functions (lint + test)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: functions
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
-
-      - name: Install functions dependencies
-        run: npm ci
-
-      - name: Lint (typecheck)
-        run: npm run lint
-
-      - name: Test
-        run: npm test
-
-      - name: Audit (functions)
-        run: npm audit --audit-level=high
-
-  firestore-rules:
-    name: Firestore rules (emulator tests)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Run rules tests against Firestore emulator
-        run: npm run test:rules
 
   e2e:
     name: E2E (Playwright smoke)
@@ -93,7 +49,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
@@ -101,40 +57,3 @@ jobs:
 
       - name: Run E2E smoke test
         run: npm run test:e2e
-
-  deploy:
-    name: Deploy to Firebase (hosting + rules + functions)
-    if: github.ref == 'refs/heads/main' && vars.ENABLE_DEPLOY == 'true'
-    needs: [app, functions, firestore-rules, e2e]
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Build app
-        run: npm run build
-
-      - uses: w9jds/firebase-action@v13
-        with:
-          args: deploy --only functions
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT_ID: gen-lang-client-0169317507
-
-      - name: Deploy hosting + firestore (rules) after functions are live
-        uses: w9jds/firebase-action@v13
-        with:
-          args: deploy --only hosting,firestore
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          PROJECT_ID: gen-lang-client-0169317507

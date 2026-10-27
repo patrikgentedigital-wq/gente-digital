@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TeamMember } from '../types';
 import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
 import { compareByPercent, percentOf } from '../lib/scoring';
+import { activeSlide, availableSlides, nextSlide } from '../lib/kioskSlides';
 import {
   X,
   Trophy,
@@ -37,6 +38,8 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
 }) => {
   const dialogRef = useDialog(isOpen, onClose);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
+  // Quais slides têm conteúdo; atualizado a cada renderização e lido pelo giro automático.
+  const availableSlidesRef = useRef<boolean[]>([true, true, true, true]);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -81,7 +84,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   useEffect(() => {
     if (!isOpen || !isPlaying) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 4);
+      setCurrentSlide((prev) => nextSlide(prev, availableSlidesRef.current, 1));
     }, 10000);
     return () => clearInterval(interval);
   }, [isOpen, isPlaying]);
@@ -132,6 +135,16 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     .filter((team) => team.count > 0)
     .sort((a, b) => b.avgPercent - a.avgPercent);
 
+  // A TV fica ligada sem ninguém olhando: só gira os slides que têm o que mostrar.
+  const available = availableSlides({
+    topScore: top1?.score ?? 0,
+    growth: growthLeaders.length,
+    teamsWithScore: teamStats.filter((team) => team.avgPercent > 0).length,
+    levelUp: levelUpLeaders.length,
+  });
+  availableSlidesRef.current = available;
+  const slide = activeSlide(currentSlide, available);
+
   return (
     <div
       ref={dialogRef}
@@ -161,7 +174,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-xl border border-line">
             <button
-              onClick={() => setCurrentSlide((prev) => (prev === 0 ? 3 : prev - 1))}
+              onClick={() => setCurrentSlide((prev) => nextSlide(prev, availableSlidesRef.current, -1))}
               className="p-1 text-muted hover:text-ink transition-colors cursor-pointer"
               title="Slide anterior"
             >
@@ -175,19 +188,19 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
             <button
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % 4)}
+              onClick={() => setCurrentSlide((prev) => nextSlide(prev, availableSlidesRef.current, 1))}
               className="p-1 text-muted hover:text-ink transition-colors cursor-pointer"
               title="Próximo slide"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
             <div className="flex gap-1.5 ml-2">
-              {[0, 1, 2, 3].map((idx) => (
+              {[0, 1, 2, 3].filter((idx) => availableSlidesRef.current[idx]).map((idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
                   className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
-                    currentSlide === idx ? 'bg-accent w-6' : 'bg-line'
+                    slide === idx ? 'bg-accent w-6' : 'bg-line'
                   }`}
                 />
               ))}
@@ -219,9 +232,16 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
             <p className="text-xs text-muted">Aguardando dados dos colaboradores para exibição no telão.</p>
           </div>
         ) : (
-          <div key={currentSlide} className="flex-1 flex flex-col justify-center animate-slide-fade">
+          <div key={slide} className="flex-1 flex flex-col justify-center animate-slide-fade xl:pr-40">
+            {slide === -1 && (
+              <div className="text-center p-8 bg-surface rounded-3xl border border-line max-w-md mx-auto">
+                <Trophy className="w-12 h-12 text-accent-text mx-auto mb-3 opacity-60" />
+                <h3 className="text-lg font-bold text-ink mb-1">Ainda não há avaliações neste ciclo</h3>
+                <p className="text-xs text-muted">Os resultados aparecem aqui assim que as avaliações forem salvas.</p>
+              </div>
+            )}
             {/* SLIDE 0: PODIUM & TOP PERFORMERS */}
-            {currentSlide === 0 && (
+            {slide === 0 && (
               <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
                 <div className="text-center">
                   <div className="inline-flex items-center gap-2 bg-accent/10 text-accent-text px-4 py-1 rounded-brand text-xs font-bold font-mono uppercase tracking-widest border border-accent/20 mb-2">
@@ -317,7 +337,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         )}
 
         {/* SLIDE 1: MAIORES EVOLUÇÕES & FOGUETES */}
-        {currentSlide === 1 && (
+        {slide === 1 && (
           <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
             <div className="text-center">
               <div className="inline-flex items-center gap-2 bg-success/10 text-success px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-success/20 mb-2">
@@ -358,7 +378,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         )}
 
         {/* SLIDE 2: DESEMPENHO DOS TIMES */}
-        {currentSlide === 2 && (
+        {slide === 2 && (
           <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
             <div className="text-center">
               <div className="inline-flex items-center gap-2 bg-info/10 text-info px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-info/20 mb-2">
@@ -411,7 +431,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
           </div>
         )}
           {/* SLIDE 3: RECONHECIMENTO — SUBIU DE NÍVEL */}
-        {currentSlide === 3 && (
+        {slide === 3 && (
           <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
             <div className="text-center">
               <div className="inline-flex items-center gap-2 bg-accent/10 text-accent-text px-4 py-1 rounded-brand text-xs font-bold font-mono uppercase tracking-widest border border-accent/20 mb-2">

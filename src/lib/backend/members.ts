@@ -46,7 +46,7 @@ export function subscribeToMembers(
   };
 }
 
-export async function addMemberToFirestore(newMember: TeamMember): Promise<void> {
+export async function addMember(newMember: TeamMember): Promise<void> {
   const { error } = await getSupabase().from('members').insert({
     id: newMember.id,
     name: newMember.name,
@@ -58,7 +58,7 @@ export async function addMemberToFirestore(newMember: TeamMember): Promise<void>
   if (error) throw error;
 }
 
-export async function updateMemberInFirestore(updatedMember: TeamMember): Promise<void> {
+export async function updateMember(updatedMember: TeamMember): Promise<void> {
   const { data, error } = await getSupabase()
     .from('members')
     .update({
@@ -76,17 +76,17 @@ export async function updateMemberInFirestore(updatedMember: TeamMember): Promis
   }
 }
 
-export async function deleteMemberFromFirestore(memberId: string): Promise<void> {
+export async function archiveMember(memberId: string): Promise<void> {
   const { error } = await getSupabase().rpc('archive_member', { p_member_id: memberId });
   if (error) throw error;
 }
 
-export async function restoreMemberFromFirestore(memberId: string): Promise<void> {
+export async function restoreMember(memberId: string): Promise<void> {
   const { error } = await getSupabase().rpc('restore_member', { p_member_id: memberId });
   if (error) throw error;
 }
 
-export async function getArchivedMembersFromFirestore(): Promise<TeamMember[]> {
+export async function getArchivedMembers(): Promise<TeamMember[]> {
   const { data, error } = await getSupabase()
     .from('members')
     .select(ARCHIVED_COLUMNS)

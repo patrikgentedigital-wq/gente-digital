@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EvaluationAuditLog, TeamMember } from '../types';
-import { getArchivedMembersFromFirestore, subscribeToAuditLogs } from '../lib/backend';
+import { getArchivedMembers, subscribeToAuditLogs } from '../lib/backend';
 import { FileSearch, AlertTriangle, ArchiveRestore, RotateCcw, Search, ChevronDown } from 'lucide-react';
 import { Skeleton } from './Skeleton';
 
@@ -63,7 +63,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
 
   const loadArchived = useCallback(async () => {
     try {
-      const archived = await getArchivedMembersFromFirestore();
+      const archived = await getArchivedMembers();
       setArchivedMembers(archived);
       setArchivedError(null);
     } catch (err) {

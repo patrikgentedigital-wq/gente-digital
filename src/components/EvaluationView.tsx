@@ -136,7 +136,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   // Load the persisted evaluation whenever the member or cycle changes.
   // Note: we intentionally depend only on selectedMember.id (not the object/array
-  // identities) so Firestore snapshots do not wipe in-progress drafts.
+  // identities) so live updates do not wipe in-progress drafts.
   const memberId = selectedMember.id;
   const memberPdiGoals = selectedMember.pdiGoals;
   useEffect(() => {

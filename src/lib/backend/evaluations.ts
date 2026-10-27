@@ -79,7 +79,7 @@ interface EvaluationRow {
   members?: { name: string } | null;
 }
 
-export async function getEvaluationFromFirestore(evaluationId: string): Promise<EvaluationPayload | null> {
+export async function getEvaluation(evaluationId: string): Promise<EvaluationPayload | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('evaluations')
@@ -114,7 +114,7 @@ export async function getEvaluationFromFirestore(evaluationId: string): Promise<
   };
 }
 
-export async function saveEvaluationAndMemberInFirestore({
+export async function saveEvaluation({
   member,
   evaluation,
   expectedRevision = 0,

@@ -20,10 +20,10 @@ vi.mock('./client', () => ({
 
 import {
   describeEvaluationError,
-  getEvaluationFromFirestore,
+  getEvaluation,
   isEvaluationConflictError,
   isEvaluationCriteriaOutdatedError,
-  saveEvaluationAndMemberInFirestore,
+  saveEvaluation,
   type EvaluationPayload,
 } from './evaluations';
 
@@ -47,10 +47,10 @@ beforeEach(() => {
   fake.profileResult = { data: null, error: null };
 });
 
-describe('saveEvaluationAndMemberInFirestore', () => {
+describe('saveEvaluation', () => {
   it('envia as notas ao servidor e devolve o resultado calculado por ele', async () => {
     fake.rpc.mockResolvedValue({ data: { id: 'x', revision: 2, score: 12, max_score: 15, status: 'Atenção' }, error: null });
-    const saved = await saveEvaluationAndMemberInFirestore({ member, evaluation, expectedRevision: 1 });
+    const saved = await saveEvaluation({ member, evaluation, expectedRevision: 1 });
     expect(fake.rpc).toHaveBeenCalledWith('save_evaluation', {
       p_member_id: 'ana_ta',
       p_cycle: 'Outubro/2026',
@@ -64,14 +64,14 @@ describe('saveEvaluationAndMemberInFirestore', () => {
 
   it('reconhece conflito de revisão', async () => {
     fake.rpc.mockResolvedValue({ data: null, error: { message: 'conflito_de_revisao' } });
-    const failure = await saveEvaluationAndMemberInFirestore({ member, evaluation }).catch((error) => error);
+    const failure = await saveEvaluation({ member, evaluation }).catch((error) => error);
     expect(isEvaluationConflictError(failure)).toBe(true);
     expect(isEvaluationCriteriaOutdatedError(failure)).toBe(false);
   });
 
   it('reconhece perguntas desatualizadas', async () => {
     fake.rpc.mockResolvedValue({ data: null, error: { message: 'perguntas_desatualizadas' } });
-    const failure = await saveEvaluationAndMemberInFirestore({ member, evaluation }).catch((error) => error);
+    const failure = await saveEvaluation({ member, evaluation }).catch((error) => error);
     expect(isEvaluationCriteriaOutdatedError(failure)).toBe(true);
     expect(isEvaluationConflictError(failure)).toBe(false);
     expect(describeEvaluationError(failure)).toBe('As perguntas da equipe mudaram. Recarregue a avaliação.');
@@ -93,7 +93,7 @@ describe('describeEvaluationError', () => {
   });
 });
 
-describe('getEvaluationFromFirestore', () => {
+describe('getEvaluation', () => {
   it('monta a avaliação com o nome do membro e do líder', async () => {
     fake.evaluationResult = {
       data: {
@@ -104,7 +104,7 @@ describe('getEvaluationFromFirestore', () => {
       error: null,
     };
     fake.profileResult = { data: { name: 'Brenda' }, error: null };
-    expect(await getEvaluationFromFirestore('evaluation_ana_ta_out')).toEqual({
+    expect(await getEvaluation('evaluation_ana_ta_out')).toEqual({
       id: 'evaluation_ana_ta_out', memberId: 'ana_ta', memberName: 'Ana', leaderName: 'Brenda', score: 12,
       status: 'Atenção', cycle: 'Outubro/2026', comments: 'ok', pdiGoals: [], criteriaScores: { '1-0': 5 },
       revision: 2, createdAt: '2026-10-27T10:00:00Z', updatedAt: '2026-10-28T10:00:00Z',
@@ -112,6 +112,6 @@ describe('getEvaluationFromFirestore', () => {
   });
 
   it('devolve null quando a avaliação não existe', async () => {
-    expect(await getEvaluationFromFirestore('nao-existe')).toBeNull();
+    expect(await getEvaluation('nao-existe')).toBeNull();
   });
 });

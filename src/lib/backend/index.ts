@@ -11,22 +11,22 @@ export {
 } from './auth';
 export type { AppProfile, AppRole, AuthUser } from './auth';
 export {
-  addMemberToFirestore,
-  deleteMemberFromFirestore,
-  getArchivedMembersFromFirestore,
+  addMember,
+  archiveMember,
+  getArchivedMembers,
   listTeams,
-  restoreMemberFromFirestore,
+  restoreMember,
   subscribeToAuditLogs,
   subscribeToMembers,
-  updateMemberInFirestore,
+  updateMember,
 } from './members';
 export { getCriteriaSet, saveCriteriaSet } from './criteria';
 export type { CriteriaSet } from './criteria';
 export {
   describeEvaluationError,
-  getEvaluationFromFirestore,
+  getEvaluation,
   isEvaluationConflictError,
   isEvaluationCriteriaOutdatedError,
-  saveEvaluationAndMemberInFirestore,
+  saveEvaluation,
 } from './evaluations';
 export type { EvaluationPayload, SavedEvaluation } from './evaluations';

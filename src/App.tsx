@@ -3,6 +3,7 @@ import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
   addMember,
   archiveMember,
+  countOpenClientErrors,
   describeEvaluationError,
   getEvaluation,
   isEvaluationConflictError,
@@ -16,6 +17,8 @@ import {
 import type { EvaluationPayload } from './lib/backend';
 import { useTeamCriteria } from './hooks/useTeamCriteria';
 import { CriteriaEditorView } from './components/CriteriaEditorView';
+import { ClientErrorsPanel } from './components/ClientErrorsPanel';
+import { clientErrorReporter } from './lib/clientErrors';
 import { SetPasswordView } from './components/SetPasswordView';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
@@ -63,6 +66,22 @@ export default function App() {
   const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
+  const [openErrorCount, setOpenErrorCount] = useState(0);
+
+  const refreshErrorCount = useCallback(() => {
+    countOpenClientErrors().then(setOpenErrorCount);
+  }, []);
+
+  // O admin vê no menu quantos erros dos líderes ainda estão abertos; confere a cada minuto.
+  useEffect(() => {
+    if (authRole !== 'admin') {
+      setOpenErrorCount(0);
+      return;
+    }
+    refreshErrorCount();
+    const timer = window.setInterval(refreshErrorCount, 60_000);
+    return () => window.clearInterval(timer);
+  }, [authRole, refreshErrorCount]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -284,6 +303,7 @@ export default function App() {
         toast.error(describeEvaluationError(error) ?? 'As perguntas da equipe mudaram. Recarregue a avaliação.');
         throw new Error('evaluation-save-failed');
       }
+      clientErrorReporter.report(error, 'save');
       toast.error(describeEvaluationError(error) ?? 'A avaliação não foi salva. Nenhum dado local foi confirmado.');
       throw new Error('evaluation-save-failed');
     }
@@ -357,7 +377,10 @@ export default function App() {
          )}
         {activeTab === 'criteria' && authRole && <CriteriaEditorView role={authRole} />}
         {activeTab === 'audit' && authRole === 'admin' && (
-          <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
+          <>
+            <ClientErrorsPanel onChange={refreshErrorCount} />
+            <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
+          </>
         )}
       </main>
     </>
@@ -379,6 +402,7 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         isAuthenticated={Boolean(authUser && authRole)}
         role={authRole}
+        openErrorCount={openErrorCount}
         onLogout={authUser ? () => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.')) : undefined}
       />
 

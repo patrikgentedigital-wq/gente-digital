@@ -15,6 +15,8 @@ interface NavbarProps {
   isAuthenticated?: boolean;
   role?: 'leader' | 'admin' | null;
   onLogout?: () => void;
+  /** Erros do sistema ainda abertos; vira um aviso no menu Auditoria (só para admin). */
+  openErrorCount?: number;
 }
 
 const HERO: Record<Tab, { title: string; subtitle: string }> = {
@@ -53,6 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAuthenticated = false,
   role = null,
   onLogout,
+  openErrorCount = 0,
 }) => {
   const items: Array<{ tab: Tab; label: string; needsAuth?: boolean }> = [
     { tab: 'dashboard', label: 'Visão geral' },
@@ -90,6 +93,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 {label}
+                {tab === 'audit' && role === 'admin' && openErrorCount > 0 && (
+                  <span
+                    aria-label={`${openErrorCount} ${openErrorCount === 1 ? 'erro aberto' : 'erros abertos'}`}
+                    className="ml-1.5 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white"
+                  >
+                    {openErrorCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>

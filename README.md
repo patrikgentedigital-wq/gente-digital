@@ -5,8 +5,8 @@ Plataforma interna de ranking, análise de desempenho e avaliação de equipes.
 ## Stack
 
 - React + Vite + TypeScript
-- Firebase Authentication e Firestore
-- Cloud Functions para provisionamento de roles e gravação autoritativa de avaliações
+- Supabase (Postgres, Auth e Realtime): regras de acesso por equipe (RLS) e funções SQL que gravam avaliações e perguntas
+- Vercel para publicar (cada envio ao GitHub gera um deploy; a `main` é produção)
 - Tailwind CSS, Recharts e Vitest
 
 ## Desenvolvimento local
@@ -18,13 +18,8 @@ npm ci
 npm run dev
 ```
 
-O projeto usa a configuração pública do Firebase em
-`firebase-applet-config.json`. Para sobrescrever valores localmente, copie
-`.env.example` para `.env.local`.
-
-Para habilitar o App Check no frontend, informe `VITE_FIREBASE_APPCHECK_SITE_KEY`
-com a site key reCAPTCHA v3 cadastrada no Firebase Console. Depois, ative a
-exigência de App Check no Firebase apenas após validar o domínio publicado.
+Copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL` e
+`VITE_SUPABASE_ANON_KEY` (chaves públicas: quem protege os dados é a RLS do banco).
 
 ## Validação
 
@@ -32,53 +27,26 @@ exigência de App Check no Firebase apenas após validar o domínio publicado.
 npm run lint
 npm test
 npm run build
-
-cd functions
-npm ci
-npm run lint
-npm test
-npm run build
 ```
 
-Para publicar o app, as Cloud Functions precisam ser publicadas junto com as
-Rules porque o salvamento de avaliações usa a callable `saveEvaluation`:
+## Banco, segurança e publicação
 
-```sh
-firebase deploy --only functions,firestore,hosting
-```
+- O esquema, as regras de acesso e as funções ficam em `supabase/migrations/`
+  (aplicar em ordem). O teste de segurança, que simula admin, líder da equipe,
+  líder de outra equipe, líder sem equipe e anônimo, está em
+  `supabase/tests/security.sql`; ele termina em erro de propósito ("OK: ...")
+  para não deixar dados.
+- Quem pode o quê: o **admin** lê e edita tudo; o **líder** lê e avalia só a própria
+  equipe e edita só as perguntas dela. Notas, totais e status são calculados no
+  servidor (`save_evaluation`); o navegador nunca grava pontuação.
+- Contas: crie o usuário em Authentication no painel do Supabase e depois uma linha
+  em `profiles` (papel `admin` ou `leader` e a equipe).
+- Seed inicial: `node scripts/build-seed.mjs` gera `supabase/seed/0001_seed.sql` a
+  partir de `scripts/seed-data.json` (veja `scripts/seed-data.example.json`). Os
+  dados reais ficam fora do git porque o repositório é público.
+- Publicação: a Vercel publica a `main` em produção e as outras branches como
+  preview. Os cabeçalhos de segurança estão em `vercel.json`.
 
-Os hooks de deploy executam os builds do frontend e de `functions/` antes da
-publicação. O Firestore aceita membros legados sem o campo `deleted`; eles são
-tratados como ativos até serem arquivados.
+> `functions/`, `firestore.rules` e `docs/firebase-*` pertencem à versão antiga em
+> Firebase e ficam só como histórico.
 
-## Roles e autorização
-
-O acesso aos dados depende de e-mail verificado e custom claim `role`:
-
-- `leader`: leitura e avaliações;
-- `admin`: gerenciamento completo de colaboradores, avaliações e líderes.
-
-### Gerenciamento de Usuários e Roles
-
-Para listar, criar contas ou alterar permissões via terminal:
-
-```sh
-# Listar usuários cadastrados e suas roles
-npm run roles -- list
-
-# Criar um novo usuário líder ou admin (com e-mail verificado automaticamente)
-npm run roles -- create-user lider@gentedigital.com.br SenhaForte123 leader
-
-# Atribuir ou alterar role de um usuário existente
-npm run roles -- set-role lider@gentedigital.com.br admin
-```
-
-Para mais detalhes e procedimentos via Cloud Functions, consulte [`docs/firebase-roles-runbook.md`](docs/firebase-roles-runbook.md).
-
-Para validar as Rules localmente, execute:
-
-```sh
-firebase emulators:start --only auth,firestore
-```
-
-As Rules do Firestore continuam sendo a autoridade de segurança; a interface adapta os botões e formulários dinamicamente conforme o papel (`admin` ou `leader`) autenticado.

@@ -24,7 +24,6 @@
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
-    "firebase": "^12.17.1",
     "lucide-react": "^0.546.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.1",

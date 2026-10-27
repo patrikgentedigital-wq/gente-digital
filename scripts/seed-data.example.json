@@ -1,0 +1,11 @@
+{
+  "teams": [
+    { "id": "Equipe A", "color": "#E11D48", "active": true },
+    { "id": "Equipe B", "color": "#3B6FE0", "active": false }
+  ],
+  "members": [
+    { "id": "ana_equipe_a", "name": "Ana", "job": "Analista", "team": "Equipe A" },
+    { "id": "bruno_equipe_a", "name": "Bruno", "job": "Técnico", "team": "Equipe A" },
+    { "id": "caio_equipe_a", "name": "Caio", "job": "Estagiário", "team": "Equipe A", "archived": true }
+  ]
+}

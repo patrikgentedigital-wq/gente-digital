@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { TeamMember } from '../types';
-import type { EvaluationPayload } from '../lib/firebaseLoader';
-import { CRITERIA_CATEGORIES } from '../data/catalogData';
+import type { EvaluationPayload } from '../lib/backend';
+import type { CriteriaCategory } from '../lib/criteria';
 import { getCategoryScorePercent, isPdiGoalOverdue } from '../lib/evaluation';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { useDialog } from '../hooks/useDialog';
@@ -49,6 +49,8 @@ interface EmployeeDetailModalProps {
   onOpenImageModal?: (member: TeamMember) => void;
   onSelectForEvaluation: (member: TeamMember) => void;
   evaluation?: EvaluationPayload | null;
+  /** Perguntas da equipe do membro, para o radar. */
+  criteria?: CriteriaCategory[] | null;
 }
 
 // Render Badge Icon Helper
@@ -107,6 +109,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   onOpenImageModal,
   onSelectForEvaluation,
   evaluation,
+  criteria,
 }) => {
   const dialogRef = useDialog(Boolean(member), onClose);
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
@@ -124,9 +127,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     return true;
   });
 
-  const radarData = evaluation
-    ? CRITERIA_CATEGORIES.flatMap((category) => {
-        const score = getCategoryScorePercent(evaluation.criteriaScores, category.id);
+  const radarData = evaluation && criteria
+    ? criteria.flatMap((category) => {
+        const score = getCategoryScorePercent(evaluation.criteriaScores, category.id, criteria);
         return score === null
           ? []
           : [{ category: category.name.split(' ')[0], fullName: category.name, score }];

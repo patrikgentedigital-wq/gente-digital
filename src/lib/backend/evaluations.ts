@@ -120,7 +120,7 @@ export async function saveEvaluationAndMemberInFirestore({
   expectedRevision = 0,
 }: {
   member: TeamMember;
-  evaluation: EvaluationPayload;
+  evaluation: Pick<EvaluationPayload, 'cycle' | 'comments' | 'pdiGoals' | 'criteriaScores'>;
   expectedRevision?: number;
 }): Promise<SavedEvaluation> {
   const { data, error } = await getSupabase().rpc('save_evaluation', {

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
 import { TeamMember } from '../types';
-import { CRITERIA_CATEGORIES } from '../data/catalogData';
+import type { CriteriaCategory } from '../lib/criteria';
 import { useDialog } from '../hooks/useDialog';
 import { getCategoryScore } from '../utils/reportUtils';
 import { Avatar } from './Avatar';
@@ -13,6 +13,7 @@ interface ReportExportModalProps {
   criteriaScores?: Record<string, number>;
   leaderComments?: string;
   cycle?: string;
+  criteria?: CriteriaCategory[] | null;
 }
 
 export const ReportExportModal: React.FC<ReportExportModalProps> = ({
@@ -22,6 +23,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   criteriaScores,
   leaderComments = '',
   cycle = 'Ciclo atual',
+  criteria = null,
 }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const dialogRef = useDialog(isOpen, onClose);
@@ -119,8 +121,8 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {CRITERIA_CATEGORIES.map((cat) => {
-                const { sum, max } = getCategoryScore(cat.id, criteriaScores);
+              {(criteria ?? []).map((cat) => {
+                const { sum, max } = getCategoryScore(cat.id, criteriaScores, criteria ?? []);
                 const percent = sum === null ? 0 : Math.round((sum / max) * 100);
 
                 return (

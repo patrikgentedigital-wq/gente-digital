@@ -1,19 +1,19 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
-  getEvaluationFromFirestore,
-  saveEvaluationAndMemberInFirestore,
-  isEvaluationConflictError,
-  isEvaluationServiceUnavailableError,
-} from './lib/firebaseLoader';
-import type { EvaluationPayload } from './lib/firebaseLoader';
-import {
   addMemberToFirestore,
   deleteMemberFromFirestore,
+  describeEvaluationError,
+  getEvaluationFromFirestore,
+  isEvaluationConflictError,
+  isEvaluationCriteriaOutdatedError,
   logoutLeader,
   restoreMemberFromFirestore,
+  saveEvaluationAndMemberInFirestore,
   updateMemberInFirestore,
 } from './lib/backend';
+import type { EvaluationPayload } from './lib/backend';
+import { useTeamCriteria } from './hooks/useTeamCriteria';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';
@@ -32,7 +32,6 @@ import { Skeleton } from './components/Skeleton';
 import { toast } from './utils/toastUtils';
 import {
   getDefaultEvaluationCycle,
-  getPerformanceStatus,
   makeEvaluationId,
   normalizeCriteriaScores,
   rankMembers,
@@ -80,6 +79,10 @@ export default function App() {
       setSelectedEvaluationMember(null);
     }
   }, [authUser]);
+
+  const evaluationCriteria = useTeamCriteria(selectedEvaluationMember?.team ?? null);
+  const detailCriteria = useTeamCriteria(detailModalMember?.team ?? null);
+  const reportCriteria = useTeamCriteria(reportModal?.member.team ?? null);
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
     return getEvaluationFromFirestore(makeEvaluationId(memberId, cycle));
@@ -228,7 +231,7 @@ export default function App() {
 
   const handleSaveEvaluation = async (
     memberId: string,
-    newTotalScore: number,
+    _clientTotal: number,
     criteriaScores: Record<string, number>,
     comments: string,
     cycle = getDefaultEvaluationCycle(),
@@ -238,50 +241,41 @@ export default function App() {
     const targetMember = members.find((member) => member.id === memberId);
     if (!targetMember || !authUser) return 0;
 
-    const newStatus: PerformanceStatus = getPerformanceStatus(newTotalScore);
-
-    const updatedMember: TeamMember = {
-      ...targetMember,
-      score: newTotalScore,
-      status: newStatus,
-      evaluationStatus: 'Concluído',
-      pdiGoals,
-      history: [
-        ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
-        { month: cycle, score: newTotalScore },
-      ],
-    };
     try {
-      const savedRevision = await saveEvaluationAndMemberInFirestore({
-        member: updatedMember,
-        evaluation: {
-          id: makeEvaluationId(memberId, cycle),
-          memberId,
-          memberName: targetMember.name,
-          leaderName: (currentLeader || authUser.email || 'Líder').slice(0, 100),
-          score: newTotalScore,
-          status: newStatus,
-          cycle,
-          comments,
-          pdiGoals,
-          criteriaScores,
-        },
+      // A nota, o máximo e o status são calculados no servidor: o navegador não decide a classificação.
+      const saved = await saveEvaluationAndMemberInFirestore({
+        member: targetMember,
+        evaluation: { cycle, comments, pdiGoals, criteriaScores },
         expectedRevision,
       });
+      const updatedMember: TeamMember = {
+        ...targetMember,
+        score: saved.score,
+        maxScore: saved.maxScore,
+        status: saved.status,
+        evaluationStatus: 'Concluído',
+        pdiGoals,
+        history: [
+          ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
+          { month: cycle, score: saved.score },
+        ],
+      };
       setMembers((previous) => rankMembers(previous.map((member) =>
         member.id === memberId ? updatedMember : member
       )));
       setSelectedEvaluationMember(updatedMember);
-      return savedRevision;
+      return saved.revision;
     } catch (error) {
       if (isEvaluationConflictError(error)) {
         toast.error('Esta avaliação foi alterada por outra pessoa. Recarregue os dados antes de salvar novamente.');
-      } else if (isEvaluationServiceUnavailableError(error)) {
-        toast.error('O serviço de avaliações ainda não está publicado. Solicite o deploy das Cloud Functions.');
-      } else {
-        toast.error('A avaliação não foi salva. Nenhum dado local foi confirmado.');
+        throw new Error('evaluation-conflict');
       }
-      throw new Error(isEvaluationConflictError(error) ? 'evaluation-conflict' : 'evaluation-save-failed');
+      if (isEvaluationCriteriaOutdatedError(error)) {
+        toast.error(describeEvaluationError(error) ?? 'As perguntas da equipe mudaram. Recarregue a avaliação.');
+        throw new Error('evaluation-save-failed');
+      }
+      toast.error(describeEvaluationError(error) ?? 'A avaliação não foi salva. Nenhum dado local foi confirmado.');
+      throw new Error('evaluation-save-failed');
     }
   };
 
@@ -336,6 +330,7 @@ export default function App() {
            selectedEvaluationMember ? (
              <EvaluationView
                members={members}
+               criteria={evaluationCriteria}
                selectedMember={selectedEvaluationMember}
                onSelectMember={setSelectedEvaluationMember}
                onSaveEvaluation={handleSaveEvaluation}
@@ -459,6 +454,8 @@ export default function App() {
         onSaveAvatar={handleSaveAvatarUrl}
         detailModalMember={detailModalMember}
         detailEvaluation={detailEvaluation}
+        detailCriteria={detailCriteria}
+        reportCriteria={reportCriteria}
         onCloseDetail={() => setDetailModalMember(null)}
         onSelectForEvaluation={(member) => {
           setSelectedEvaluationMember(member);

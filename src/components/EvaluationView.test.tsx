@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { EvaluationView } from './EvaluationView';
 import type { TeamMember } from '../types';
 import { CRITERIA_SCORE_KEYS } from '../lib/evaluation';
+import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
 
 const member: TeamMember = {
   id: 'member-1',
@@ -49,6 +50,7 @@ function renderEvaluation(overrides: Partial<React.ComponentProps<typeof Evaluat
   const onSaveEvaluation = vi.fn().mockResolvedValue(2);
   const props: React.ComponentProps<typeof EvaluationView> = {
     members: [member],
+    criteria: DEFAULT_CRITERIA_CATEGORIES,
     selectedMember: member,
     onSelectMember: vi.fn(),
     onSaveEvaluation,
@@ -99,5 +101,14 @@ describe('EvaluationView integration', () => {
       [],
       0,
     );
+  });
+});
+
+describe('EvaluationView sem perguntas da equipe', () => {
+  it('avisa que a equipe ainda não tem perguntas e não deixa salvar', async () => {
+    const { onSaveEvaluation } = renderEvaluation({ criteria: null });
+    expect(screen.getByText('Esta equipe ainda não tem perguntas de avaliação.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
+    await waitFor(() => expect(onSaveEvaluation).not.toHaveBeenCalled());
   });
 });

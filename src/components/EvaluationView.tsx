@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TeamMember, PdiGoal } from '../types';
-import type { EvaluationPayload } from '../lib/firebaseLoader';
-import { CRITERIA_CATEGORIES, TEAMS } from '../data/catalogData';
+import type { EvaluationPayload } from '../lib/backend';
+import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
+import type { CriteriaCategory } from '../lib/criteria';
 import {
   FileText,
   Save,
@@ -33,6 +34,7 @@ import { toast } from '../utils/toastUtils';
 import { ConfirmModal } from './ConfirmModal';
 import {
   getDefaultEvaluationCycle,
+  criteriaScoreKeys,
   getEvaluationCycles,
   hasCompleteCriteriaScores,
   isPdiGoalOverdue,
@@ -48,6 +50,8 @@ import { Skeleton } from './Skeleton';
 
 interface EvaluationViewProps {
   members: TeamMember[];
+  /** Perguntas da equipe do membro selecionado; null enquanto carrega ou quando a equipe não tem perguntas. */
+  criteria?: CriteriaCategory[] | null;
   selectedMember: TeamMember;
   onSelectMember: (member: TeamMember) => void;
   onSaveEvaluation: (
@@ -70,6 +74,7 @@ interface EvaluationViewProps {
 
 export const EvaluationView: React.FC<EvaluationViewProps> = ({
   members,
+  criteria,
   selectedMember,
   onSelectMember,
   onSaveEvaluation,
@@ -90,14 +95,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   // Initialize scores (0..5 for each category item)
   const [scores, setScores] = useState<Record<string, number | undefined>>({});
 
-  const [openCategories, setOpenCategories] = useState<Record<number, boolean>>({
-    1: true,
-    2: true,
-    3: true,
-    4: true,
-    5: true,
-    6: true,
-  });
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const categories = criteria ?? [];
 
   const [leaderComments, setLeaderComments] = useState<string>('');
   const [isDirty, setIsDirty] = useState<boolean>(false);
@@ -167,7 +166,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             return;
           }
         }
-        setScores(normalizeCriteriaScores(evaluation?.criteriaScores));
+        setScores(normalizeCriteriaScores(evaluation?.criteriaScores, categories));
         setLeaderComments(evaluation?.comments || '');
         setPdiGoals(evaluation?.pdiGoals || memberPdiGoals || []);
         setEvaluationRevision(evaluation?.revision ?? 0);
@@ -204,8 +203,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
 
-  const toggleCategory = (catId: number) => {
-    setOpenCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
+  const toggleCategory = (catId: string) => {
+    setOpenCategories((prev) => ({ ...prev, [catId]: prev[catId] === false }));
   };
 
   const updateScore = (key: string, delta: number) => {
@@ -218,18 +217,19 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   // Calculate category sum & grand total
-  const getCategorySum = (catId: number) => {
-    const cat = CRITERIA_CATEGORIES.find((c) => c.id === catId);
+  const getCategorySum = (catId: string) => {
+    const cat = categories.find((c) => c.id === catId);
     if (!cat) return 0;
-    return cat.items.reduce((acc, _, idx) => acc + (scores[`${catId}-${idx}`] ?? 0), 0);
+    return cat.items.reduce((acc, item) => acc + (scores[item.id] ?? 0), 0);
   };
 
-  const scoreKeys = CRITERIA_CATEGORIES.flatMap((cat) => cat.items.map((_, idx) => `${cat.id}-${idx}`));
-  const hasAllScores = hasCompleteCriteriaScores(scores);
+  const scoreKeys = criteriaScoreKeys(categories);
+  const hasAllScores = hasCompleteCriteriaScores(scores, categories);
   const grandTotal = scoreKeys.reduce((total, key) => total + (scores[key] ?? 0), 0);
+  const maxScore = scoreKeys.length * 5;
 
   // Radar chart data comparing category percentages
-  const radarData = CRITERIA_CATEGORIES.map((cat) => {
+  const radarData = categories.map((cat) => {
     const catSum = getCategorySum(cat.id);
     const catMax = cat.items.length * 5;
     const leaderPct = Math.round((catSum / catMax) * 100);
@@ -241,7 +241,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   });
 
   const sectionsProgress = [
-    { id: 'eval-criterios', label: 'Critérios (1–6)', done: hasAllScores },
+    { id: 'eval-criterios', label: 'Critérios', done: hasAllScores },
     { id: 'eval-pdi', label: 'PDI', done: pdiGoals.length > 0 },
     { id: 'eval-parecer', label: 'Parecer da liderança', done: leaderComments.trim().length > 0 },
   ];
@@ -298,6 +298,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   const handleSave = async () => {
+    if (categories.length === 0) {
+      toast.error('Esta equipe ainda não tem perguntas. Peça ao admin para cadastrá-las na aba Perguntas.');
+      return;
+    }
     if (!hasAllScores) {
       toast.error('Preencha todos os critérios antes de salvar.');
       return;
@@ -322,7 +326,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       clearDraft(selectedMember.id, cycle);
       setDraftSavedAt(null);
       toast.success(
-        `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/155`,
+        `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/${maxScore}`,
         'Avaliação Concluída'
       );
     } catch (error) {
@@ -527,8 +531,13 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
       {/* Criteria Categories Cards */}
       <div id="eval-criterios" className="space-y-3 scroll-mt-4">
-        {CRITERIA_CATEGORIES.map((cat) => {
-          const isOpen = !!openCategories[cat.id];
+        {categories.length === 0 && (
+          <div className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-muted" role="status">
+            Esta equipe ainda não tem perguntas de avaliação.
+          </div>
+        )}
+        {categories.map((cat) => {
+          const isOpen = openCategories[cat.id] !== false;
           const catSum = getCategorySum(cat.id);
           const catMax = cat.items.length * 5;
 
@@ -561,14 +570,14 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               {/* Items Body */}
               {isOpen && (
                 <div className="px-4 pb-4 border-t border-line divide-y divide-line">
-                  {cat.items.map((label, idx) => {
-                    const key = `${cat.id}-${idx}`;
+                  {cat.items.map((item) => {
+                    const key = item.id;
                     const score = scores[key];
 
                     return (
-                      <div key={idx} className="flex items-center justify-between gap-4 py-3">
+                      <div key={item.id} className="flex items-center justify-between gap-4 py-3">
                         <div className="text-xs text-muted leading-normal flex-1">
-                          {label}
+                          {item.text}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">

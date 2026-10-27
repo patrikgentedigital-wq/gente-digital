@@ -71,6 +71,7 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
           isOpen
           onClose={onCloseMemberForm}
           memberToEdit={memberToEdit}
+          members={members}
           onSaveMember={onSaveMember}
           onDeleteMember={onDeleteMember}
         />

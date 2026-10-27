@@ -9,6 +9,7 @@ interface DashboardKpiCardsProps {
   statusCounts: { Voando: number; 'Caminho Certo': number; Atenção: number; Alarme: number };
   bestTeam: { leader: string; avgScore: number; count: number } | null;
   completedEvaluationsCount: number;
+  teamCount: number;
 }
 
 export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
@@ -18,6 +19,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
   statusCounts,
   bestTeam,
   completedEvaluationsCount,
+  teamCount,
 }) => {
   const totalMembers = members.length;
   const evalPercent = totalMembers > 0 ? Math.round((completedEvaluationsCount / totalMembers) * 100) : 0;
@@ -77,7 +79,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
           <span className="text-3xl font-extrabold font-mono text-ink">
             {totalMembers}
           </span>
-          <span className="text-xs text-faint font-mono">em 9 equipes</span>
+          <span className="text-xs text-faint font-mono">em {teamCount} {teamCount === 1 ? 'equipe' : 'equipes'}</span>
         </div>
         <div className="mt-2 text-[11px] text-success font-mono">
           {evalPercent}% com avaliação concluída ({completedEvaluationsCount}/{totalMembers})

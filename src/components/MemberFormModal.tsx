@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember, LeaderName } from '../types';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
 import { X, UserPlus, Edit3, Trash2, Mail, Briefcase, Users, Link as LinkIcon, AlertTriangle, Check } from 'lucide-react';
 import { useDialog } from '../hooks/useDialog';
 
@@ -8,6 +9,8 @@ interface MemberFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   memberToEdit?: TeamMember | null;
+  /** Membros atuais: de onde saem as equipes que não estão na lista inicial. */
+  members?: TeamMember[];
   onSaveMember: (memberData: TeamMember) => Promise<void> | void;
   onDeleteMember?: (memberId: string) => Promise<void> | void;
 }
@@ -16,6 +19,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   isOpen,
   onClose,
   memberToEdit,
+  members = [],
   onSaveMember,
   onDeleteMember,
 }) => {
@@ -53,7 +57,8 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
 
   if (!isOpen) return null;
 
-  const selectedTeamData = TEAMS.find((t) => t.leader === team) || TEAMS[0];
+  const teamOptions = deriveTeams(members, TEAMS, { includeEmpty: true });
+  const selectedTeamData = teamOptions.find((t) => t.leader === team) || teamOptions[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +271,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                   onChange={(e) => setTeam(e.target.value as LeaderName)}
                   className="w-full bg-surface-2 border border-line rounded-xl pl-8 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 >
-                  {TEAMS.map((t) => (
+                  {teamOptions.map((t) => (
                     <option key={t.leader} value={t.leader}>
                       Time {t.leader}
                     </option>

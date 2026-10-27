@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
@@ -53,7 +54,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     const voandoPct = Math.round((counts.Voando / (total || 1)) * 100);
 
-    const teams = TEAMS.map((t) => {
+    const teams = deriveTeams(members, TEAMS).map((t) => {
       const teamMembers = members.filter((m) => m.team === t.leader);
       const count = teamMembers.length;
       const teamAvg =
@@ -217,6 +218,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         statusCounts={statusCounts}
         bestTeam={bestTeam}
         completedEvaluationsCount={completedEvaluationsCount}
+        teamCount={teamStats.length}
       />
 
       {/* Main Charts Section 1: Team Comparison BarChart & Status PieChart */}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TeamMember } from '../types';
 import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
 import {
   X,
   Trophy,
@@ -110,7 +111,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     .slice(0, 6);
 
   // Teams summary calculations
-  const teamStats = TEAMS.map((team) => {
+  const teamStats = deriveTeams(members, TEAMS).map((team) => {
     const teamMembers = members.filter((m) => m.team === team.leader);
     const avgScore =
       teamMembers.length > 0

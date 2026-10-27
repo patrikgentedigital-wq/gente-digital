@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import logo from '../assets/gente-digital-logo.svg';
 import { X, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
-import { loginWithEmailAndPassword } from '../lib/backend';
+import { loginWithEmailAndPassword, sendPasswordReset } from '../lib/backend';
 import { useDialog } from '../hooks/useDialog';
 
 interface LeaderLoginModalProps {
@@ -21,8 +21,24 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleForgotPassword = async () => {
+    setInfoMsg(null);
+    if (!email.trim()) {
+      setErrorMsg('Digite o seu e-mail acima para receber o link.');
+      return;
+    }
+    setErrorMsg(null);
+    try {
+      await sendPasswordReset(email.trim());
+      setInfoMsg('Se este e-mail estiver cadastrado, enviamos um link para criar uma nova senha.');
+    } catch (error: unknown) {
+      setErrorMsg(error instanceof Error ? error.message : 'Não foi possível enviar o link. Tente de novo.');
+    }
+  };
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -128,6 +144,20 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
               />
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            className="text-[11px] font-semibold text-muted hover:text-ink hover:underline cursor-pointer"
+          >
+            Esqueci minha senha
+          </button>
+
+          {infoMsg && (
+            <p className="bg-success-soft border border-success/40 text-success text-xs p-3 rounded-xl" role="status">
+              {infoMsg}
+            </p>
+          )}
 
           <button
             type="submit"

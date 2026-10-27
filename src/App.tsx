@@ -10,11 +10,13 @@ import {
   logoutLeader,
   restoreMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
+  initialAuthLink,
   updateMemberInFirestore,
 } from './lib/backend';
 import type { EvaluationPayload } from './lib/backend';
 import { useTeamCriteria } from './hooks/useTeamCriteria';
 import { CriteriaEditorView } from './components/CriteriaEditorView';
+import { SetPasswordView } from './components/SetPasswordView';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';
@@ -40,6 +42,13 @@ import {
 
 export default function App() {
   const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
+  // Quem chega pelo link de convite ou de recuperação precisa definir a senha antes de usar o sistema.
+  const [passwordSetupPending, setPasswordSetupPending] = useState(initialAuthLink.type !== null && !initialAuthLink.failed);
+  useEffect(() => {
+    if (initialAuthLink.failed) {
+      toast.error('O link expirou ou já foi usado. Peça um novo convite ou use "Esqueci minha senha".');
+    }
+  }, []);
   const { members, setMembers, membersError, membersLoading } = useMembers(authUser, authRole);
   const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
@@ -375,6 +384,13 @@ export default function App() {
 
       {!authReady || (authUser && !authRoleReady) ? (
         <main className="flex-1 flex items-center justify-center p-8 text-sm text-muted">Verificando sessão...</main>
+      ) : authUser && passwordSetupPending ? (
+        <SetPasswordView
+          onDone={() => {
+            setPasswordSetupPending(false);
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }}
+        />
       ) : authUser && !authRole ? (
         <main className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-md rounded-3xl bg-surface p-8 text-center">

@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fake = vi.hoisted(() => ({
-  auth: { signInWithPassword: vi.fn(), signOut: vi.fn(), onAuthStateChange: vi.fn(), getSession: vi.fn() },
+  auth: {
+    signInWithPassword: vi.fn(),
+    signOut: vi.fn(),
+    onAuthStateChange: vi.fn(),
+    getSession: vi.fn(),
+    updateUser: vi.fn(),
+    resetPasswordForEmail: vi.fn(),
+  },
   profileResult: { data: null as unknown, error: null as unknown },
 }));
 
@@ -19,7 +26,9 @@ import {
   getCurrentUserRole,
   loginWithEmailAndPassword,
   logoutLeader,
+  sendPasswordReset,
   subscribeToAuth,
+  updatePassword,
 } from './auth';
 
 const user = { id: 'u1', email: 'lider@empresa.com' };
@@ -102,5 +111,37 @@ describe('logoutLeader', () => {
     fake.auth.signOut.mockResolvedValue({ error: null });
     await logoutLeader();
     expect(fake.auth.signOut).toHaveBeenCalled();
+  });
+});
+
+describe('updatePassword', () => {
+  it('grava a senha nova na conta logada', async () => {
+    fake.auth.updateUser.mockResolvedValue({ data: {}, error: null });
+    await updatePassword('senha-forte-1');
+    expect(fake.auth.updateUser).toHaveBeenCalledWith({ password: 'senha-forte-1' });
+  });
+
+  it('traduz senha igual à anterior e esconde erros desconhecidos', async () => {
+    fake.auth.updateUser.mockResolvedValue({ data: null, error: { message: 'New password should be different from the old password.' } });
+    await expect(updatePassword('x')).rejects.toThrow('A nova senha precisa ser diferente da anterior.');
+
+    fake.auth.updateUser.mockResolvedValue({ data: null, error: { message: 'algo interno do servidor' } });
+    await expect(updatePassword('x')).rejects.toThrow('Não foi possível salvar a senha. Tente de novo.');
+  });
+});
+
+describe('sendPasswordReset', () => {
+  it('pede o link de recuperação para o e-mail informado', async () => {
+    fake.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+    await sendPasswordReset('lider@empresa.com');
+    expect(fake.auth.resetPasswordForEmail).toHaveBeenCalledWith('lider@empresa.com', expect.anything());
+  });
+
+  it('avisa quando há pedidos demais e não revela se o e-mail existe', async () => {
+    fake.auth.resetPasswordForEmail.mockResolvedValue({ data: null, error: { message: 'email rate limit exceeded' } });
+    await expect(sendPasswordReset('a@b.c')).rejects.toThrow('Aguarde um pouco antes de pedir outro link.');
+
+    fake.auth.resetPasswordForEmail.mockResolvedValue({ data: null, error: { message: 'User not found' } });
+    await expect(sendPasswordReset('a@b.c')).resolves.toBeUndefined();
   });
 });

@@ -1,4 +1,5 @@
 import { getSupabase } from './client';
+import { parseAuthLink, type AuthLink } from '../passwordSetup';
 
 export type AppRole = 'leader' | 'admin';
 
@@ -77,4 +78,34 @@ export async function getCurrentProfile(): Promise<AppProfile | null> {
 export async function logoutLeader(): Promise<void> {
   const { error } = await getSupabase().auth.signOut();
   if (error) throw error;
+}
+
+/** Como a pessoa chegou: pelo link de convite ou de recuperação de senha. Lido uma vez, antes do Supabase limpar o endereço. */
+export const initialAuthLink: AuthLink =
+  typeof window === 'undefined' ? { type: null, failed: false } : parseAuthLink(window.location.hash);
+
+/** Define a senha da conta logada (usada ao aceitar o convite ou recuperar a senha). */
+export async function updatePassword(password: string): Promise<void> {
+  const { error } = await getSupabase().auth.updateUser({ password });
+  if (!error) return;
+  if (/different from the old password/i.test(error.message)) {
+    throw new Error('A nova senha precisa ser diferente da anterior.');
+  }
+  throw new Error('Não foi possível salvar a senha. Tente de novo.');
+}
+
+/**
+ * Envia o link de recuperação. Não revela se o e-mail existe: só avisa de excesso de pedidos
+ * ou de falha de conexão.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  const redirectTo = typeof window === 'undefined' ? undefined : window.location.origin;
+  const { error } = await getSupabase().auth.resetPasswordForEmail(email, { redirectTo });
+  if (!error) return;
+  if (/rate limit|too many|only request/i.test(error.message)) {
+    throw new Error('Aguarde um pouco antes de pedir outro link.');
+  }
+  if (/fetch|network/i.test(error.message)) {
+    throw new Error('Não foi possível enviar o link. Verifique a conexão.');
+  }
 }

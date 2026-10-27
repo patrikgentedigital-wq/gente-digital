@@ -3,8 +3,11 @@ export {
   getCurrentProfile,
   getCurrentUserRole,
   loginWithEmailAndPassword,
+  initialAuthLink,
   logoutLeader,
+  sendPasswordReset,
   subscribeToAuth,
+  updatePassword,
 } from './auth';
 export type { AppProfile, AppRole, AuthUser } from './auth';
 export {

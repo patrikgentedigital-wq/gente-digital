@@ -1,5 +1,6 @@
 import { PerformanceStatus, TeamMember } from '../types';
-import { CRITERIA_CATEGORIES } from '../data/catalogData';
+import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
+import type { CriteriaCategory } from './criteria';
 
 export interface EvaluationCycleOption {
   id: string;
@@ -41,16 +42,22 @@ export function getDefaultEvaluationCycle(referenceDate = new Date()): string {
   return getEvaluationCycles(referenceDate)[0]?.id || `${MONTH_NAMES[referenceDate.getMonth()]}/${referenceDate.getFullYear()}`;
 }
 
-export const CRITERIA_SCORE_KEYS = CRITERIA_CATEGORIES.flatMap((category) =>
-  category.items.map((_, index) => `${category.id}-${index}`),
-);
+/** Ids das perguntas, na ordem das categorias. Sem argumento, usa as 31 perguntas padrão. */
+export function criteriaScoreKeys(categories: readonly CriteriaCategory[] = DEFAULT_CRITERIA_CATEGORIES): string[] {
+  return categories.flatMap((category) => category.items.map((item) => item.id));
+}
 
-export function normalizeCriteriaScores(scores: unknown): Record<string, number> {
+export const CRITERIA_SCORE_KEYS = criteriaScoreKeys();
+
+export function normalizeCriteriaScores(
+  scores: unknown,
+  categories: readonly CriteriaCategory[] = DEFAULT_CRITERIA_CATEGORIES,
+): Record<string, number> {
   if (!scores || typeof scores !== 'object') return {};
 
   const source = scores as Record<string, unknown>;
   return Object.fromEntries(
-    CRITERIA_SCORE_KEYS.flatMap((key) => {
+    criteriaScoreKeys(categories).flatMap((key) => {
       const value = source[key];
       return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 5
         ? [[key, value]]
@@ -61,20 +68,25 @@ export function normalizeCriteriaScores(scores: unknown): Record<string, number>
 
 export function getCategoryScorePercent(
   criteriaScores: Record<string, number> | undefined,
-  categoryId: number,
+  categoryId: number | string,
+  categories: readonly CriteriaCategory[] = DEFAULT_CRITERIA_CATEGORIES,
 ): number | null {
-  const category = CRITERIA_CATEGORIES.find((item) => item.id === categoryId);
-  if (!category || !criteriaScores) return null;
+  const category = categories.find((item) => item.id === String(categoryId));
+  if (!category || !criteriaScores || category.items.length === 0) return null;
 
-  const scores = category.items.map((_, index) => criteriaScores[`${categoryId}-${index}`]);
+  const scores = category.items.map((item) => criteriaScores[item.id]);
   if (scores.some((score) => typeof score !== 'number' || !Number.isFinite(score))) return null;
 
   const total = (scores as number[]).reduce((sum, score) => sum + score, 0);
   return Math.round((total / (category.items.length * 5)) * 100);
 }
 
-export function hasCompleteCriteriaScores(scores: Record<string, number | undefined>): boolean {
-  return CRITERIA_SCORE_KEYS.every((key) => typeof scores[key] === 'number' && Number.isFinite(scores[key]));
+export function hasCompleteCriteriaScores(
+  scores: Record<string, number | undefined>,
+  categories: readonly CriteriaCategory[] = DEFAULT_CRITERIA_CATEGORIES,
+): boolean {
+  const keys = criteriaScoreKeys(categories);
+  return keys.length > 0 && keys.every((key) => typeof scores[key] === 'number' && Number.isFinite(scores[key]));
 }
 
 export function getPerformanceStatus(score: number): PerformanceStatus {

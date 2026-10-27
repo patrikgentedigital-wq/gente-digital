@@ -1,4 +1,4 @@
-// Camada de dados do app. As telas importam daqui; as funções de avaliação entram na Tarefa 7.
+// Camada de dados do app. As telas importam daqui.
 export {
   getCurrentProfile,
   getCurrentUserRole,
@@ -17,3 +17,13 @@ export {
   subscribeToMembers,
   updateMemberInFirestore,
 } from './members';
+export { getCriteriaSet, saveCriteriaSet } from './criteria';
+export type { CriteriaSet } from './criteria';
+export {
+  describeEvaluationError,
+  getEvaluationFromFirestore,
+  isEvaluationConflictError,
+  isEvaluationCriteriaOutdatedError,
+  saveEvaluationAndMemberInFirestore,
+} from './evaluations';
+export type { EvaluationPayload, SavedEvaluation } from './evaluations';

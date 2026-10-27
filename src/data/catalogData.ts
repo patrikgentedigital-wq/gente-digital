@@ -1,4 +1,5 @@
 import { LeaderName, TeamStructure } from '../types';
+import type { CriteriaCategory } from '../lib/criteria';
 
 export interface CriterionCategory {
   id: number;
@@ -75,6 +76,13 @@ export const CRITERIA_CATEGORIES: CriterionCategory[] = [
     ],
   },
 ];
+
+/** As 31 perguntas padrão, no formato das perguntas por equipe (ids "1-0", "1-1"...). Ponto de partida de cada equipe. */
+export const DEFAULT_CRITERIA_CATEGORIES: CriteriaCategory[] = CRITERIA_CATEGORIES.map((category) => ({
+  id: String(category.id),
+  name: category.name,
+  items: category.items.map((text, index) => ({ id: `${category.id}-${index}`, text })),
+}));
 
 const team = (leader: LeaderName, color: string): TeamStructure => ({
   leader,

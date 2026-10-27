@@ -348,7 +348,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                leaderComments: leaderComments.trim(),
                cycle,
              })}
-            className="bg-surface-2 hover:bg-line border border-line text-accent font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+            className="bg-surface-2 hover:bg-line border border-line text-accent-text font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
           >
             <FileText className="w-4 h-4" />
             Exportar Relatório PDF
@@ -361,7 +361,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         {/* Team Filter */}
         <div className="md:col-span-3">
           <label className="block text-xs font-mono font-semibold text-muted mb-2 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-accent" />
+            <Filter className="w-3.5 h-3.5 text-accent-text" />
             Filtrar Time
           </label>
           <select
@@ -422,7 +422,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 className="bg-surface-2 hover:border-accent text-xs font-bold text-ink border border-line px-3.5 py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0"
                 title="Alterar foto do perfil"
               >
-                <ImageIcon className="w-3.5 h-3.5 text-accent" />
+                <ImageIcon className="w-3.5 h-3.5 text-accent-text" />
               </button>
             )}
           </div>
@@ -457,7 +457,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       <div className="bg-surface p-4 rounded-xl mb-6 shadow-lg">
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-mono font-semibold text-muted flex items-center gap-1.5">
-            <Compass className="w-3.5 h-3.5 text-accent" />
+            <Compass className="w-3.5 h-3.5 text-accent-text" />
             Progresso da Avaliação
           </span>
           <span className="font-mono text-xs text-faint">
@@ -486,7 +486,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       <div className="bg-surface p-5 rounded-3xl mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Compass className="w-4 h-4 text-accent" />
+            <Compass className="w-4 h-4 text-accent-text" />
             <h3 className="font-display font-bold text-sm text-ink">
               Teia de Competências da Liderança
             </h3>
@@ -517,7 +517,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <Radar name="Avaliação do Líder" dataKey="lider" stroke="#0071e3" fill="#0071e3" fillOpacity={0.4} />
+                <Radar name="Avaliação do Líder" dataKey="lider" stroke="#000000" fill="#ffe708" fillOpacity={0.4} />
               </RadarChart>
             </ResponsiveContainer>
           )}
@@ -539,14 +539,14 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-2/50 transition-colors"
               >
                 <div className="font-display font-semibold text-sm text-ink flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-md bg-surface-2 text-accent font-mono text-xs flex items-center justify-center font-bold">
+                  <span className="w-5 h-5 rounded-md bg-surface-2 text-accent-text font-mono text-xs flex items-center justify-center font-bold">
                     {cat.id}
                   </span>
                   {cat.name}
                 </div>
 
                 <div className="flex items-center gap-3 font-mono text-xs">
-                  <span className="text-accent font-bold">
+                  <span className="text-accent-text font-bold">
                     {catSum} / {catMax}
                   </span>
                   {isOpen ? (
@@ -692,7 +692,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                     {g.status === 'completed' ? (
                       <CheckCircle2 className="w-4 h-4 text-success" />
                     ) : (
-                      <Clock className="w-4 h-4 text-accent" />
+                      <Clock className="w-4 h-4 text-accent-text" />
                     )}
                   </button>
                   <span
@@ -728,7 +728,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
       {/* Leader Comments Box */}
       <div id="eval-parecer" className="bg-surface p-4 rounded-xl mt-6 space-y-2 scroll-mt-4">
-        <label className="text-xs font-mono font-bold text-accent block">
+        <label className="text-xs font-mono font-bold text-accent-text block">
           Comentários e Parecer da Liderança
         </label>
         <textarea
@@ -749,7 +749,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         <div className="flex items-center gap-4 flex-wrap">
           <div>
             <div className="text-[11px] font-mono text-faint">Pontuação Final ({cycle})</div>
-            <div className="font-mono font-bold text-2xl text-accent">
+            <div className="font-mono font-bold text-2xl text-accent-text">
               {grandTotal} <span className="text-xs text-faint font-normal">/ 155</span>
             </div>
           </div>
@@ -767,7 +767,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         <button
           onClick={handleSave}
           disabled={isLoadingEvaluation || !hasAllScores || !leaderComments.trim()}
-          className="bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-xl cursor-pointer transition-all shadow-md flex items-center gap-2"
+          className="bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-brand cursor-pointer transition-all shadow-md flex items-center gap-2"
         >
           <Save className="w-4 h-4" />
           Salvar Avaliação

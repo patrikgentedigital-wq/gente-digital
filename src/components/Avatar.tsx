@@ -29,6 +29,15 @@ export function getInitials(name: string): string {
     .toUpperCase();
 }
 
+/** Preto sobre cores claras, branco sobre escuras (as cores das equipes vêm do cadastro). */
+function readableInk(hex: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return '#000000';
+  const n = parseInt(m[1], 16);
+  const luminance = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return luminance > 0.55 ? '#000000' : '#ffffff';
+}
+
 export const Avatar: React.FC<AvatarProps> = ({
   name,
   src,
@@ -62,8 +71,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <div
       aria-hidden="true"
-      className={`${sizeClass} ${shapeClass} flex items-center justify-center font-display font-bold text-ink select-none ${className}`}
-      style={{ backgroundColor: teamColor || '#0071e3' }}
+      className={`${sizeClass} ${shapeClass} flex items-center justify-center font-display font-bold select-none ${className}`}
+      style={{ backgroundColor: teamColor || '#ffe708', color: readableInk(teamColor || '#ffe708') }}
       title={name}
     >
       {getInitials(name) || '?'}

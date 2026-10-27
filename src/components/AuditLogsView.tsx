@@ -7,7 +7,7 @@ import { Skeleton } from './Skeleton';
 const STATUS_COLORS: Record<string, string> = {
   Voando: 'text-success',
   'Caminho Certo': 'text-info',
-  Atenção: 'text-accent',
+  Atenção: 'text-accent-text',
   Alarme: 'text-danger',
 };
 
@@ -204,7 +204,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
                     <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTimestamp(log.createdAt)}</td>
                     <td className="px-4 py-3 text-ink font-medium whitespace-nowrap">{memberName(log)}</td>
                     <td className="px-4 py-3 text-muted whitespace-nowrap">{log.cycle}</td>
-                    <td className="px-4 py-3 font-mono text-accent">#{log.revision}</td>
+                    <td className="px-4 py-3 font-mono text-accent-text">#{log.revision}</td>
                     <td className="px-4 py-3 font-mono text-ink">{log.score}</td>
                     <td className={`px-4 py-3 font-mono font-bold ${STATUS_COLORS[log.status] ?? 'text-ink'}`}>{log.status}</td>
                     <td className="px-4 py-3 text-muted whitespace-nowrap">
@@ -227,7 +227,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
               <div key={log.id} className="bg-surface border border-line rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-ink font-medium text-sm truncate">{memberName(log)}</span>
-                  <span className="font-mono text-accent text-xs shrink-0">#{log.revision}</span>
+                  <span className="font-mono text-accent-text text-xs shrink-0">#{log.revision}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 text-xs text-muted">
                   <span>{formatTimestamp(log.createdAt)}</span>
@@ -258,7 +258,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
               <button
                 type="button"
                 onClick={() => setMaxResults((current) => current + 300)}
-                className="inline-flex items-center gap-1 text-accent hover:text-accent-hover font-bold"
+                className="inline-flex items-center gap-1 text-accent-text hover:text-muted font-bold"
               >
                 Carregar mais <ChevronDown className="w-3.5 h-3.5" />
               </button>
@@ -269,7 +269,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
 
       <div className="bg-surface p-6 rounded-3xl mt-6">
         <div className="flex items-center gap-2 mb-1">
-          <ArchiveRestore className="w-5 h-5 text-accent" />
+          <ArchiveRestore className="w-5 h-5 text-accent-text" />
           <h3 className="font-display font-bold text-lg text-ink">Membros Arquivados</h3>
         </div>
         <p className="text-xs text-muted mt-0.5 mb-4">
@@ -303,7 +303,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
                     <tr key={member.id} className="border-b border-line-soft/60 hover:bg-surface-2/40">
                       <td className="px-4 py-3 text-ink font-medium whitespace-nowrap">{member.name}</td>
                       <td className="px-4 py-3 text-muted whitespace-nowrap">{member.team}</td>
-                      <td className="px-4 py-3 font-mono text-accent">{member.score}</td>
+                      <td className="px-4 py-3 font-mono text-accent-text">{member.score}</td>
                       <td className="px-4 py-3 text-muted whitespace-nowrap">{formatTimestamp(member.deletedAt)}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <button

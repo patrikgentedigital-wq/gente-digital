@@ -37,7 +37,7 @@ export const ToastContainer: React.FC = () => {
           bgCls = 'bg-gold-soft';
           textCls = 'text-warn-pale';
           IconComponent = AlertTriangle;
-          iconColor = 'text-accent';
+          iconColor = 'text-accent-text';
         }
 
         return (

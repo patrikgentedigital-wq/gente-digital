@@ -88,7 +88,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   // Helper for status badge
   const getTierInfo = (score: number) => {
-    if (score > 140) return { label: 'Voando', cls: 'bg-gold-soft text-accent border border-accent/30' };
+    if (score > 140) return { label: 'Voando', cls: 'bg-gold-soft text-accent-text border border-accent/30' };
     if (score > 130) return { label: 'Caminho certo', cls: 'bg-success-soft text-success border border-success/30' };
     if (score >= 120) return { label: 'Atenção', cls: 'bg-warn-soft text-warn border border-warn/30' };
     return { label: 'Alarme', cls: 'bg-danger-soft text-danger border border-danger/30' };
@@ -199,7 +199,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             className="bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-ink text-xs font-bold px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
             title="Exportar dados filtrados em CSV/Excel"
           >
-            <Download className="w-3.5 h-3.5 text-accent" />
+            <Download className="w-3.5 h-3.5 text-accent-text" />
             Exportar CSV
           </button>
 
@@ -222,7 +222,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         </span>
         {[
           { id: 'all', label: 'Todos' },
-          { id: 'Voando', label: 'Voando (>140)', color: 'text-accent' },
+          { id: 'Voando', label: 'Voando (>140)', color: 'text-accent-text' },
           { id: 'Caminho Certo', label: 'Caminho Certo (>130)', color: 'text-success' },
           { id: 'Atenção', label: 'Atenção (120-130)', color: 'text-warn' },
           { id: 'Alarme', label: 'Alarme (<120)', color: 'text-danger' },
@@ -267,7 +267,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onOpenImageModal(top3[1]!)}
-                    className="absolute -bottom-1 -right-1 bg-surface-2 border border-line text-accent p-1 rounded-full hover:scale-110 transition-all shadow-md"
+                    className="absolute -bottom-1 -right-1 bg-surface-2 border border-line text-accent-text p-1 rounded-full hover:scale-110 transition-all shadow-md"
                     title="Editar Foto"
                   >
                     <ImageIcon className="w-3 h-3" />
@@ -277,13 +277,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
               <button
                 onClick={() => onSelectMemberForDetail?.(top3[1]!)}
-                className="font-display font-semibold text-base text-ink my-0.5 truncate hover:text-accent hover:underline cursor-pointer block mx-auto max-w-full"
+                className="font-display font-semibold text-base text-ink my-0.5 truncate hover:text-accent-text hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >
                 {top3[1].name}
               </button>
               <div className="text-xs text-faint mb-2 font-mono">Time {top3[1].team}</div>
-              <div className="font-mono font-bold text-xl text-accent">
+              <div className="font-mono font-bold text-xl text-accent-text">
                 {top3[1].score} <span className="text-xs text-faint font-medium">/155</span>
               </div>
             </div>
@@ -293,7 +293,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           {top3[0] && (
             <div className="order-1 md:order-2 bg-gradient-to-b from-surface-2 to-surface border-2 border-accent rounded-3xl p-5 text-center relative shadow-[0_0_20px_rgba(227,167,59,0.25)] md:-translate-y-2 group">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-mono text-xs text-accent font-bold">
+                <span className="font-mono text-xs text-accent-text font-bold">
                   #1 ★
                 </span>
                 {renderRankTrend(1, top3[0].previousRank)}
@@ -322,13 +322,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
               <button
                 onClick={() => onSelectMemberForDetail?.(top3[0]!)}
-                className="font-display font-bold text-lg text-ink my-0.5 truncate hover:text-accent hover:underline cursor-pointer block mx-auto max-w-full"
+                className="font-display font-bold text-lg text-ink my-0.5 truncate hover:text-accent-text hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >
                 {top3[0].name}
               </button>
               <div className="text-xs text-faint mb-2 font-mono">Time {top3[0].team}</div>
-              <div className="font-mono font-bold text-2xl text-accent">
+              <div className="font-mono font-bold text-2xl text-accent-text">
                 {top3[0].score} <span className="text-xs text-faint font-medium">/155</span>
               </div>
             </div>
@@ -357,7 +357,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onOpenImageModal(top3[2]!)}
-                    className="absolute -bottom-1 -right-1 bg-surface-2 border border-line text-accent p-1 rounded-full hover:scale-110 transition-all shadow-md"
+                    className="absolute -bottom-1 -right-1 bg-surface-2 border border-line text-accent-text p-1 rounded-full hover:scale-110 transition-all shadow-md"
                     title="Editar Foto"
                   >
                     <ImageIcon className="w-3 h-3" />
@@ -367,13 +367,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
               <button
                 onClick={() => onSelectMemberForDetail?.(top3[2]!)}
-                className="font-display font-semibold text-base text-ink my-0.5 truncate hover:text-accent hover:underline cursor-pointer block mx-auto max-w-full"
+                className="font-display font-semibold text-base text-ink my-0.5 truncate hover:text-accent-text hover:underline cursor-pointer block mx-auto max-w-full"
                 title="Ver Detalhes e Gráfico"
               >
                 {top3[2].name}
               </button>
               <div className="text-xs text-faint mb-2 font-mono">Time {top3[2].team}</div>
-              <div className="font-mono font-bold text-xl text-accent">
+              <div className="font-mono font-bold text-xl text-accent-text">
                 {top3[2].score} <span className="text-xs text-faint font-medium">/155</span>
               </div>
             </div>
@@ -385,7 +385,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       <div className="flex flex-col gap-2">
         {sortedData.length === 0 && (
           <div className="bg-surface border border-line rounded-3xl p-8 text-center space-y-3 my-4">
-            <div className="text-accent font-mono text-sm font-bold ">
+            <div className="text-accent-text font-mono text-sm font-bold ">
               Nenhum colaborador encontrado
             </div>
             <p className="text-xs text-muted max-w-md mx-auto">
@@ -397,7 +397,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   setSearchQuery('');
                   setStatusFilter('all');
                 }}
-                className="px-4 py-2 bg-surface-2 hover:bg-line border border-line text-xs font-bold text-accent rounded-xl transition-all cursor-pointer"
+                className="px-4 py-2 bg-surface-2 hover:bg-line border border-line text-xs font-bold text-accent-text rounded-xl transition-all cursor-pointer"
               >
                 Limpar Todos os Filtros
               </button>
@@ -435,7 +435,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenImageModal(person)}
-                      className="absolute -bottom-1 -right-1 bg-surface border border-line text-accent p-0.5 rounded-full opacity-0 group-hover/avatar:opacity-100 hover:scale-110 transition-all shadow-sm"
+                      className="absolute -bottom-1 -right-1 bg-surface border border-line text-accent-text p-0.5 rounded-full opacity-0 group-hover/avatar:opacity-100 hover:scale-110 transition-all shadow-sm"
                       title="Editar Link da Imagem"
                     >
                       <ImageIcon className="w-2.5 h-2.5" />
@@ -448,7 +448,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <button
                       onClick={() => onSelectMemberForDetail?.(person)}
-                      className="font-semibold text-sm text-ink truncate group-hover:text-accent transition-colors text-left hover:underline cursor-pointer block"
+                      className="font-semibold text-sm text-ink truncate group-hover:text-accent-text transition-colors text-left hover:underline cursor-pointer block"
                       title="Ver Detalhes e Conquistas"
                     >
                       {person.name}
@@ -460,7 +460,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                         .map((b) => (
                           <span
                             key={b.id}
-                            className="text-[10px] px-1.5 py-0.2 rounded-full bg-surface-2 border border-line text-accent font-mono cursor-pointer hover:border-accent transition-colors"
+                            className="text-[10px] px-1.5 py-0.2 rounded-full bg-surface-2 border border-line text-accent-text font-mono cursor-pointer hover:border-accent transition-colors"
                             title={`${b.name}: ${b.description}`}
                             onClick={() => onSelectMemberForDetail?.(person)}
                           >
@@ -502,7 +502,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 {onOpenMemberForm && (
                   <button
                     onClick={() => onOpenMemberForm(person)}
-                    className="p-1.5 rounded-lg border border-line hover:border-accent hover:bg-surface-2 text-muted hover:text-accent transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg border border-line hover:border-accent hover:bg-surface-2 text-muted hover:text-accent-text transition-colors cursor-pointer"
                     title="Editar Dados do Colaborador"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
@@ -511,7 +511,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 {onSelectMemberForDetail && (
                   <button
                     onClick={() => onSelectMemberForDetail(person)}
-                    className="p-1.5 rounded-lg border border-line hover:border-accent hover:bg-surface-2 text-muted hover:text-accent transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg border border-line hover:border-accent hover:bg-surface-2 text-muted hover:text-accent-text transition-colors cursor-pointer"
                     title="Ver Histórico em Gráfico"
                   >
                     <TrendingUp className="w-3.5 h-3.5" />
@@ -519,7 +519,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 )}
                 <button
                   onClick={() => onOpenReportModal(person)}
-                  className="p-1.5 rounded-lg border border-line hover:border-accent hover:bg-surface-2 text-muted hover:text-accent transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg border border-line hover:border-accent hover:bg-surface-2 text-muted hover:text-accent-text transition-colors cursor-pointer"
                   title="Gerar Relatório PDF"
                 >
                   <FileText className="w-3.5 h-3.5" />

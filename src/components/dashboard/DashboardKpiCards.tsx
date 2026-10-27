@@ -30,10 +30,10 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
           <span className="text-[11px] font-mono font-bold ">
             Média Geral da Empresa
           </span>
-          <TrendingUp className="w-4 h-4 text-accent" />
+          <TrendingUp className="w-4 h-4 text-accent-text" />
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-mono text-accent">
+          <span className="text-3xl font-extrabold font-mono text-accent-text">
             {avgScore}
           </span>
           <span className="text-xs text-faint font-mono">/ 155 pts</span>
@@ -50,7 +50,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
           <span className="text-[11px] font-mono font-bold ">
             Taxa na Meta (&gt;140)
           </span>
-          <Trophy className="w-4 h-4 text-accent" />
+          <Trophy className="w-4 h-4 text-accent-text" />
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-extrabold font-mono text-ink">
@@ -90,7 +90,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
           <span className="text-[11px] font-mono font-bold ">
             Equipe em Destaque
           </span>
-          <Award className="w-4 h-4 text-accent" />
+          <Award className="w-4 h-4 text-accent-text" />
         </div>
         {bestTeam ? (
           <div>
@@ -98,7 +98,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
               <span className="text-lg font-bold text-ink truncate">
                 Time {bestTeam.leader}
               </span>
-              <span className="font-mono text-sm font-bold text-accent">
+              <span className="font-mono text-sm font-bold text-accent-text">
                 {bestTeam.avgScore} pts
               </span>
             </div>

@@ -44,11 +44,11 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
                   className="w-3 h-3 rounded-full shrink-0"
                   style={{ backgroundColor: team.color }}
                 />
-                <span className="font-bold text-sm text-ink group-hover:text-accent transition-colors">
+                <span className="font-bold text-sm text-ink group-hover:text-accent-text transition-colors">
                   Time {team.leader}
                 </span>
               </div>
-              <span className="text-xs font-mono font-bold text-accent bg-surface-2 px-2 py-0.5 rounded border border-line">
+              <span className="text-xs font-mono font-bold text-accent-text bg-surface-2 px-2 py-0.5 rounded border border-line">
                 {team.avgScore} pts
               </span>
             </div>
@@ -69,7 +69,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
                 <span className="text-faint">Destaque do Time:</span>
                 <button
                   onClick={() => onSelectMemberForDetail(team.topMember!)}
-                  className="font-bold text-ink hover:text-accent hover:underline cursor-pointer truncate max-w-[140px]"
+                  className="font-bold text-ink hover:text-accent-text hover:underline cursor-pointer truncate max-w-[140px]"
                 >
                   {team.topMember.name} ({team.topMember.score}p)
                 </button>

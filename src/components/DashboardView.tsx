@@ -83,7 +83,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         name: 'Voando (>140 pts)',
         shortName: 'Voando',
         value: counts.Voando,
-        color: '#0071e3',
+        color: '#39d3cf',
         pct: Math.round((counts.Voando / (total || 1)) * 100),
       },
       {
@@ -114,7 +114,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         range: '145 - 155 pts',
         label: 'Excelência',
         count: members.filter((m) => m.score >= 145).length,
-        color: '#0071e3',
+        color: '#39d3cf',
       },
       {
         range: '135 - 144 pts',
@@ -197,14 +197,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }}
             className="flex items-center gap-1.5 bg-surface hover:bg-surface-2 border border-line hover:border-accent text-muted hover:text-ink text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
           >
-            <Download className="w-3.5 h-3.5 text-accent" />
+            <Download className="w-3.5 h-3.5 text-accent-text" />
             Exportar CSV
           </button>
 
           <div className="flex items-center gap-2 bg-surface border border-line rounded-xl px-3 py-1.5">
-            <Filter className="w-3.5 h-3.5 text-accent" />
+            <Filter className="w-3.5 h-3.5 text-accent-text" />
             <span className="text-xs font-mono font-bold text-muted">Período:</span>
-            <span className="text-xs font-mono font-bold text-accent">Ciclo {getDefaultEvaluationCycle()}</span>
+            <span className="text-xs font-mono font-bold text-accent-text">Ciclo {getDefaultEvaluationCycle()}</span>
           </div>
         </div>
       </div>

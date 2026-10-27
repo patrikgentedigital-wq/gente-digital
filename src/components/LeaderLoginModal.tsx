@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Lock, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
+import logo from '../assets/gente-digital-logo.svg';
+import { X, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
 import { loginWithEmailAndPassword } from '../lib/firebaseLoader';
 import { useDialog } from '../hooks/useDialog';
 
@@ -68,9 +69,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
-              <Lock className="w-5 h-5" aria-hidden="true" />
-            </div>
+            <img src={logo} alt="" aria-hidden="true" className="h-12 w-auto" />
             <div>
               <h3 id="leader-login-title" className="font-display font-bold text-xl text-ink">Área do Líder</h3>
               <p className="text-xs text-muted">Autenticação via Firebase</p>
@@ -134,7 +133,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-ink font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer mt-2"
+            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-ink font-bold text-xs py-3 rounded-brand transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer mt-2"
           >
             {isLoading ? (
               <>

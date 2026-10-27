@@ -39,7 +39,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             <button
               type="button"
               onClick={this.handleReset}
-              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink cursor-pointer"
+              className="mt-5 rounded-brand bg-accent px-4 py-2 text-xs font-bold text-accent-ink cursor-pointer"
             >
               Tentar novamente
             </button>

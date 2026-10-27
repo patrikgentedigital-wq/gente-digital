@@ -384,7 +384,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.'))}
-              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
+              className="mt-5 rounded-brand bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
             >
               Encerrar sessão
             </button>
@@ -414,7 +414,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsLeaderModalOpen(true)}
-              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
+              className="mt-5 rounded-brand bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
             >
               Entrar como líder
             </button>
@@ -481,14 +481,14 @@ export default function App() {
             <button
               type="button"
               onClick={() => setInfoModal('privacy')}
-              className="hover:text-accent transition-colors cursor-pointer"
+              className="hover:text-accent-text transition-colors cursor-pointer"
             >
               Privacidade
             </button>
             <button
               type="button"
               onClick={() => setInfoModal('support')}
-              className="hover:text-accent transition-colors cursor-pointer"
+              className="hover:text-accent-text transition-colors cursor-pointer"
             >
               Suporte
             </button>

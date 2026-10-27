@@ -54,18 +54,18 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                 {/* Title & Leader */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-display font-bold text-ink group-hover:text-accent transition-colors">
+                    <h3 className="text-lg font-display font-bold text-ink group-hover:text-accent-text transition-colors">
                       Time {leader}
                     </h3>
                     <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                      <Users className="w-3.5 h-3.5 text-accent" />
+                      <Users className="w-3.5 h-3.5 text-accent-text" />
                       {teamMembers.length} {teamMembers.length === 1 ? 'Membro' : 'Membros'}
                     </p>
                   </div>
 
                   <div className="bg-app border border-line px-3 py-1.5 rounded-xl text-right">
                     <span className="text-[10px] font-mono text-faint block">MÉDIA</span>
-                    <span className="text-base font-bold font-mono text-accent">{avgScore}</span>
+                    <span className="text-base font-bold font-mono text-accent-text">{avgScore}</span>
                   </div>
                 </div>
 
@@ -94,12 +94,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent font-mono">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent-text font-mono">
                         <Award className="w-3 h-3" /> Destaque
                       </div>
                       <button
                         onClick={() => onSelectMemberForDetail?.(topPerformer)}
-                        className="text-xs font-bold text-ink truncate hover:text-accent hover:underline cursor-pointer block text-left"
+                        className="text-xs font-bold text-ink truncate hover:text-accent-text hover:underline cursor-pointer block text-left"
                         title="Ver Gráfico de Desempenho"
                       >
                         {topPerformer.name}
@@ -134,7 +134,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
                 <button
                   onClick={() => onSelectTeamFilter(leader)}
-                  className="text-xs font-bold font-mono text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold font-mono text-accent-text hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   Filtrar <ChevronRight className="w-3.5 h-3.5" />
                 </button>

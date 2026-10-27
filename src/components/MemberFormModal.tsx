@@ -73,7 +73,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       name: name.trim(),
       role: role.trim(),
       team,
-      teamColor: selectedTeamData?.color || '#0071e3',
+      teamColor: selectedTeamData?.color || '#ffe708',
       rank: memberToEdit?.rank || 99,
       previousRank: memberToEdit?.previousRank,
       score: finalScore,
@@ -119,7 +119,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
         {/* Header */}
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent-text">
               {isEditing ? <Edit3 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
@@ -182,7 +182,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
                     onError={() => setAvatarError(true)}
                   />
                 ) : (
-                  <div className="font-bold text-sm text-accent">
+                  <div className="font-bold text-sm text-accent-text">
                     {name ? name.slice(0, 2).toUpperCase() : 'GD'}
                   </div>
                 )}
@@ -279,7 +279,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
             <div className="space-y-1 bg-surface-2 p-3 rounded-xl border border-line">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-muted font-semibold">{isEditing ? 'Pontuação atual:' : 'Pontuação inicial:'}</span>
-                <span className="font-mono font-bold text-accent">{isEditing ? memberToEdit?.score : score} / 155 pts</span>
+                <span className="font-mono font-bold text-accent-text">{isEditing ? memberToEdit?.score : score} / 155 pts</span>
               </div>
               <input
                 type="range"

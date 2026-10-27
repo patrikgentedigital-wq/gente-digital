@@ -50,7 +50,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
         {/* Top Bar Action */}
         <div className="p-4 border-b border-line bg-surface-2 flex justify-between items-center print:hidden">
           <div className="flex items-center gap-2 font-display font-bold text-sm text-ink">
-            <Sparkles className="w-4 h-4 text-accent" />
+            <Sparkles className="w-4 h-4 text-accent-text" />
             <span id="report-export-title">Relatório Consolidado de Desempenho</span>
           </div>
 
@@ -87,7 +87,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 className="border-2 border-accent shadow-lg bg-app"
               />
               <div>
-                <div className="font-mono text-[10px] text-accent uppercase tracking-widest font-bold mb-0.5">
+                <div className="font-mono text-[10px] text-accent-text uppercase tracking-widest font-bold mb-0.5">
                   GENTE DIGITAL · RELATÓRIO INDIVIDUAL
                 </div>
                 <h2 className="text-2xl font-display font-bold text-ink">{member.name}</h2>
@@ -95,17 +95,17 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 <div className="flex items-center gap-2 mt-2 font-mono text-[11px] text-faint">
                   <span>Líder: <strong className="text-ink">{member.team}</strong></span>
                   <span>•</span>
-                  <span>Rank: <strong className="text-accent">#{member.rank}</strong></span>
+                  <span>Rank: <strong className="text-accent-text">#{member.rank}</strong></span>
                 </div>
               </div>
             </div>
 
             <div className="text-right border-t md:border-t-0 border-line pt-3 md:pt-0 w-full md:w-auto">
               <div className="font-mono text-[10px] text-faint uppercase">Pontuação Final</div>
-              <div className="text-4xl font-mono font-bold text-accent">
+              <div className="text-4xl font-mono font-bold text-accent-text">
                 {member.score} <span className="text-sm font-normal text-faint">/ 155</span>
               </div>
-              <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-gold-soft text-accent border border-accent/30 uppercase">
+              <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-gold-soft text-accent-text border border-accent/30 uppercase">
                 {member.status}
               </div>
             </div>
@@ -114,7 +114,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
           {/* Category Breakdown */}
           <div className="space-y-3">
             <h3 className="font-display font-bold text-sm text-ink uppercase tracking-wider font-mono flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-accent" />
+              <CheckCircle2 className="w-4 h-4 text-accent-text" />
               Pontuação por Categoria de Avaliação
             </h3>
 
@@ -127,7 +127,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                   <div key={cat.id} className="bg-surface-2/60 border border-line p-3.5 rounded-xl flex flex-col justify-between">
                     <div className="flex justify-between items-center text-xs mb-2">
                       <span className="font-semibold text-ink">{cat.id}. {cat.name}</span>
-                      <span className="font-mono text-accent font-bold">
+                      <span className="font-mono text-accent-text font-bold">
                         {sum === null ? '—' : `${sum}/${max}`}
                       </span>
                     </div>
@@ -146,7 +146,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
 
           {/* Feedback & Observations */}
           <div className="bg-surface-2 border border-line p-4 rounded-xl space-y-2">
-            <span className="font-mono text-[11px] font-bold text-accent uppercase tracking-wider block">
+            <span className="font-mono text-[11px] font-bold text-accent-text uppercase tracking-wider block">
               Parecer Final da Liderança
             </span>
             <p className="text-xs text-muted italic leading-relaxed">

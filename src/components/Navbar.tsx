@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tv, UserPlus } from 'lucide-react';
+import logo from '../assets/gente-digital-logo.svg';
 
 type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit';
 
@@ -67,8 +68,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header>
       <div className="sticky top-0 z-40 border-b border-line-soft bg-surface/75 backdrop-blur-xl backdrop-saturate-150">
-        <div className="max-w-[1040px] mx-auto px-6 min-h-12 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-1.5">
-          <span className="text-sm font-semibold tracking-tight text-ink">Gente Digital</span>
+        <div className="max-w-[1040px] mx-auto px-6 min-h-14 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-1.5">
+          <img src={logo} alt="Gente Digital" className="h-9 w-auto" />
 
           <nav aria-label="Principal" className="order-3 md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto -mx-2 md:mx-0 px-2 md:px-0">
             {items.map(({ tab, label, needsAuth }) => (
@@ -77,9 +78,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 aria-current={activeTab === tab ? 'page' : undefined}
                 onClick={() => handleSelect(tab, needsAuth)}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-accent ${
+                className={`whitespace-nowrap rounded-brand px-3.5 py-1.5 text-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-accent ${
                   activeTab === tab
-                    ? 'bg-ink text-app font-semibold'
+                    ? 'bg-accent text-accent-ink font-bold'
                     : 'text-muted hover:text-ink font-medium'
                 }`}
               >
@@ -122,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenLeaderModal}
-                className="rounded-full bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors cursor-pointer"
+                className="rounded-brand bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors cursor-pointer"
               >
                 Entrar
               </button>
@@ -132,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="max-w-[1040px] mx-auto px-6 pt-14 pb-8 md:pt-20 md:pb-10">
-        <h1 className="text-4xl md:text-6xl font-semibold tracking-[-0.03em] leading-[1.05] text-ink">
+        <h1 className="font-display text-4xl md:text-6xl font-semibold tracking-[-0.035em] leading-[1.05] text-ink">
           {hero.title}
         </h1>
         <p className="mt-3 text-lg md:text-xl text-muted max-w-[34ch] leading-snug">

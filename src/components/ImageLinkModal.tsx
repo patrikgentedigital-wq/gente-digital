@@ -73,13 +73,13 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
         {/* Header */}
         <div className="flex justify-between items-center border-b border-line pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent-text">
               <LinkIcon className="w-5 h-5" />
             </div>
             <div>
               <h3 id="image-link-modal-title" className="font-display font-bold text-lg text-ink">Link Direto da Imagem</h3>
               <p className="text-xs text-muted">
-                Personalize o avatar de <span className="text-accent font-semibold">{memberName}</span>
+                Personalize o avatar de <span className="text-accent-text font-semibold">{memberName}</span>
               </p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
 
         {/* URL Input */}
         <div className="space-y-2">
-          <label className="text-xs font-bold font-mono text-accent flex items-center gap-1.5">
+          <label className="text-xs font-bold font-mono text-accent-text flex items-center gap-1.5">
             <ImageIcon className="w-3.5 h-3.5" />
             URL Direta da Imagem
           </label>
@@ -169,7 +169,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
         {/* Preset Gallery */}
         <div className="space-y-2">
           <label className="text-xs font-bold font-mono text-muted flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
+            <Sparkles className="w-3.5 h-3.5 text-accent-text" />
             Galeria de Avatares
           </label>
           <div className="grid grid-cols-5 gap-2 bg-app p-2.5 rounded-xl border border-line">
@@ -205,7 +205,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover transition-colors shadow-[0_0_15px_rgba(227,167,59,0.2)]"
+            className="px-5 py-2 rounded-brand bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover transition-colors shadow-[0_0_15px_rgba(255,231,8,0.35)]"
           >
             Salvar Foto
           </button>

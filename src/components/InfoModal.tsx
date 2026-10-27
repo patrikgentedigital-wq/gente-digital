@@ -32,7 +32,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-line bg-surface-2/60">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-app border border-line text-accent">
+            <div className="p-2.5 rounded-xl bg-app border border-line text-accent-text">
               {type === 'privacy' ? <Shield className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
             </div>
             <div>
@@ -58,7 +58,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
             <>
               <div className="p-4 rounded-xl bg-app border border-line">
                 <h4 className="font-bold text-ink mb-2 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-accent" />
+                  <Lock className="w-4 h-4 text-accent-text" />
                   Confidencialidade de Avaliações & Desempenho
                 </h4>
                 <p className="text-xs leading-relaxed">
@@ -89,7 +89,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
             <>
               <div className="p-4 rounded-xl bg-app border border-line">
                 <h4 className="font-bold text-ink mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-accent" />
+                  <MessageSquare className="w-4 h-4 text-accent-text" />
                   Canais de Atendimento Interno
                 </h4>
                 <p className="text-xs leading-relaxed">
@@ -101,11 +101,11 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-app border border-line">
                   <div className="font-bold text-ink text-xs mb-1 flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-accent" />
+                    <Award className="w-4 h-4 text-accent-text" />
                     Gente & Gestão (RH)
                   </div>
                   <p className="text-xs text-faint mb-2">Dúvidas sobre critérios, ciclos e regras de pontuação</p>
-                  <div className="flex items-center gap-2 font-mono text-xs text-accent">
+                  <div className="flex items-center gap-2 font-mono text-xs text-accent-text">
                     <Mail className="w-3.5 h-3.5" />
                     <span>rh@gentedigital.com.br</span>
                   </div>
@@ -132,7 +132,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-accent-ink font-bold text-xs transition-colors"
+            className="px-5 py-2 rounded-brand bg-accent hover:bg-accent-hover text-accent-ink font-bold text-xs transition-colors"
           >
             Entendido
           </button>

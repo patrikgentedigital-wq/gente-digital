@@ -52,7 +52,7 @@ const TeamBarTooltip: React.FC<TeamBarTooltipProps> = ({ active, payload }) => {
         </div>
         <div className="flex justify-between text-muted">
           <span>Média do Time:</span>
-          <span className="font-mono font-bold text-accent">{data.avgScore} pts</span>
+          <span className="font-mono font-bold text-accent-text">{data.avgScore} pts</span>
         </div>
         <div className="flex justify-between text-muted">
           <span>Integrantes:</span>
@@ -79,14 +79,14 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamSt
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-accent" />
+            <BarChart3 className="w-4 h-4 text-accent-text" />
             Média de Pontuação por Equipe
           </h3>
           <p className="text-xs text-muted mt-0.5">
             Comparativo de performance média entre os líderes e seus times.
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-accent">
+        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-accent-text">
           <span className="w-2 h-0.5 bg-accent" />
           <span>Meta: 140 pts</span>
         </div>
@@ -118,19 +118,19 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamSt
             <Tooltip content={<TeamBarTooltip />} />
             <ReferenceLine
               y={140}
-              stroke="#0071e3"
+              stroke="#000000"
               strokeDasharray="4 4"
               strokeWidth={2}
               label={{
                 value: 'Meta 140',
-                fill: '#0071e3',
+                fill: '#000000',
                 fontSize: 10,
                 position: 'insideTopRight',
               }}
             />
             <Bar dataKey="avgScore" radius={[6, 6, 0, 0]}>
               {teamStats.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color || '#0071e3'} />
+                <Cell key={`cell-${index}`} fill={entry.color || '#ffe708'} />
               ))}
             </Bar>
           </BarChart>

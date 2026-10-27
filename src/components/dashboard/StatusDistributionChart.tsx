@@ -60,7 +60,7 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
     <div className="bg-surface p-5 rounded-3xl flex flex-col justify-between space-y-4">
       <div>
         <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
-          <PieChartIcon className="w-4 h-4 text-accent" />
+          <PieChartIcon className="w-4 h-4 text-accent-text" />
           Distribuição por Nível
         </h3>
         <p className="text-xs text-muted mt-0.5">

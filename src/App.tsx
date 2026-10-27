@@ -7,11 +7,11 @@ import {
   deleteMemberFromFirestore,
   restoreMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
-  logoutLeader,
   isEvaluationConflictError,
   isEvaluationServiceUnavailableError,
 } from './lib/firebaseLoader';
 import type { EvaluationPayload } from './lib/firebaseLoader';
+import { logoutLeader } from './lib/backend';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';

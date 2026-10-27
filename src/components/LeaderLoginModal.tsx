@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import logo from '../assets/gente-digital-logo.svg';
 import { X, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
-import { loginWithEmailAndPassword } from '../lib/firebaseLoader';
+import { loginWithEmailAndPassword } from '../lib/backend';
 import { useDialog } from '../hooks/useDialog';
 
 interface LeaderLoginModalProps {
@@ -30,18 +30,17 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const credential = await loginWithEmailAndPassword(email.trim(), password);
-      const leaderName = credential.user.displayName || credential.user.email || 'Líder';
+      const { leaderName } = await loginWithEmailAndPassword(email.trim(), password);
       onLoginSuccess(leaderName);
       onClose();
     } catch (error: unknown) {
       console.error('Login error:', error);
-      const err = error as { message?: string; code?: string };
+      const err = error as { message?: string };
       if (err?.message === 'EMAIL_NOT_VERIFIED') {
         setErrorMsg('Confirme o e-mail da conta antes de acessar a área do líder.');
       } else if (err?.message === 'ROLE_NOT_AUTHORIZED') {
         setErrorMsg('Sua conta está autenticada, mas não possui uma role autorizada nesta plataforma.');
-      } else if (err?.code === 'auth/invalid-credential') {
+      } else if (err?.message === 'INVALID_CREDENTIALS') {
         setErrorMsg('E-mail ou senha inválidos.');
       } else {
         setErrorMsg('Não foi possível autenticar. Verifique a conexão e as credenciais.');

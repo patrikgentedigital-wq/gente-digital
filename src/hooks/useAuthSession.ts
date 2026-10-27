@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
-import { getCurrentUserRole, subscribeToAuth } from '../lib/firebaseLoader';
+import { getCurrentUserRole, subscribeToAuth } from '../lib/backend';
+import type { AuthUser } from '../lib/backend';
 
 export function useAuthSession() {
-  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authRole, setAuthRole] = useState<'leader' | 'admin' | null>(null);
   const [authRoleReady, setAuthRoleReady] = useState(false);
@@ -24,7 +24,7 @@ export function useAuthSession() {
         if (active) setAuthRole(role);
       })
       .catch((error) => {
-        console.error('Unable to resolve Firebase role:', error);
+        console.error('Unable to resolve user role:', error);
         if (active) setAuthRole(null);
       })
       .finally(() => {

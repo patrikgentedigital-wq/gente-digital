@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { User } from 'firebase/auth';
+import type { AuthUser } from '../lib/backend';
 import type { TeamMember } from '../types';
 import { subscribeToMembers } from '../lib/firebaseLoader';
 
-export function useMembers(authUser: User | null, authRole: 'leader' | 'admin' | null) {
+export function useMembers(authUser: AuthUser | null, authRole: 'leader' | 'admin' | null) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [membersLoading, setMembersLoading] = useState(false);

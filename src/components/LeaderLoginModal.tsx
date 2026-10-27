@@ -71,7 +71,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
             <img src={logo} alt="" aria-hidden="true" className="h-12 w-auto" />
             <div>
               <h3 id="leader-login-title" className="font-display font-bold text-xl text-ink">Área do Líder</h3>
-              <p className="text-xs text-muted">Autenticação via Firebase</p>
+              <p className="text-xs text-muted">Acesso com e-mail e senha</p>
             </div>
           </div>
           <button
@@ -85,7 +85,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
         </div>
 
         <p className="text-xs text-muted leading-relaxed">
-          Acesso reservado a líderes provisionados no Firebase Authentication.
+          Acesso reservado a líderes cadastrados pelo administrador.
         </p>
 
         {errorMsg && (
@@ -150,7 +150,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
 
         <div className="text-[11px] text-faint leading-relaxed bg-surface-2 p-3 rounded-xl border border-line flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
-          <span>A sessão é autorizada pelo token do Firebase Auth e pelas Rules do Firestore.</span>
+          <span>A sessão é autorizada pelo login e pelas regras de acesso por equipe.</span>
         </div>
       </div>
     </div>

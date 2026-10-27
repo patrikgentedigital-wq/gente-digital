@@ -463,7 +463,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       <footer className="px-8 py-3 bg-app border-t border-line flex justify-between items-center font-mono text-xs text-faint">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-success" />
-          <span>Dados carregados do Firestore</span>
+          <span>Dados atualizados em tempo real</span>
         </div>
         <div className="flex items-center gap-3">
           <span>Pressione <strong className="text-ink">ESC</strong> para sair</span>

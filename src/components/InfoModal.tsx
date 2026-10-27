@@ -74,7 +74,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
                 </h4>
                 <ul className="list-disc pl-5 space-y-2 text-xs">
                   <li>
-                    <strong>Controle de Acesso:</strong> O acesso é controlado via autenticação do Firebase com roles verificadas (`leader` ou `admin`).
+                    <strong>Controle de Acesso:</strong> O acesso é controlado por login com papéis verificados (líder ou admin).
                   </li>
                   <li>
                     <strong>Imutabilidade e Auditoria:</strong> Avaliações salvas geram histórico por ciclo garantindo rastreabilidade e integridade métrica.

@@ -14,6 +14,7 @@ import {
 } from './lib/backend';
 import type { EvaluationPayload } from './lib/backend';
 import { useTeamCriteria } from './hooks/useTeamCriteria';
+import { CriteriaEditorView } from './components/CriteriaEditorView';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';
@@ -40,7 +41,7 @@ import {
 export default function App() {
   const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
   const { members, setMembers, membersError, membersLoading } = useMembers(authUser, authRole);
-  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit'>('ranking');
+  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
@@ -57,7 +58,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit') {
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria') {
       setActiveTab(tab);
     }
     const query = params.get('q');
@@ -345,6 +346,7 @@ export default function App() {
              </div>
            )
          )}
+        {activeTab === 'criteria' && authRole && <CriteriaEditorView role={authRole} />}
         {activeTab === 'audit' && authRole === 'admin' && (
           <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
         )}

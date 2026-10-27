@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { TeamMember, PdiGoal } from '../types';
 import type { EvaluationPayload } from '../lib/firebaseLoader';
 import { CRITERIA_CATEGORIES, TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
 import {
   FileText,
   Save,
@@ -81,7 +82,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [cycle, setCycle] = useState<string>(() => getDefaultEvaluationCycle());
   const availableEvaluationCycles = getEvaluationCycles();
   const [teamFilter, setTeamFilter] = useState<string>(() => {
-    if (currentLeader && TEAMS.some((t) => t.leader.toLowerCase() === currentLeader.toLowerCase())) {
+    if (currentLeader && deriveTeams(members, TEAMS).some((t) => t.leader.toLowerCase() === currentLeader.toLowerCase())) {
       return currentLeader;
     }
     return 'all';
@@ -393,7 +394,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             className="w-full bg-surface-2 border border-line text-white font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
           >
             <option value="all">Todos os Times ({members.length})</option>
-            {TEAMS.map((t) => {
+            {deriveTeams(members, TEAMS).map((t) => {
               const count = members.filter((m) => m.team.toLowerCase() === t.leader.toLowerCase()).length;
               return (
                 <option key={t.leader} value={t.leader}>

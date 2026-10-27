@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { TeamMember, LeaderName, PerformanceStatus } from '../types';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
@@ -44,7 +45,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   setSearchQuery,
 }) => {
   const [view, setView] = useState<'geral' | 'equipe'>('geral');
-  const [selectedTeamLeader, setSelectedTeamLeader] = useState<string>('Djemerson');
+  const [selectedTeamChoice, setSelectedTeamLeader] = useState<string>('Djemerson');
+  const teamList = useMemo(() => deriveTeams(members, TEAMS), [members]);
+  // A equipe escolhida pode não existir (ex.: Djemerson sem membros); cai na primeira disponível.
+  const selectedTeamLeader = teamList.some((t) => t.leader === selectedTeamChoice)
+    ? selectedTeamChoice
+    : (teamList[0]?.leader ?? selectedTeamChoice);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Helper for rank trend indicator
@@ -183,7 +189,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               onChange={(e) => setSelectedTeamLeader(e.target.value)}
               className="bg-surface border border-line text-ink font-sans text-xs px-3.5 py-2 rounded-xl focus:outline-none focus:border-accent"
             >
-              {TEAMS.map((t) => (
+              {teamList.map((t) => (
                 <option key={t.leader} value={t.leader}>
                   Time {t.leader} ({members.filter((member) => member.team === t.leader).length} membros)
                 </option>

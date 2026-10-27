@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
 import { Avatar } from './Avatar';
 import { Users, Award, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
@@ -18,7 +19,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   onSelectMemberForDetail,
 }) => {
   const activeTeams = useMemo(() => {
-    return TEAMS.map((teamStruct) => {
+    return deriveTeams(members, TEAMS).map((teamStruct) => {
       const teamMembers = members.filter((m) => m.team === teamStruct.leader);
       if (teamMembers.length === 0) return null;
 

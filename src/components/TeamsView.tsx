@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
+import { compareByPercent, percentOf } from '../lib/scoring';
 import { Avatar } from './Avatar';
 import { Users, Award, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
@@ -23,16 +24,16 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
       const teamMembers = members.filter((m) => m.team === teamStruct.leader);
       if (teamMembers.length === 0) return null;
 
-      const avgScore = Math.round(
-        teamMembers.reduce((acc, m) => acc + m.score, 0) / teamMembers.length
+      const avgPercent = Math.round(
+        teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / teamMembers.length
       );
 
-      const topPerformer = [...teamMembers].sort((a, b) => b.score - a.score)[0];
+      const topPerformer = [...teamMembers].sort(compareByPercent)[0];
 
       return {
         ...teamStruct,
         teamMembers,
-        avgScore,
+        avgPercent,
         topPerformer,
       };
     }).filter((t): t is NonNullable<typeof t> => t !== null);
@@ -44,7 +45,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {activeTeams.map((teamStruct) => {
-          const { leader, color, teamMembers, avgScore, topPerformer } = teamStruct;
+          const { leader, color, teamMembers, avgPercent, topPerformer } = teamStruct;
 
           return (
             <div
@@ -66,7 +67,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
                   <div className="bg-app border border-line px-3 py-1.5 rounded-xl text-right">
                     <span className="text-[10px] font-mono text-faint block">MÉDIA</span>
-                    <span className="text-base font-bold font-mono text-accent-text">{avgScore}</span>
+                    <span className="text-base font-bold font-mono text-accent-text">{avgPercent}%</span>
                   </div>
                 </div>
 

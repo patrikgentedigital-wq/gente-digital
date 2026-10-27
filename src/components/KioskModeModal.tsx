@@ -3,6 +3,7 @@ import { TeamMember } from '../types';
 import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
+import { compareByPercent, percentOf } from '../lib/scoring';
 import {
   X,
   Trophy,
@@ -88,7 +89,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   if (!isOpen) return null;
 
   // Sorted members for calculations
-  const sortedMembers = [...members].sort((a, b) => b.score - a.score);
+  const sortedMembers = [...members].sort(compareByPercent);
   const top1 = sortedMembers[0];
   const top2 = sortedMembers[1];
   const top3 = sortedMembers[2];
@@ -113,23 +114,23 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   // Teams summary calculations
   const teamStats = deriveTeams(members, TEAMS).map((team) => {
     const teamMembers = members.filter((m) => m.team === team.leader);
-    const avgScore =
+    const avgPercent =
       teamMembers.length > 0
-        ? teamMembers.reduce((acc, m) => acc + m.score, 0) / teamMembers.length
+        ? teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / teamMembers.length
         : 0;
-    const flyingCount = teamMembers.filter((m) => m.score > 140).length;
+    const flyingCount = teamMembers.filter((m) => m.status === 'Voando').length;
 
     return {
       name: `Time ${team.leader}`,
       leader: team.leader,
       color: team.color,
       count: teamMembers.length,
-      avgScore: Math.round(avgScore * 10) / 10,
+      avgPercent: Math.round(avgPercent * 10) / 10,
       flyingCount,
     };
   })
     .filter((team) => team.count > 0)
-    .sort((a, b) => b.avgScore - a.avgScore);
+    .sort((a, b) => b.avgPercent - a.avgPercent);
 
   return (
     <div
@@ -248,7 +249,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   <h3 className="font-bold text-lg text-ink truncate max-w-full">{top2.name}</h3>
                   <p className="text-xs text-muted mb-2">{top2.role} • Time {top2.team}</p>
                   <div className="bg-surface-2 px-4 py-1.5 rounded-xl border border-line font-mono font-black text-xl text-slate-200">
-                    {top2.score} <span className="text-xs font-normal text-faint">/ 155</span>
+                    {top2.score} <span className="text-xs font-normal text-faint">/ {top2.maxScore}</span>
                   </div>
                 </div>
               )}
@@ -270,7 +271,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   <h3 className="font-black text-2xl text-ink truncate max-w-full">{top1.name}</h3>
                   <p className="text-xs text-accent-text font-semibold mb-3">{top1.role} • Time {top1.team}</p>
                   <div className="bg-accent/20 px-6 py-2 rounded-2xl border border-accent font-mono font-black text-3xl text-accent-text shadow-inner">
-                    {top1.score} <span className="text-sm font-normal text-muted">/ 155 pts</span>
+                    {top1.score} <span className="text-sm font-normal text-muted">/ {top1.maxScore} pts</span>
                   </div>
                 </div>
               )}
@@ -292,7 +293,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   <h3 className="font-bold text-lg text-ink truncate max-w-full">{top3.name}</h3>
                   <p className="text-xs text-muted mb-2">{top3.role} • Time {top3.team}</p>
                   <div className="bg-surface-2 px-4 py-1.5 rounded-xl border border-line font-mono font-black text-xl text-bronze">
-                    {top3.score} <span className="text-xs font-normal text-faint">/ 155</span>
+                    {top3.score} <span className="text-xs font-normal text-faint">/ {top3.maxScore}</span>
                   </div>
                 </div>
               )}
@@ -346,7 +347,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                       <p className="text-xs text-muted truncate">{m.role} • Time {m.team}</p>
                       <div className="flex items-center gap-3 mt-2 font-mono text-xs">
                         <span className="text-faint">Posição: <strong className="text-ink">{m.rank}º</strong></span>
-                        <span className="text-accent-text font-bold">{m.score} pts</span>
+                        <span className="text-accent-text font-bold">{m.score}/{m.maxScore} ({Math.round(percentOf(m.score, m.maxScore))}%)</span>
                       </div>
                     </div>
                   </div>
@@ -387,13 +388,13 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   <div className="space-y-2.5 my-2">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-muted">Média da Equipe:</span>
-                      <span className="font-mono font-bold text-accent-text text-base">{team.avgScore} pts</span>
+                      <span className="font-mono font-bold text-accent-text text-base">{team.avgPercent}%</span>
                     </div>
                     <div className="w-full bg-app h-2 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-1000"
                         style={{
-                          width: `${(team.avgScore / 155) * 100}%`,
+                          width: `${team.avgPercent}%`,
                           backgroundColor: team.color,
                         }}
                       />
@@ -440,7 +441,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                       <h4 className="font-bold text-ink text-base truncate">{m.name}</h4>
                       <p className="text-xs text-muted truncate">{m.role} • Time {m.team}</p>
                       <div className="flex items-center gap-3 mt-2 font-mono text-xs">
-                        <span className="text-faint">Nível: <strong className={m.score > 140 ? 'text-success' : 'text-ink'}>{m.status}</strong></span>
+                        <span className="text-faint">Nível: <strong className={m.status === 'Voando' ? 'text-success' : 'text-ink'}>{m.status}</strong></span>
                         <span className="text-accent-text font-bold">{m.score} pts</span>
                       </div>
                     </div>

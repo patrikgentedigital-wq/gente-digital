@@ -2,16 +2,18 @@ import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
   getEvaluationFromFirestore,
-  updateMemberInFirestore,
-  addMemberToFirestore,
-  deleteMemberFromFirestore,
-  restoreMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
   isEvaluationConflictError,
   isEvaluationServiceUnavailableError,
 } from './lib/firebaseLoader';
 import type { EvaluationPayload } from './lib/firebaseLoader';
-import { logoutLeader } from './lib/backend';
+import {
+  addMemberToFirestore,
+  deleteMemberFromFirestore,
+  logoutLeader,
+  restoreMemberFromFirestore,
+  updateMemberInFirestore,
+} from './lib/backend';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';

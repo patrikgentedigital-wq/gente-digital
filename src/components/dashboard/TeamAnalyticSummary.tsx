@@ -6,7 +6,7 @@ interface TeamAnalyticSummaryProps {
     leader: string;
     color: string;
     count: number;
-    avgScore: number;
+    avgPercent: number;
     topMember: TeamMember | null;
     voandoCount: number;
   }>;
@@ -49,7 +49,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
                 </span>
               </div>
               <span className="text-xs font-mono font-bold text-accent-text bg-surface-2 px-2 py-0.5 rounded border border-line">
-                {team.avgScore} pts
+                {team.avgPercent}%
               </span>
             </div>
 
@@ -59,7 +59,7 @@ export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
                 <span className="font-bold text-ink">{team.count} colaboradores</span>
               </div>
               <div>
-                <span className="text-[10px] text-faint block">NA META (&gt;140)</span>
+                <span className="text-[10px] text-faint block">NA META (VOANDO)</span>
                 <span className="font-bold text-success">{team.voandoCount} pessoas</span>
               </div>
             </div>

@@ -18,7 +18,7 @@ interface TeamComparisonChartProps {
     leader: string;
     color: string;
     count: number;
-    avgScore: number;
+    avgPercent: number;
     topMember: TeamMember | null;
     voandoCount: number;
   }>;
@@ -30,7 +30,7 @@ interface TeamBarTooltipProps {
     payload: {
       leader: string;
       color: string;
-      avgScore: number;
+      avgPercent: number;
       count: number;
       voandoCount: number;
       topMember: TeamMember | null;
@@ -52,14 +52,14 @@ const TeamBarTooltip: React.FC<TeamBarTooltipProps> = ({ active, payload }) => {
         </div>
         <div className="flex justify-between text-muted">
           <span>Média do Time:</span>
-          <span className="font-mono font-bold text-accent-text">{data.avgScore} pts</span>
+          <span className="font-mono font-bold text-accent-text">{data.avgPercent}%</span>
         </div>
         <div className="flex justify-between text-muted">
           <span>Integrantes:</span>
           <span className="font-mono font-bold text-ink">{data.count} colaboradores</span>
         </div>
         <div className="flex justify-between text-muted">
-          <span>Nível Voando (&gt;140):</span>
+          <span>Nível Voando (acima de 90%):</span>
           <span className="font-mono font-bold text-success">{data.voandoCount}</span>
         </div>
         {data.topMember && (
@@ -88,7 +88,7 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamSt
         </div>
         <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-accent-text">
           <span className="w-2 h-0.5 bg-accent" />
-          <span>Meta: 140 pts</span>
+          <span>Meta: 90%</span>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamSt
               textAnchor="end"
             />
             <YAxis
-              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
+              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 100]}
               stroke="#86868b"
               fontSize={11}
               tickLine={false}
@@ -117,18 +117,18 @@ export const TeamComparisonChart: React.FC<TeamComparisonChartProps> = ({ teamSt
             />
             <Tooltip content={<TeamBarTooltip />} />
             <ReferenceLine
-              y={140}
+              y={90.3}
               stroke="#000000"
               strokeDasharray="4 4"
               strokeWidth={2}
               label={{
-                value: 'Meta 140',
+                value: 'Meta 90%',
                 fill: '#000000',
                 fontSize: 10,
                 position: 'insideTopRight',
               }}
             />
-            <Bar dataKey="avgScore" radius={[6, 6, 0, 0]}>
+            <Bar dataKey="avgPercent" radius={[6, 6, 0, 0]}>
               {teamStats.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color || '#ffe708'} />
               ))}

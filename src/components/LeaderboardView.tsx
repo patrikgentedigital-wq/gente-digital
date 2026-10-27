@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TeamMember, LeaderName, PerformanceStatus } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
+import { compareByPercent, percentOf } from '../lib/scoring';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
@@ -93,10 +94,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   };
 
   // Helper for status badge
-  const getTierInfo = (score: number) => {
-    if (score > 140) return { label: 'Voando', cls: 'bg-gold-soft text-accent-text border border-accent/30' };
-    if (score > 130) return { label: 'Caminho certo', cls: 'bg-success-soft text-success border border-success/30' };
-    if (score >= 120) return { label: 'Atenção', cls: 'bg-warn-soft text-warn border border-warn/30' };
+  const getTierInfo = (status: PerformanceStatus) => {
+    if (status === 'Voando') return { label: 'Voando', cls: 'bg-gold-soft text-accent-text border border-accent/30' };
+    if (status === 'Caminho Certo') return { label: 'Caminho certo', cls: 'bg-success-soft text-success border border-success/30' };
+    if (status === 'Atenção') return { label: 'Atenção', cls: 'bg-warn-soft text-warn border border-warn/30' };
     return { label: 'Alarme', cls: 'bg-danger-soft text-danger border border-danger/30' };
   };
 
@@ -121,7 +122,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
       );
     }
 
-    const sorted = [...filtered].sort((a, b) => b.score - a.score);
+    const sorted = [...filtered].sort(compareByPercent);
     const podium = statusFilter === 'all' && !searchQuery.trim() ? sorted.slice(0, 3) : [];
 
     return { sortedData: sorted, top3: podium };
@@ -134,8 +135,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   };
 
   // Helper for 5-segment bars
-  const renderBars = (score: number) => {
-    const filled = score > 140 ? 5 : score > 130 ? 4 : score >= 120 ? 3 : score >= 100 ? 2 : 1;
+  const renderBars = (status: PerformanceStatus, percent: number) => {
+    // 100/155 = 64,5%: o piso da quarta barra, como antes com 100 pontos.
+    const filled = status === 'Voando' ? 5 : status === 'Caminho Certo' ? 4 : status === 'Atenção' ? 3 : percent >= 64.5 ? 2 : 1;
     return (
       <div className="hidden sm:flex gap-1 items-end h-6">
         {[1, 2, 3, 4, 5].map((i) => {
@@ -228,10 +230,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         </span>
         {[
           { id: 'all', label: 'Todos' },
-          { id: 'Voando', label: 'Voando (>140)', color: 'text-accent-text' },
-          { id: 'Caminho Certo', label: 'Caminho Certo (>130)', color: 'text-success' },
-          { id: 'Atenção', label: 'Atenção (120-130)', color: 'text-warn' },
-          { id: 'Alarme', label: 'Alarme (<120)', color: 'text-danger' },
+          { id: 'Voando', label: 'Voando (acima de 90%)', color: 'text-accent-text' },
+          { id: 'Caminho Certo', label: 'Caminho Certo (84% a 90%)', color: 'text-success' },
+          { id: 'Atenção', label: 'Atenção (77% a 84%)', color: 'text-warn' },
+          { id: 'Alarme', label: 'Alarme (abaixo de 77%)', color: 'text-danger' },
         ].map((f) => (
           <button
             key={f.id}
@@ -290,7 +292,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               </button>
               <div className="text-xs text-faint mb-2 font-mono">Time {top3[1].team}</div>
               <div className="font-mono font-bold text-xl text-accent-text">
-                {top3[1].score} <span className="text-xs text-faint font-medium">/155</span>
+                {top3[1].score} <span className="text-xs text-faint font-medium">/{top3[1].maxScore}</span>
               </div>
             </div>
           )}
@@ -335,7 +337,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               </button>
               <div className="text-xs text-faint mb-2 font-mono">Time {top3[0].team}</div>
               <div className="font-mono font-bold text-2xl text-accent-text">
-                {top3[0].score} <span className="text-xs text-faint font-medium">/155</span>
+                {top3[0].score} <span className="text-xs text-faint font-medium">/{top3[0].maxScore}</span>
               </div>
             </div>
           )}
@@ -380,7 +382,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               </button>
               <div className="text-xs text-faint mb-2 font-mono">Time {top3[2].team}</div>
               <div className="font-mono font-bold text-xl text-accent-text">
-                {top3[2].score} <span className="text-xs text-faint font-medium">/155</span>
+                {top3[2].score} <span className="text-xs text-faint font-medium">/{top3[2].maxScore}</span>
               </div>
             </div>
           )}
@@ -412,7 +414,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         )}
 
         {sortedData.map((person) => {
-          const tier = getTierInfo(person.score);
+          const tier = getTierInfo(person.status);
 
           return (
             <div
@@ -488,7 +490,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
               {/* Meter bars */}
               <div className="flex items-center gap-2.5 flex-wrap md:flex-nowrap md:pl-2 md:border-l md:border-line md:justify-end">
-                {renderBars(person.score)}
+                {renderBars(person.status, percentOf(person.score, person.maxScore))}
 
                 {/* Tier Badge */}
                 <div
@@ -500,7 +502,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 {/* Score */}
                 <div className="font-mono font-bold text-base text-ink text-right min-w-[70px]">
                   {person.score}
-                  <span className="text-[11px] text-faint font-normal"> /155</span>
+                  <span className="text-[11px] text-faint font-normal"> /{person.maxScore}</span>
+                  <span className="block text-[10px] text-faint font-normal">{Math.round(percentOf(person.score, person.maxScore))}%</span>
                 </div>
 
                 {/* Action Buttons */}
@@ -549,19 +552,19 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         <div className="flex flex-wrap items-center gap-5">
           <div className="flex items-center gap-2 text-xs text-faint">
             <span className="w-2 h-2 rounded-xs bg-accent" />
-            <span>Voando (&gt;140 pts)</span>
+            <span>Voando (acima de 90%)</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-faint">
             <span className="w-2 h-2 rounded-xs bg-success" />
-            <span>Caminho certo (&gt;130 pts)</span>
+            <span>Caminho certo (84% a 90%)</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-faint">
             <span className="w-2 h-2 rounded-xs bg-warn" />
-            <span>Atenção (120-130 pts)</span>
+            <span>Atenção (77% a 84%)</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-faint">
             <span className="w-2 h-2 rounded-xs bg-danger" />
-            <span>Alarme (&lt;120 pts)</span>
+            <span>Alarme (abaixo de 77%)</span>
           </div>
         </div>
 

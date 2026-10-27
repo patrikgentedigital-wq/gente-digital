@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
+import { subscribeToMembers } from '../lib/backend';
 import type { AuthUser } from '../lib/backend';
 import type { TeamMember } from '../types';
-import { subscribeToMembers } from '../lib/firebaseLoader';
 
 export function useMembers(authUser: AuthUser | null, authRole: 'leader' | 'admin' | null) {
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -26,12 +26,8 @@ export function useMembers(authUser: AuthUser | null, authRole: 'leader' | 'admi
       (error) => {
         console.error('Members subscription failed:', error);
         setMembers([]);
-        setMembersError('Não foi possível carregar os dados do Firestore. Verifique sua autorização.');
+        setMembersError('Não foi possível carregar os dados. Verifique sua autorização.');
         setMembersLoading(false);
-      },
-      (error) => {
-        console.error('Invalid member document:', error);
-        setMembersError(`Alguns dados foram ignorados por estarem inválidos (${error.documentId}).`);
       },
     );
   }, [authRole, authUser]);

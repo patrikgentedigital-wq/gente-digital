@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
+import { compareByPercent, percentOf } from '../lib/scoring';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
@@ -27,7 +28,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // --- Memoized Computations ---
   const {
     totalMembers,
-    avgScore,
+    avgPercent,
     completedEvaluationsCount,
     statusCounts,
     voandoPercent,
@@ -40,16 +41,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const total = members.length;
     const average =
       total > 0
-        ? Math.round(members.reduce((acc, m) => acc + m.score, 0) / total)
+        ? Math.round(members.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / total)
         : 0;
 
     const completedCount = members.filter((m) => m.evaluationStatus === 'Concluído').length;
 
     const counts = {
-      Voando: members.filter((m) => m.score > 140).length,
-      'Caminho Certo': members.filter((m) => m.score > 130 && m.score <= 140).length,
-      Atenção: members.filter((m) => m.score >= 120 && m.score <= 130).length,
-      Alarme: members.filter((m) => m.score < 120).length,
+      Voando: members.filter((m) => m.status === 'Voando').length,
+      'Caminho Certo': members.filter((m) => m.status === 'Caminho Certo').length,
+      Atenção: members.filter((m) => m.status === 'Atenção').length,
+      Alarme: members.filter((m) => m.status === 'Alarme').length,
     };
 
     const voandoPct = Math.round((counts.Voando / (total || 1)) * 100);
@@ -59,50 +60,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       const count = teamMembers.length;
       const teamAvg =
         count > 0
-          ? Math.round(teamMembers.reduce((acc, m) => acc + m.score, 0) / count)
+          ? Math.round(teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / count)
           : 0;
       const topMember =
         count > 0
-          ? [...teamMembers].sort((a, b) => b.score - a.score)[0] || null
+          ? [...teamMembers].sort(compareByPercent)[0] || null
           : null;
 
       return {
         leader: t.leader,
         color: t.color,
         count,
-        avgScore: teamAvg,
+        avgPercent: teamAvg,
         topMember,
-        voandoCount: teamMembers.filter((m) => m.score > 140).length,
+        voandoCount: teamMembers.filter((m) => m.status === 'Voando').length,
       };
     }).filter((t) => t.count > 0);
 
-    const sortedTeams = [...teams].sort((a, b) => b.avgScore - a.avgScore);
+    const sortedTeams = [...teams].sort((a, b) => b.avgPercent - a.avgPercent);
     const topTeam = sortedTeams[0] || null;
 
     const pie = [
       {
-        name: 'Voando (>140 pts)',
+        name: 'Voando (acima de 90%)',
         shortName: 'Voando',
         value: counts.Voando,
         color: '#39d3cf',
         pct: Math.round((counts.Voando / (total || 1)) * 100),
       },
       {
-        name: 'Caminho Certo (131-140 pts)',
+        name: 'Caminho Certo (84% a 90%)',
         shortName: 'Caminho Certo',
         value: counts['Caminho Certo'],
         color: '#34c759',
         pct: Math.round((counts['Caminho Certo'] / (total || 1)) * 100),
       },
       {
-        name: 'Atenção (120-130 pts)',
+        name: 'Atenção (77% a 84%)',
         shortName: 'Atenção',
         value: counts.Atenção,
         color: '#ff9f0a',
         pct: Math.round((counts.Atenção / (total || 1)) * 100),
       },
       {
-        name: 'Alarme (<120 pts)',
+        name: 'Alarme (abaixo de 77%)',
         shortName: 'Alarme',
         value: counts.Alarme,
         color: '#ff3b30',
@@ -112,27 +113,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     const buckets = [
       {
-        range: '145 - 155 pts',
+        range: '93% a 100%',
         label: 'Excelência',
-        count: members.filter((m) => m.score >= 145).length,
+        count: members.filter((m) => percentOf(m.score, m.maxScore) >= 93).length,
         color: '#39d3cf',
       },
       {
-        range: '135 - 144 pts',
+        range: '87% a 92%',
         label: 'Alto Desempenho',
-        count: members.filter((m) => m.score >= 135 && m.score < 145).length,
+        count: members.filter((m) => percentOf(m.score, m.maxScore) >= 87 && percentOf(m.score, m.maxScore) < 93).length,
         color: '#34c759',
       },
       {
-        range: '125 - 134 pts',
+        range: '81% a 86%',
         label: 'Em Desenvolvimento',
-        count: members.filter((m) => m.score >= 125 && m.score < 135).length,
+        count: members.filter((m) => percentOf(m.score, m.maxScore) >= 81 && percentOf(m.score, m.maxScore) < 87).length,
         color: '#ff9f0a',
       },
       {
-        range: '< 125 pts',
+        range: 'abaixo de 81%',
         label: 'Atenção Especial',
-        count: members.filter((m) => m.score < 125).length,
+        count: members.filter((m) => percentOf(m.score, m.maxScore) < 81).length,
         color: '#ff3b30',
       },
     ];
@@ -173,7 +174,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
     return {
       totalMembers: total,
-      avgScore: average,
+      avgPercent: average,
       completedEvaluationsCount: completedCount,
       statusCounts: counts,
       voandoPercent: voandoPct,
@@ -213,7 +214,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* KPI Stats Cards */}
       <DashboardKpiCards
         members={members}
-        avgScore={avgScore}
+        avgPercent={avgPercent}
         voandoPercent={voandoPercent}
         statusCounts={statusCounts}
         bestTeam={bestTeam}

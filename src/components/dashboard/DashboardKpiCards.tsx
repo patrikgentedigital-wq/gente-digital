@@ -4,17 +4,17 @@ import { Trophy, Users, TrendingUp, Award, ArrowUpRight } from 'lucide-react';
 
 interface DashboardKpiCardsProps {
   members: TeamMember[];
-  avgScore: number;
+  avgPercent: number;
   voandoPercent: number;
   statusCounts: { Voando: number; 'Caminho Certo': number; Atenção: number; Alarme: number };
-  bestTeam: { leader: string; avgScore: number; count: number } | null;
+  bestTeam: { leader: string; avgPercent: number; count: number } | null;
   completedEvaluationsCount: number;
   teamCount: number;
 }
 
 export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
   members,
-  avgScore,
+  avgPercent,
   voandoPercent,
   statusCounts,
   bestTeam,
@@ -36,9 +36,9 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-extrabold font-mono text-accent-text">
-            {avgScore}
+            {avgPercent}
           </span>
-          <span className="text-xs text-faint font-mono">/ 155 pts</span>
+          <span className="text-xs text-faint font-mono">% do máximo</span>
         </div>
         <div className="mt-2 text-[11px] text-success flex items-center gap-1 font-mono">
           <ArrowUpRight className="w-3.5 h-3.5" />
@@ -50,7 +50,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
       <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
         <div className="flex items-center justify-between text-faint mb-2">
           <span className="text-[11px] font-mono font-bold ">
-            Taxa na Meta (&gt;140)
+            Taxa na meta (Voando)
           </span>
           <Trophy className="w-4 h-4 text-accent-text" />
         </div>
@@ -101,7 +101,7 @@ export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
                 Time {bestTeam.leader}
               </span>
               <span className="font-mono text-sm font-bold text-accent-text">
-                {bestTeam.avgScore} pts
+                {bestTeam.avgPercent}%
               </span>
             </div>
             <div className="mt-2 text-[11px] text-muted flex justify-between font-mono">

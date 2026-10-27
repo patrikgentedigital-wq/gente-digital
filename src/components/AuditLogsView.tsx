@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EvaluationAuditLog, TeamMember } from '../types';
-import { getArchivedMembersFromFirestore, subscribeToAuditLogs } from '../lib/firebaseLoader';
+import { getArchivedMembersFromFirestore, subscribeToAuditLogs } from '../lib/backend';
 import { FileSearch, AlertTriangle, ArchiveRestore, RotateCcw, Search, ChevronDown } from 'lucide-react';
 import { Skeleton } from './Skeleton';
 
@@ -18,6 +18,10 @@ function formatTimestamp(value: unknown): string {
     } catch {
       // fall through to generic formatting
     }
+  }
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString('pt-BR');
   }
   return String(value ?? '—');
 }

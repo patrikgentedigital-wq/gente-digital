@@ -50,7 +50,7 @@ export const ScoreBucketHistogram: React.FC<ScoreBucketHistogramProps> = ({
       </div>
 
       <div className="text-[11px] text-faint pt-2 border-t border-line">
-        * Pontuação máxima atingível no ciclo de avaliação: <strong>155 pontos</strong>.
+        * Cada equipe tem a própria pontuação máxima; as faixas usam o <strong>percentual do máximo</strong>.
       </div>
     </div>
   );

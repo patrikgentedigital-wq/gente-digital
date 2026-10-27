@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { TeamMember } from '../types';
-import type { EvaluationPayload } from '../lib/firebaseLoader';
+import type { EvaluationPayload } from '../lib/backend';
+import type { CriteriaCategory } from '../lib/criteria';
 import { ImageLinkModal } from './ImageLinkModal';
 import { MemberFormModal } from './MemberFormModal';
 import { KioskModeModal } from './KioskModeModal';
@@ -33,9 +34,11 @@ interface AuthenticatedModalsProps {
   onSaveAvatar: (url: string) => Promise<void>;
   detailModalMember: TeamMember | null;
   detailEvaluation: EvaluationPayload | null;
+  detailCriteria: CriteriaCategory[] | null;
   onCloseDetail: () => void;
   onSelectForEvaluation: (member: TeamMember) => void;
   reportModal: ReportModalState | null;
+  reportCriteria: CriteriaCategory[] | null;
   onCloseReport: () => void;
 }
 
@@ -57,6 +60,8 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
   onSaveAvatar,
   detailModalMember,
   detailEvaluation,
+  detailCriteria,
+  reportCriteria,
   onCloseDetail,
   onSelectForEvaluation,
   reportModal,
@@ -71,6 +76,7 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
           isOpen
           onClose={onCloseMemberForm}
           memberToEdit={memberToEdit}
+          members={members}
           onSaveMember={onSaveMember}
           onDeleteMember={onDeleteMember}
         />
@@ -93,6 +99,7 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
           member={detailModalMember}
           allMembers={members}
           evaluation={detailEvaluation}
+          criteria={detailCriteria}
           onClose={onCloseDetail}
           onOpenImageModal={isAdmin ? onOpenImageModal : undefined}
           onSelectForEvaluation={onSelectForEvaluation}
@@ -107,6 +114,7 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
           criteriaScores={reportModal.criteriaScores}
           leaderComments={reportModal.leaderComments}
           cycle={reportModal.cycle}
+          criteria={reportCriteria}
         />
       )}
     </Suspense>

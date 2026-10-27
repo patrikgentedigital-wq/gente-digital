@@ -1,8 +1,7 @@
-import type { TeamLeaderName } from './lib/teams';
-
 export type PerformanceStatus = 'Voando' | 'Caminho Certo' | 'Atenção' | 'Alarme';
 
-export type LeaderName = TeamLeaderName;
+/** Nome da equipe (o líder que a identifica). Equipes novas são criadas em `teams/{id}`, então não é uma lista fixa. */
+export type LeaderName = string;
 
 export interface EvaluationCriterion {
   id: string;

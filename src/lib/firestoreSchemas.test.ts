@@ -22,6 +22,18 @@ const validMember = {
 };
 
 describe('Firestore runtime schemas', () => {
+  it('aceita equipes criadas fora da lista inicial (ex.: Mariza Leite, Danielle, João Lucas)', () => {
+    for (const team of ['Mariza Leite', 'Danielle', 'João Lucas']) {
+      const parsed = parseTeamMember({ ...validMember, team }, 'member-1');
+      expect(parsed.team).toBe(team);
+    }
+  });
+
+  it('rejeita equipe vazia ou longa demais', () => {
+    expect(() => parseTeamMember({ ...validMember, team: '' }, 'member-1')).toThrow(FirestoreDataValidationError);
+    expect(() => parseTeamMember({ ...validMember, team: 'x'.repeat(101) }, 'member-1')).toThrow(FirestoreDataValidationError);
+  });
+
   it('normalizes valid member defaults and rejects a document id mismatch', () => {
     const parsed = parseTeamMember(validMember, 'member-1');
 

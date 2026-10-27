@@ -1,10 +1,7 @@
 import { z } from 'zod';
 import type { EvaluationPayload } from './firebase';
-import type { LeaderName, TeamMember } from '../types';
-import { TEAM_LEADERS } from './teams';
+import type { TeamMember } from '../types';
 import { CRITERIA_SCORE_KEYS } from './evaluation';
-
-const leaderNames = TEAM_LEADERS satisfies readonly LeaderName[];
 
 const performanceStatuses = ['Voando', 'Caminho Certo', 'Atenção', 'Alarme'] as const;
 const evaluationStatuses = ['Pendente', 'Forms Respondido', 'Concluído'] as const;
@@ -86,7 +83,8 @@ const teamMemberSchema = z.object({
   id: documentIdSchema,
   name: z.string().min(1).max(100),
   role: z.string().min(1).max(120),
-  team: z.enum(leaderNames),
+  // Equipes novas nascem em `teams/{id}` (callable saveTeam), então o nome não se limita a TEAM_LEADERS.
+  team: z.string().min(1).max(100),
   teamColor: z.string().max(32).default('#3B6FE0'),
   rank: z.number().finite().int().min(1).max(10000),
   previousRank: z.number().finite().int().min(1).max(10000).optional(),

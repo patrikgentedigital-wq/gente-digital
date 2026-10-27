@@ -1,17 +1,20 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
-  getEvaluationFromFirestore,
-  updateMemberInFirestore,
   addMemberToFirestore,
   deleteMemberFromFirestore,
+  describeEvaluationError,
+  getEvaluationFromFirestore,
+  isEvaluationConflictError,
+  isEvaluationCriteriaOutdatedError,
+  logoutLeader,
   restoreMemberFromFirestore,
   saveEvaluationAndMemberInFirestore,
-  logoutLeader,
-  isEvaluationConflictError,
-  isEvaluationServiceUnavailableError,
-} from './lib/firebaseLoader';
-import type { EvaluationPayload } from './lib/firebaseLoader';
+  updateMemberInFirestore,
+} from './lib/backend';
+import type { EvaluationPayload } from './lib/backend';
+import { useTeamCriteria } from './hooks/useTeamCriteria';
+import { CriteriaEditorView } from './components/CriteriaEditorView';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { Navbar } from './components/Navbar';
@@ -30,7 +33,6 @@ import { Skeleton } from './components/Skeleton';
 import { toast } from './utils/toastUtils';
 import {
   getDefaultEvaluationCycle,
-  getPerformanceStatus,
   makeEvaluationId,
   normalizeCriteriaScores,
   rankMembers,
@@ -39,7 +41,7 @@ import {
 export default function App() {
   const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
   const { members, setMembers, membersError, membersLoading } = useMembers(authUser, authRole);
-  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit'>('ranking');
+  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
@@ -56,7 +58,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit') {
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria') {
       setActiveTab(tab);
     }
     const query = params.get('q');
@@ -78,6 +80,10 @@ export default function App() {
       setSelectedEvaluationMember(null);
     }
   }, [authUser]);
+
+  const evaluationCriteria = useTeamCriteria(selectedEvaluationMember?.team ?? null);
+  const detailCriteria = useTeamCriteria(detailModalMember?.team ?? null);
+  const reportCriteria = useTeamCriteria(reportModal?.member.team ?? null);
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
     return getEvaluationFromFirestore(makeEvaluationId(memberId, cycle));
@@ -226,7 +232,7 @@ export default function App() {
 
   const handleSaveEvaluation = async (
     memberId: string,
-    newTotalScore: number,
+    _clientTotal: number,
     criteriaScores: Record<string, number>,
     comments: string,
     cycle = getDefaultEvaluationCycle(),
@@ -236,50 +242,41 @@ export default function App() {
     const targetMember = members.find((member) => member.id === memberId);
     if (!targetMember || !authUser) return 0;
 
-    const newStatus: PerformanceStatus = getPerformanceStatus(newTotalScore);
-
-    const updatedMember: TeamMember = {
-      ...targetMember,
-      score: newTotalScore,
-      status: newStatus,
-      evaluationStatus: 'Concluído',
-      pdiGoals,
-      history: [
-        ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
-        { month: cycle, score: newTotalScore },
-      ],
-    };
     try {
-      const savedRevision = await saveEvaluationAndMemberInFirestore({
-        member: updatedMember,
-        evaluation: {
-          id: makeEvaluationId(memberId, cycle),
-          memberId,
-          memberName: targetMember.name,
-          leaderName: (currentLeader || authUser.email || 'Líder').slice(0, 100),
-          score: newTotalScore,
-          status: newStatus,
-          cycle,
-          comments,
-          pdiGoals,
-          criteriaScores,
-        },
+      // A nota, o máximo e o status são calculados no servidor: o navegador não decide a classificação.
+      const saved = await saveEvaluationAndMemberInFirestore({
+        member: targetMember,
+        evaluation: { cycle, comments, pdiGoals, criteriaScores },
         expectedRevision,
       });
+      const updatedMember: TeamMember = {
+        ...targetMember,
+        score: saved.score,
+        maxScore: saved.maxScore,
+        status: saved.status,
+        evaluationStatus: 'Concluído',
+        pdiGoals,
+        history: [
+          ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
+          { month: cycle, score: saved.score },
+        ],
+      };
       setMembers((previous) => rankMembers(previous.map((member) =>
         member.id === memberId ? updatedMember : member
       )));
       setSelectedEvaluationMember(updatedMember);
-      return savedRevision;
+      return saved.revision;
     } catch (error) {
       if (isEvaluationConflictError(error)) {
         toast.error('Esta avaliação foi alterada por outra pessoa. Recarregue os dados antes de salvar novamente.');
-      } else if (isEvaluationServiceUnavailableError(error)) {
-        toast.error('O serviço de avaliações ainda não está publicado. Solicite o deploy das Cloud Functions.');
-      } else {
-        toast.error('A avaliação não foi salva. Nenhum dado local foi confirmado.');
+        throw new Error('evaluation-conflict');
       }
-      throw new Error(isEvaluationConflictError(error) ? 'evaluation-conflict' : 'evaluation-save-failed');
+      if (isEvaluationCriteriaOutdatedError(error)) {
+        toast.error(describeEvaluationError(error) ?? 'As perguntas da equipe mudaram. Recarregue a avaliação.');
+        throw new Error('evaluation-save-failed');
+      }
+      toast.error(describeEvaluationError(error) ?? 'A avaliação não foi salva. Nenhum dado local foi confirmado.');
+      throw new Error('evaluation-save-failed');
     }
   };
 
@@ -334,6 +331,7 @@ export default function App() {
            selectedEvaluationMember ? (
              <EvaluationView
                members={members}
+               criteria={evaluationCriteria}
                selectedMember={selectedEvaluationMember}
                onSelectMember={setSelectedEvaluationMember}
                onSaveEvaluation={handleSaveEvaluation}
@@ -348,6 +346,7 @@ export default function App() {
              </div>
            )
          )}
+        {activeTab === 'criteria' && authRole && <CriteriaEditorView role={authRole} />}
         {activeTab === 'audit' && authRole === 'admin' && (
           <AuditLogsView members={members} onRestoreMember={handleRestoreMember} />
         )}
@@ -378,13 +377,13 @@ export default function App() {
         <main className="flex-1 flex items-center justify-center p-8 text-sm text-muted">Verificando sessão...</main>
       ) : authUser && !authRole ? (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
-            <h2 className="text-xl font-bold text-white">Acesso sem autorização</h2>
+          <div className="max-w-md rounded-3xl bg-surface p-8 text-center">
+            <h2 className="text-xl font-bold text-ink">Acesso sem autorização</h2>
             <p className="mt-2 text-sm text-muted">Sua conta está autenticada, mas ainda não possui uma role autorizada para esta plataforma.</p>
             <button
               type="button"
               onClick={() => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.'))}
-              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
+              className="mt-5 rounded-brand bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
             >
               Encerrar sessão
             </button>
@@ -408,13 +407,13 @@ export default function App() {
         </Suspense>
       ) : (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-2xl border border-line bg-surface p-6 text-center">
-            <h2 className="text-xl font-bold text-white">Acesso autenticado necessário</h2>
+          <div className="max-w-md rounded-3xl bg-surface p-8 text-center">
+            <h2 className="text-xl font-bold text-ink">Acesso autenticado necessário</h2>
             <p className="mt-2 text-sm text-muted">Os dados de colaboradores só são carregados após autenticação de um líder autorizado.</p>
             <button
               type="button"
               onClick={() => setIsLeaderModalOpen(true)}
-              className="mt-5 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
+              className="mt-5 rounded-brand bg-accent px-4 py-2 text-xs font-bold text-accent-ink"
             >
               Entrar como líder
             </button>
@@ -457,6 +456,8 @@ export default function App() {
         onSaveAvatar={handleSaveAvatarUrl}
         detailModalMember={detailModalMember}
         detailEvaluation={detailEvaluation}
+        detailCriteria={detailCriteria}
+        reportCriteria={reportCriteria}
         onCloseDetail={() => setDetailModalMember(null)}
         onSelectForEvaluation={(member) => {
           setSelectedEvaluationMember(member);
@@ -475,20 +476,20 @@ export default function App() {
       />
 
       <footer className="border-t border-line bg-app py-6 px-6 mt-auto">
-        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 font-mono text-xs text-faint">
-          <div>© 2026 <strong className="text-accent">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
+        <div className="max-w-[1040px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-faint">
+          <div>© 2026 <strong className="text-ink font-semibold">Gente Digital</strong>. Análise & Desempenho de Equipes.</div>
           <div className="flex gap-4">
             <button
               type="button"
               onClick={() => setInfoModal('privacy')}
-              className="hover:text-accent transition-colors cursor-pointer"
+              className="hover:text-accent-text transition-colors cursor-pointer"
             >
               Privacidade
             </button>
             <button
               type="button"
               onClick={() => setInfoModal('support')}
-              className="hover:text-accent transition-colors cursor-pointer"
+              className="hover:text-accent-text transition-colors cursor-pointer"
             >
               Suporte
             </button>

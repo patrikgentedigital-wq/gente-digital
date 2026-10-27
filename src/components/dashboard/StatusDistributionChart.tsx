@@ -35,8 +35,8 @@ const StatusPieTooltip: React.FC<StatusPieTooltipProps> = ({ active, payload }) 
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-surface border border-line p-3 rounded-xl shadow-xl text-xs space-y-1">
-        <p className="font-bold text-white flex items-center gap-1.5">
+      <div className="bg-surface p-3 rounded-xl text-xs space-y-1">
+        <p className="font-bold text-ink flex items-center gap-1.5">
           <span
             className="w-2.5 h-2.5 rounded-full inline-block"
             style={{ backgroundColor: data.color }}
@@ -44,7 +44,7 @@ const StatusPieTooltip: React.FC<StatusPieTooltipProps> = ({ active, payload }) 
           {data.name}
         </p>
         <p className="text-muted">
-          Qtd: <strong className="text-white font-mono">{data.value}</strong> colaboradores ({data.pct}%)
+          Qtd: <strong className="text-ink font-mono">{data.value}</strong> colaboradores ({data.pct}%)
         </p>
       </div>
     );
@@ -57,10 +57,10 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
   totalMembers,
 }) => {
   return (
-    <div className="bg-surface border border-line p-5 rounded-2xl flex flex-col justify-between space-y-4">
+    <div className="bg-surface p-5 rounded-3xl flex flex-col justify-between space-y-4">
       <div>
         <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
-          <PieChartIcon className="w-4 h-4 text-accent" />
+          <PieChartIcon className="w-4 h-4 text-accent-text" />
           Distribuição por Nível
         </h3>
         <p className="text-xs text-muted mt-0.5">
@@ -90,7 +90,7 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
 
         {/* Center Donut Label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl font-bold font-mono text-white">{totalMembers}</span>
+          <span className="text-2xl font-bold font-mono text-ink">{totalMembers}</span>
           <span className="text-[10px] font-mono text-faint">Membros</span>
         </div>
       </div>
@@ -106,7 +106,7 @@ export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = (
               />
               <span className="text-muted">{item.shortName}</span>
             </div>
-            <span className="font-mono font-bold text-white">
+            <span className="font-mono font-bold text-ink">
               {item.value} <span className="text-faint font-normal">({item.pct}%)</span>
             </span>
           </div>

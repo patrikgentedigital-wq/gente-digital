@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { TeamMember } from '../types';
+import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
+import { compareByPercent, percentOf } from '../lib/scoring';
 import {
   X,
   Trophy,
@@ -47,7 +50,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         module.default.toDataURL(window.location.origin, {
           width: 160,
           margin: 1,
-          color: { dark: '#E3A73B', light: '#0F1E38' },
+          color: { dark: '#000000', light: '#ffffff' },
         }),
       )
       .then((url) => {
@@ -86,7 +89,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   if (!isOpen) return null;
 
   // Sorted members for calculations
-  const sortedMembers = [...members].sort((a, b) => b.score - a.score);
+  const sortedMembers = [...members].sort(compareByPercent);
   const top1 = sortedMembers[0];
   const top2 = sortedMembers[1];
   const top3 = sortedMembers[2];
@@ -109,30 +112,30 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     .slice(0, 6);
 
   // Teams summary calculations
-  const teamStats = TEAMS.map((team) => {
+  const teamStats = deriveTeams(members, TEAMS).map((team) => {
     const teamMembers = members.filter((m) => m.team === team.leader);
-    const avgScore =
+    const avgPercent =
       teamMembers.length > 0
-        ? teamMembers.reduce((acc, m) => acc + m.score, 0) / teamMembers.length
+        ? teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / teamMembers.length
         : 0;
-    const flyingCount = teamMembers.filter((m) => m.score > 140).length;
+    const flyingCount = teamMembers.filter((m) => m.status === 'Voando').length;
 
     return {
       name: `Time ${team.leader}`,
       leader: team.leader,
       color: team.color,
       count: teamMembers.length,
-      avgScore: Math.round(avgScore * 10) / 10,
+      avgPercent: Math.round(avgPercent * 10) / 10,
       flyingCount,
     };
   })
     .filter((team) => team.count > 0)
-    .sort((a, b) => b.avgScore - a.avgScore);
+    .sort((a, b) => b.avgPercent - a.avgPercent);
 
   return (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-50 bg-overlay-2 text-ink flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-300"
+      className="theme-dark fixed inset-0 z-50 bg-app text-ink flex flex-col font-sans select-none overflow-hidden animate-in fade-in duration-300"
       role="dialog"
       aria-modal="true"
       aria-labelledby="kiosk-mode-title"
@@ -141,15 +144,12 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       {/* Kiosk Header */}
       <header className="px-8 py-4 bg-app/90 border-b border-line flex justify-between items-center backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-accent-ink font-black text-xl shadow-lg shadow-accent/20">
-            GD
-          </div>
           <div>
             <div className="flex items-center gap-2">
-                 <h1 id="kiosk-mode-title" className="font-display font-black text-2xl tracking-wider text-white">
-                GENTE DIGITAL
+              <h1 id="kiosk-mode-title" className="font-display">
+                <img src={logoEscuro} alt="Gente Digital" className="h-14 w-auto" />
               </h1>
-              <span className="bg-accent/20 text-accent text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-accent/30 uppercase tracking-widest animate-pulse">
+              <span className="bg-accent/20 text-accent-text text-[10px] font-mono font-bold px-2 py-0.5 rounded-brand border border-accent/30 uppercase tracking-widest animate-pulse">
                 AO VIVO • CICLO ATUAL
               </span>
             </div>
@@ -162,21 +162,21 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
           <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-xl border border-line">
             <button
               onClick={() => setCurrentSlide((prev) => (prev === 0 ? 3 : prev - 1))}
-              className="p-1 text-muted hover:text-white transition-colors cursor-pointer"
+              className="p-1 text-muted hover:text-ink transition-colors cursor-pointer"
               title="Slide anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="p-1 text-accent hover:text-accent-hover transition-colors cursor-pointer"
+              className="p-1 text-accent-text hover:text-accent-hover transition-colors cursor-pointer"
               title={isPlaying ? 'Pausar rotação' : 'Iniciar rotação'}
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setCurrentSlide((prev) => (prev + 1) % 4)}
-              className="p-1 text-muted hover:text-white transition-colors cursor-pointer"
+              className="p-1 text-muted hover:text-ink transition-colors cursor-pointer"
               title="Próximo slide"
             >
               <ChevronRight className="w-4 h-4" />
@@ -194,7 +194,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
             </div>
           </div>
 
-          <div className="font-mono font-bold text-xl text-accent bg-surface px-4 py-1.5 rounded-xl border border-line tracking-wider">
+          <div className="font-mono font-bold text-xl text-accent-text bg-surface px-4 py-1.5 rounded-xl border border-line tracking-wider">
             {currentTime}
           </div>
 
@@ -202,7 +202,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Fechar modo TV"
-            className="text-faint hover:text-white p-2 rounded-xl hover:bg-surface-2 transition-colors cursor-pointer"
+            className="text-faint hover:text-ink p-2 rounded-xl hover:bg-surface-2 transition-colors cursor-pointer"
             title="Sair do Modo TV (Esc)"
           >
             <X className="w-6 h-6" />
@@ -214,8 +214,8 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       <main className="flex-1 p-8 flex flex-col justify-center max-w-7xl w-full mx-auto overflow-hidden">
         {members.length === 0 ? (
           <div className="text-center p-8 bg-surface rounded-3xl border border-line max-w-md mx-auto">
-            <Trophy className="w-12 h-12 text-accent mx-auto mb-3 opacity-60" />
-            <h3 className="text-lg font-bold text-white mb-1">Nenhum dado carregado</h3>
+            <Trophy className="w-12 h-12 text-accent-text mx-auto mb-3 opacity-60" />
+            <h3 className="text-lg font-bold text-ink mb-1">Nenhum dado carregado</h3>
             <p className="text-xs text-muted">Aguardando dados dos colaboradores para exibição no telão.</p>
           </div>
         ) : (
@@ -224,10 +224,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
             {currentSlide === 0 && (
               <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
                 <div className="text-center">
-                  <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-accent/20 mb-2">
+                  <div className="inline-flex items-center gap-2 bg-accent/10 text-accent-text px-4 py-1 rounded-brand text-xs font-bold font-mono uppercase tracking-widest border border-accent/20 mb-2">
                     <Trophy className="w-3.5 h-3.5" /> Pódio de Honra do Ciclo
                   </div>
-                  <h2 className="text-3xl font-display font-black text-white">Top Destaques Gerais</h2>
+                  <h2 className="text-3xl font-display font-black text-ink">Top Destaques Gerais</h2>
                 </div>
 
                 {/* Podium 3 cards */}
@@ -246,10 +246,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                     shape="circle"
                     className="border-2 border-silver shadow-md mb-3"
                   />
-                  <h3 className="font-bold text-lg text-white truncate max-w-full">{top2.name}</h3>
+                  <h3 className="font-bold text-lg text-ink truncate max-w-full">{top2.name}</h3>
                   <p className="text-xs text-muted mb-2">{top2.role} • Time {top2.team}</p>
                   <div className="bg-surface-2 px-4 py-1.5 rounded-xl border border-line font-mono font-black text-xl text-slate-200">
-                    {top2.score} <span className="text-xs font-normal text-faint">/ 155</span>
+                    {top2.score} <span className="text-xs font-normal text-faint">/ {top2.maxScore}</span>
                   </div>
                 </div>
               )}
@@ -268,10 +268,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                     shape="circle"
                     className="w-24 h-24 border-4 border-accent shadow-lg mb-3"
                   />
-                  <h3 className="font-black text-2xl text-white truncate max-w-full">{top1.name}</h3>
-                  <p className="text-xs text-accent font-semibold mb-3">{top1.role} • Time {top1.team}</p>
-                  <div className="bg-accent/20 px-6 py-2 rounded-2xl border border-accent font-mono font-black text-3xl text-accent shadow-inner">
-                    {top1.score} <span className="text-sm font-normal text-muted">/ 155 pts</span>
+                  <h3 className="font-black text-2xl text-ink truncate max-w-full">{top1.name}</h3>
+                  <p className="text-xs text-accent-text font-semibold mb-3">{top1.role} • Time {top1.team}</p>
+                  <div className="bg-accent/20 px-6 py-2 rounded-2xl border border-accent font-mono font-black text-3xl text-accent-text shadow-inner">
+                    {top1.score} <span className="text-sm font-normal text-muted">/ {top1.maxScore} pts</span>
                   </div>
                 </div>
               )}
@@ -279,7 +279,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               {/* 3rd Place */}
               {top3 && (
                 <div className="bg-surface border-2 border-bronze/50 rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl relative order-3 transform hover:-translate-y-1 transition-transform">
-                  <div className="absolute -top-5 w-10 h-10 rounded-full bg-bronze text-white font-black text-base flex items-center justify-center shadow-lg border-2 border-white">
+                  <div className="absolute -top-5 w-10 h-10 rounded-full bg-bronze text-ink font-black text-base flex items-center justify-center shadow-lg border-2 border-white">
                     3º
                   </div>
                   <Avatar
@@ -290,10 +290,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                     shape="circle"
                     className="border-2 border-bronze shadow-md mb-3"
                   />
-                  <h3 className="font-bold text-lg text-white truncate max-w-full">{top3.name}</h3>
+                  <h3 className="font-bold text-lg text-ink truncate max-w-full">{top3.name}</h3>
                   <p className="text-xs text-muted mb-2">{top3.role} • Time {top3.team}</p>
                   <div className="bg-surface-2 px-4 py-1.5 rounded-xl border border-line font-mono font-black text-xl text-bronze">
-                    {top3.score} <span className="text-xs font-normal text-faint">/ 155</span>
+                    {top3.score} <span className="text-xs font-normal text-faint">/ {top3.maxScore}</span>
                   </div>
                 </div>
               )}
@@ -308,8 +308,8 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                 >
                   <span className="font-mono font-bold text-xs text-faint">{idx + 4}º</span>
                   <Avatar name={m.name} src={m.avatarUrl} teamColor={m.teamColor} size="md" shape="circle" className="my-1" />
-                  <span className="font-semibold text-xs text-white truncate w-full">{m.name.split(' ')[0]}</span>
-                  <span className="font-mono text-xs text-accent font-bold">{m.score} pts</span>
+                  <span className="font-semibold text-xs text-ink truncate w-full">{m.name.split(' ')[0]}</span>
+                  <span className="font-mono text-xs text-accent-text font-bold">{m.score} pts</span>
                 </div>
               ))}
             </div>
@@ -323,7 +323,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               <div className="inline-flex items-center gap-2 bg-success/10 text-success px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-success/20 mb-2">
                 <Rocket className="w-3.5 h-3.5" /> Destaques de Crescimento
               </div>
-              <h2 className="text-3xl font-display font-black text-white">Maiores Evoluções no Ranking</h2>
+              <h2 className="text-3xl font-display font-black text-ink">Maiores Evoluções no Ranking</h2>
               <p className="text-sm text-muted mt-1">Colaboradores que mais subiram posições e superaram metas</p>
             </div>
 
@@ -343,11 +343,11 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-white text-base truncate">{m.name}</h4>
+                      <h4 className="font-bold text-ink text-base truncate">{m.name}</h4>
                       <p className="text-xs text-muted truncate">{m.role} • Time {m.team}</p>
                       <div className="flex items-center gap-3 mt-2 font-mono text-xs">
-                        <span className="text-faint">Posição: <strong className="text-white">{m.rank}º</strong></span>
-                        <span className="text-accent font-bold">{m.score} pts</span>
+                        <span className="text-faint">Posição: <strong className="text-ink">{m.rank}º</strong></span>
+                        <span className="text-accent-text font-bold">{m.score}/{m.maxScore} ({Math.round(percentOf(m.score, m.maxScore))}%)</span>
                       </div>
                     </div>
                   </div>
@@ -364,7 +364,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               <div className="inline-flex items-center gap-2 bg-info/10 text-info px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-info/20 mb-2">
                 <Users className="w-3.5 h-3.5" /> Visão Executiva
               </div>
-              <h2 className="text-3xl font-display font-black text-white">Desempenho por Equipe</h2>
+              <h2 className="text-3xl font-display font-black text-ink">Desempenho por Equipe</h2>
               <p className="text-sm text-muted mt-1">Comparativo de médias e quantidade de colaboradores no nível Voando</p>
             </div>
 
@@ -380,7 +380,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                         className="w-3.5 h-3.5 rounded-full"
                         style={{ backgroundColor: team.color }}
                       />
-                      <h4 className="font-bold text-white text-base">{team.name}</h4>
+                      <h4 className="font-bold text-ink text-base">{team.name}</h4>
                     </div>
                     <span className="font-mono text-xs text-faint font-bold">#{idx + 1}</span>
                   </div>
@@ -388,13 +388,13 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   <div className="space-y-2.5 my-2">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-muted">Média da Equipe:</span>
-                      <span className="font-mono font-bold text-accent text-base">{team.avgScore} pts</span>
+                      <span className="font-mono font-bold text-accent-text text-base">{team.avgPercent}%</span>
                     </div>
                     <div className="w-full bg-app h-2 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-1000"
                         style={{
-                          width: `${(team.avgScore / 155) * 100}%`,
+                          width: `${team.avgPercent}%`,
                           backgroundColor: team.color,
                         }}
                       />
@@ -402,7 +402,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   </div>
 
                   <div className="flex justify-between items-center text-xs pt-3 border-t border-line text-muted font-mono mt-2">
-                    <span>Colaboradores: <strong className="text-white">{team.count}</strong></span>
+                    <span>Colaboradores: <strong className="text-ink">{team.count}</strong></span>
                     <span className="text-success">Voando: <strong>{team.flyingCount}</strong></span>
                   </div>
                 </div>
@@ -414,10 +414,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         {currentSlide === 3 && (
           <div className="flex flex-col gap-6 h-full justify-center animate-in zoom-in-95 duration-500">
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 bg-accent/10 text-accent px-4 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-widest border border-accent/20 mb-2">
+              <div className="inline-flex items-center gap-2 bg-accent/10 text-accent-text px-4 py-1 rounded-brand text-xs font-bold font-mono uppercase tracking-widest border border-accent/20 mb-2">
                 <Sparkles className="w-3.5 h-3.5" /> Reconhecimento do Ciclo
               </div>
-              <h2 className="text-3xl font-display font-black text-white">Parabéns, quem subiu de nível!</h2>
+              <h2 className="text-3xl font-display font-black text-ink">Parabéns, quem subiu de nível!</h2>
               <p className="text-sm text-muted mt-1">Colaboradores que elevaram a pontuação em relação ao ciclo anterior</p>
             </div>
 
@@ -432,17 +432,17 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   >
                     <div className="relative">
                       <Avatar name={m.name} src={m.avatarUrl} teamColor={m.teamColor} size="xl" className="border border-accent/40" />
-                      <div className="absolute -bottom-2 -right-2 bg-gold-soft border border-accent/50 text-accent font-mono font-bold text-xs px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
+                      <div className="absolute -bottom-2 -right-2 bg-gold-soft border border-accent/50 text-accent-text font-mono font-bold text-xs px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-md">
                         <Zap className="w-3 h-3" />
                         <span>+{delta}</span>
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-white text-base truncate">{m.name}</h4>
+                      <h4 className="font-bold text-ink text-base truncate">{m.name}</h4>
                       <p className="text-xs text-muted truncate">{m.role} • Time {m.team}</p>
                       <div className="flex items-center gap-3 mt-2 font-mono text-xs">
-                        <span className="text-faint">Nível: <strong className={m.score > 140 ? 'text-success' : 'text-white'}>{m.status}</strong></span>
-                        <span className="text-accent font-bold">{m.score} pts</span>
+                        <span className="text-faint">Nível: <strong className={m.status === 'Voando' ? 'text-success' : 'text-ink'}>{m.status}</strong></span>
+                        <span className="text-accent-text font-bold">{m.score} pts</span>
                       </div>
                     </div>
                   </div>
@@ -463,10 +463,10 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       <footer className="px-8 py-3 bg-app border-t border-line flex justify-between items-center font-mono text-xs text-faint">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-success" />
-          <span>Dados carregados do Firestore</span>
+          <span>Dados atualizados em tempo real</span>
         </div>
         <div className="flex items-center gap-3">
-          <span>Pressione <strong className="text-white">ESC</strong> para sair</span>
+          <span>Pressione <strong className="text-ink">ESC</strong> para sair</span>
         </div>
       </footer>
 

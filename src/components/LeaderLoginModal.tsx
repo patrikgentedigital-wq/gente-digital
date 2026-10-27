@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Lock, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
-import { loginWithEmailAndPassword } from '../lib/firebaseLoader';
+import logo from '../assets/gente-digital-logo.svg';
+import { X, ShieldCheck, Mail, ArrowRight, KeyRound, AlertCircle, Loader2 } from 'lucide-react';
+import { loginWithEmailAndPassword } from '../lib/backend';
 import { useDialog } from '../hooks/useDialog';
 
 interface LeaderLoginModalProps {
@@ -29,18 +30,17 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const credential = await loginWithEmailAndPassword(email.trim(), password);
-      const leaderName = credential.user.displayName || credential.user.email || 'Líder';
+      const { leaderName } = await loginWithEmailAndPassword(email.trim(), password);
       onLoginSuccess(leaderName);
       onClose();
     } catch (error: unknown) {
       console.error('Login error:', error);
-      const err = error as { message?: string; code?: string };
+      const err = error as { message?: string };
       if (err?.message === 'EMAIL_NOT_VERIFIED') {
         setErrorMsg('Confirme o e-mail da conta antes de acessar a área do líder.');
       } else if (err?.message === 'ROLE_NOT_AUTHORIZED') {
         setErrorMsg('Sua conta está autenticada, mas não possui uma role autorizada nesta plataforma.');
-      } else if (err?.code === 'auth/invalid-credential') {
+      } else if (err?.message === 'INVALID_CREDENTIALS') {
         setErrorMsg('E-mail ou senha inválidos.');
       } else {
         setErrorMsg('Não foi possível autenticar. Verifique a conexão e as credenciais.');
@@ -60,7 +60,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
     >
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-md rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink"
+        className="bg-surface border border-line w-full max-w-md rounded-3xl p-6 relative flex flex-col gap-5 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="leader-login-title"
@@ -68,26 +68,24 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
-              <Lock className="w-5 h-5" aria-hidden="true" />
-            </div>
+            <img src={logo} alt="" aria-hidden="true" className="h-12 w-auto" />
             <div>
-              <h3 id="leader-login-title" className="font-display font-bold text-xl text-white">Área do Líder</h3>
-              <p className="text-xs text-muted">Autenticação via Firebase</p>
+              <h3 id="leader-login-title" className="font-display font-bold text-xl text-ink">Área do Líder</h3>
+              <p className="text-xs text-muted">Acesso com e-mail e senha</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar autenticação"
-            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors"
+            className="text-faint hover:text-ink p-1 rounded-lg hover:bg-surface-2 transition-colors"
           >
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
         <p className="text-xs text-muted leading-relaxed">
-          Acesso reservado a líderes provisionados no Firebase Authentication.
+          Acesso reservado a líderes cadastrados pelo administrador.
         </p>
 
         {errorMsg && (
@@ -109,7 +107,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="lider@gentedigital.com.br"
                 autoComplete="username"
-                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 required
               />
             </div>
@@ -125,7 +123,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
-                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-accent"
+                className="w-full bg-surface-2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-xs text-ink focus:outline-none focus:border-accent"
                 required
               />
             </div>
@@ -134,7 +132,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-ink font-bold text-xs py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer mt-2"
+            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-ink font-bold text-xs py-3 rounded-brand transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer mt-2"
           >
             {isLoading ? (
               <>
@@ -152,7 +150,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
 
         <div className="text-[11px] text-faint leading-relaxed bg-surface-2 p-3 rounded-xl border border-line flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
-          <span>A sessão é autorizada pelo token do Firebase Auth e pelas Rules do Firestore.</span>
+          <span>A sessão é autorizada pelo login e pelas regras de acesso por equipe.</span>
         </div>
       </div>
     </div>

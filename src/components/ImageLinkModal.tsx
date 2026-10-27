@@ -64,7 +64,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-lg rounded-2xl p-6 shadow-2xl relative flex flex-col gap-5 text-ink"
+        className="bg-surface border border-line w-full max-w-lg rounded-3xl p-6 relative flex flex-col gap-5 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="image-link-modal-title"
@@ -73,13 +73,13 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
         {/* Header */}
         <div className="flex justify-between items-center border-b border-line pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent-text">
               <LinkIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 id="image-link-modal-title" className="font-display font-bold text-lg text-white">Link Direto da Imagem</h3>
+              <h3 id="image-link-modal-title" className="font-display font-bold text-lg text-ink">Link Direto da Imagem</h3>
               <p className="text-xs text-muted">
-                Personalize o avatar de <span className="text-accent font-semibold">{memberName}</span>
+                Personalize o avatar de <span className="text-accent-text font-semibold">{memberName}</span>
               </p>
             </div>
           </div>
@@ -87,7 +87,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Fechar edição da imagem"
-            className="text-faint hover:text-white p-1 rounded-lg hover:bg-surface-2 transition-colors"
+            className="text-faint hover:text-ink p-1 rounded-lg hover:bg-surface-2 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -113,10 +113,10 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
           </div>
 
           <div className="flex-1 space-y-1">
-            <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">
+            <span className="text-[10px] font-mono text-muted block">
               PRÉ-VISUALIZAÇÃO EM TEMPO REAL
             </span>
-            <div className="text-sm font-display font-bold text-white truncate max-w-[240px]">
+            <div className="text-sm font-display font-bold text-ink truncate max-w-[240px]">
               {memberName}
             </div>
             <p className="text-xs text-faint leading-tight">
@@ -127,7 +127,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
 
         {/* URL Input */}
         <div className="space-y-2">
-          <label className="text-xs font-bold font-mono text-accent uppercase tracking-wider flex items-center gap-1.5">
+          <label className="text-xs font-bold font-mono text-accent-text flex items-center gap-1.5">
             <ImageIcon className="w-3.5 h-3.5" />
             URL Direta da Imagem
           </label>
@@ -141,12 +141,12 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
               }}
               placeholder="https://exemplo.com/minha-foto.jpg"
               maxLength={2048}
-              className="flex-1 bg-app border border-line rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-accent transition-colors"
+              className="flex-1 bg-app border border-line rounded-xl px-3 py-2 text-sm text-ink font-mono focus:outline-none focus:border-accent transition-colors"
             />
             <button
               type="button"
               onClick={handleTestUrl}
-              className="bg-surface-2 hover:bg-line border border-line text-xs font-semibold px-3.5 py-2 rounded-xl text-white transition-colors flex items-center gap-1.5 shrink-0"
+              className="bg-surface-2 hover:bg-line border border-line text-xs font-semibold px-3.5 py-2 rounded-xl text-ink transition-colors flex items-center gap-1.5 shrink-0"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
               Testar
@@ -168,8 +168,8 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
 
         {/* Preset Gallery */}
         <div className="space-y-2">
-          <label className="text-xs font-bold font-mono text-muted uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-accent" />
+          <label className="text-xs font-bold font-mono text-muted flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-accent-text" />
             Galeria de Avatares
           </label>
           <div className="grid grid-cols-5 gap-2 bg-app p-2.5 rounded-xl border border-line">
@@ -198,14 +198,14 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-line text-xs font-semibold text-muted hover:text-white hover:bg-surface-2 transition-colors"
+            className="px-4 py-2 rounded-xl border border-line text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 transition-colors"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 rounded-xl bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover transition-colors shadow-[0_0_15px_rgba(227,167,59,0.2)]"
+            className="px-5 py-2 rounded-brand bg-accent text-accent-ink font-bold text-xs hover:bg-accent-hover transition-colors shadow-[0_0_15px_rgba(255,231,8,0.35)]"
           >
             Salvar Foto
           </button>

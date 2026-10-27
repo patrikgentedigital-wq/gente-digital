@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
+import { deriveTeams } from '../lib/teams';
+import { compareByPercent, percentOf } from '../lib/scoring';
 import { Avatar } from './Avatar';
 import { Users, Award, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
@@ -18,20 +20,20 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
   onSelectMemberForDetail,
 }) => {
   const activeTeams = useMemo(() => {
-    return TEAMS.map((teamStruct) => {
+    return deriveTeams(members, TEAMS).map((teamStruct) => {
       const teamMembers = members.filter((m) => m.team === teamStruct.leader);
       if (teamMembers.length === 0) return null;
 
-      const avgScore = Math.round(
-        teamMembers.reduce((acc, m) => acc + m.score, 0) / teamMembers.length
+      const avgPercent = Math.round(
+        teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / teamMembers.length
       );
 
-      const topPerformer = [...teamMembers].sort((a, b) => b.score - a.score)[0];
+      const topPerformer = [...teamMembers].sort(compareByPercent)[0];
 
       return {
         ...teamStruct,
         teamMembers,
-        avgScore,
+        avgPercent,
         topPerformer,
       };
     }).filter((t): t is NonNullable<typeof t> => t !== null);
@@ -39,40 +41,33 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
-      {/* Header */}
-      <div className="border-b border-line pb-5 mb-7">
-        <h2 className="text-2xl font-display font-bold text-white tracking-tight">Desempenho por Equipes</h2>
-        <p className="text-xs text-muted mt-1">
-          Visão consolidada de performance, lideranças e destaques individuais por time.
-        </p>
-      </div>
 
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {activeTeams.map((teamStruct) => {
-          const { leader, color, teamMembers, avgScore, topPerformer } = teamStruct;
+          const { leader, color, teamMembers, avgPercent, topPerformer } = teamStruct;
 
           return (
             <div
               key={leader}
-              className="bg-surface border border-line rounded-2xl p-5 flex flex-col justify-between gap-5 hover:border-accent/50 transition-all shadow-xl group"
+              className="bg-surface border border-line rounded-3xl p-5 flex flex-col justify-between gap-5 hover:border-accent/50 transition-all group"
             >
               <div>
                 {/* Title & Leader */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-display font-bold text-white group-hover:text-accent transition-colors">
+                    <h3 className="text-lg font-display font-bold text-ink group-hover:text-accent-text transition-colors">
                       Time {leader}
                     </h3>
                     <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
-                      <Users className="w-3.5 h-3.5 text-accent" />
+                      <Users className="w-3.5 h-3.5 text-accent-text" />
                       {teamMembers.length} {teamMembers.length === 1 ? 'Membro' : 'Membros'}
                     </p>
                   </div>
 
                   <div className="bg-app border border-line px-3 py-1.5 rounded-xl text-right">
                     <span className="text-[10px] font-mono text-faint block">MÉDIA</span>
-                    <span className="text-base font-bold font-mono text-accent">{avgScore}</span>
+                    <span className="text-base font-bold font-mono text-accent-text">{avgPercent}%</span>
                   </div>
                 </div>
 
@@ -101,12 +96,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent uppercase font-mono">
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent-text font-mono">
                         <Award className="w-3 h-3" /> Destaque
                       </div>
                       <button
                         onClick={() => onSelectMemberForDetail?.(topPerformer)}
-                        className="text-xs font-bold text-white truncate hover:text-accent hover:underline cursor-pointer block text-left"
+                        className="text-xs font-bold text-ink truncate hover:text-accent-text hover:underline cursor-pointer block text-left"
                         title="Ver Gráfico de Desempenho"
                       >
                         {topPerformer.name}
@@ -141,7 +136,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
                 <button
                   onClick={() => onSelectTeamFilter(leader)}
-                  className="text-xs font-bold font-mono text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold font-mono text-accent-text hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   Filtrar <ChevronRight className="w-3.5 h-3.5" />
                 </button>

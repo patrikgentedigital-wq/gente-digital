@@ -1,9 +1,12 @@
 import React from 'react';
-import { Lock, Trophy, BarChart3, Users, Tv, UserPlus, ShieldCheck } from 'lucide-react';
+import { Tv, UserPlus } from 'lucide-react';
+import logo from '../assets/gente-digital-logo.svg';
+
+type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria';
 
 interface NavbarProps {
-  activeTab: 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit';
-  setActiveTab: (tab: 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit') => void;
+  activeTab: Tab;
+  setActiveTab: (tab: Tab) => void;
   onOpenLeaderModal: () => void;
   onOpenKioskMode?: () => void;
   onOpenMemberForm?: () => void;
@@ -13,6 +16,33 @@ interface NavbarProps {
   role?: 'leader' | 'admin' | null;
   onLogout?: () => void;
 }
+
+const HERO: Record<Tab, { title: string; subtitle: string }> = {
+  criteria: {
+    title: 'Perguntas',
+    subtitle: 'Cada equipe tem as suas perguntas de avaliação.',
+  },
+  dashboard: {
+    title: 'Visão geral',
+    subtitle: 'Como o time está indo, em um só lugar.',
+  },
+  ranking: {
+    title: 'Ranking',
+    subtitle: 'Pontuação validada pela liderança, da maior para a menor.',
+  },
+  teams: {
+    title: 'Equipes',
+    subtitle: 'Quem faz parte de cada equipe e como cada uma está.',
+  },
+  leader: {
+    title: 'Avaliar',
+    subtitle: 'Registre a avaliação do ciclo e as metas de desenvolvimento.',
+  },
+  audit: {
+    title: 'Auditoria',
+    subtitle: 'Histórico de avaliações salvas e membros arquivados.',
+  },
+};
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
@@ -24,158 +54,96 @@ export const Navbar: React.FC<NavbarProps> = ({
   role = null,
   onLogout,
 }) => {
+  const items: Array<{ tab: Tab; label: string; needsAuth?: boolean }> = [
+    { tab: 'dashboard', label: 'Visão geral' },
+    { tab: 'ranking', label: 'Ranking' },
+    { tab: 'teams', label: 'Equipes' },
+    { tab: 'leader', label: 'Avaliar', needsAuth: true },
+    ...(role === 'admin' ? [{ tab: 'audit' as Tab, label: 'Auditoria' }] : []),
+    ...(isAuthenticated && role ? [{ tab: 'criteria' as Tab, label: 'Perguntas' }] : []),
+  ];
+
+  const handleSelect = (tab: Tab, needsAuth?: boolean) => {
+    if (needsAuth && !isAuthenticated) onOpenLeaderModal();
+    else setActiveTab(tab);
+  };
+
+  const hero = HERO[activeTab];
+
   return (
-    <header className="border-b border-line bg-app relative overflow-hidden">
-      {/* Subtle radial glow background */}
-      <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_15%_-20%,rgba(227,167,59,0.12),transparent),radial-gradient(500px_200px_at_90%_0%,rgba(59,111,224,0.12),transparent)] pointer-events-none" />
+    <header>
+      <div className="sticky top-0 z-40 border-b border-line-soft bg-surface/75 backdrop-blur-xl backdrop-saturate-150">
+        <div className="max-w-[1040px] mx-auto px-6 min-h-14 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-1.5">
+          <img src={logo} alt="Gente Digital" className="h-9 w-auto" />
 
-      <div className="max-w-[1040px] mx-auto px-6 pt-7 pb-4 relative flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
-        <div>
-          {/* Eyebrow */}
-          <div className="font-mono text-xs tracking-widest text-accent uppercase mb-2 flex items-center gap-2 font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(227,167,59,0.5)]" />
-            Gente Digital · Análise de Desempenho
+          <nav aria-label="Principal" className="order-3 md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto -mx-2 md:mx-0 px-2 md:px-0">
+            {items.map(({ tab, label, needsAuth }) => (
+              <button
+                key={tab}
+                type="button"
+                aria-current={activeTab === tab ? 'page' : undefined}
+                onClick={() => handleSelect(tab, needsAuth)}
+                className={`whitespace-nowrap rounded-brand px-3.5 py-1.5 text-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-accent ${
+                  activeTab === tab
+                    ? 'bg-accent text-accent-ink font-bold'
+                    : 'text-muted hover:text-ink font-medium'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-1.5">
+            {onOpenMemberForm && (
+              <button
+                type="button"
+                onClick={onOpenMemberForm}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:text-ink transition-colors cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Novo membro</span>
+              </button>
+            )}
+            {onOpenKioskMode && (
+              <button
+                type="button"
+                onClick={onOpenKioskMode}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted hover:text-ink transition-colors cursor-pointer"
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Modo TV</span>
+              </button>
+            )}
+            {isAuthenticated && onLogout ? (
+              <button
+                type="button"
+                onClick={onLogout}
+                aria-label="Encerrar sessão"
+                className="rounded-full bg-surface-2 px-3.5 py-1.5 text-xs font-medium text-ink hover:bg-line-soft transition-colors cursor-pointer"
+              >
+                Sair{role ? ` · ${role === 'admin' ? 'Admin' : 'Líder'}` : ''}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenLeaderModal}
+                className="rounded-brand bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors cursor-pointer"
+              >
+                Entrar
+              </button>
+            )}
           </div>
-
-          {/* Title */}
-          <h1 className="font-display text-3xl md:text-4xl font-extrabold text-ink tracking-tight">
-            Quadro de Desempenho
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-sm text-muted mt-1.5 font-sans">
-            Ranking e análises de desempenho com base na avaliação validada pela liderança
-          </p>
-        </div>
-
-        {/* Right Header Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {onOpenKioskMode && (
-            <button
-              type="button"
-              onClick={onOpenKioskMode}
-              className="bg-surface hover:bg-surface-2 hover:border-accent border border-line text-accent font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-              title="Abrir Modo Telão / TV para apresentações ao vivo"
-            >
-              <Tv className="w-3.5 h-3.5" />
-              <span>Modo TV (Telão)</span>
-            </button>
-          )}
-
-          {onOpenMemberForm && (
-            <button
-              type="button"
-              onClick={onOpenMemberForm}
-              className="bg-surface hover:bg-surface-2 hover:border-success border border-line text-success font-semibold text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-              title="Cadastrar novo colaborador"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Novo Membro</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              if (isAuthenticated) setActiveTab('leader');
-              else onOpenLeaderModal();
-            }}
-            className="bg-surface-2 hover:border-accent hover:text-accent border border-line text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
-          >
-            <Lock className="w-3.5 h-3.5 text-accent" />
-            {isAuthenticated ? `Sessão do ${role === 'admin' ? 'Admin' : 'Líder'}` : 'Área do Líder'}
-          </button>
-          {isAuthenticated && onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              aria-label="Encerrar sessão"
-              className="text-xs text-muted hover:text-white px-2 py-2 rounded-lg"
-            >
-              Sair
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Navigation Tabs Bar */}
-      <div className="max-w-[1040px] mx-auto px-6 pb-2 relative">
-        <nav className="flex items-center gap-2 border-t border-line/60 pt-3 overflow-x-auto">
-          <button
-            type="button"
-            aria-current={activeTab === 'ranking' ? 'page' : undefined}
-            onClick={() => setActiveTab('ranking')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'ranking'
-                ? 'bg-accent text-accent-ink font-bold shadow-md'
-                : 'text-muted hover:text-white hover:bg-surface'
-            }`}
-          >
-            <Trophy className="w-3.5 h-3.5" />
-            <span>Ranking Geral</span>
-          </button>
-
-          <button
-            type="button"
-            aria-current={activeTab === 'dashboard' ? 'page' : undefined}
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'dashboard'
-                ? 'bg-accent text-accent-ink font-bold shadow-md'
-                : 'text-muted hover:text-white hover:bg-surface'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Dashboard Analytics</span>
-          </button>
-
-          <button
-            type="button"
-            aria-current={activeTab === 'teams' ? 'page' : undefined}
-            onClick={() => setActiveTab('teams')}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'teams'
-                ? 'bg-accent text-accent-ink font-bold shadow-md'
-                : 'text-muted hover:text-white hover:bg-surface'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Organograma de Equipes</span>
-          </button>
-
-          <button
-            type="button"
-            aria-current={activeTab === 'leader' ? 'page' : undefined}
-            onClick={() => {
-              if (isAuthenticated) setActiveTab('leader');
-              else onOpenLeaderModal();
-            }}
-            className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'leader'
-                ? 'bg-accent text-accent-ink font-bold shadow-md'
-                : 'text-muted hover:text-white hover:bg-surface'
-            }`}
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Avaliar Integrantes</span>
-          </button>
-
-          {role === 'admin' && (
-            <button
-              type="button"
-              aria-current={activeTab === 'audit' ? 'page' : undefined}
-              onClick={() => setActiveTab('audit')}
-              className={`flex items-center gap-2 font-sans font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'audit'
-                  ? 'bg-accent text-accent-ink font-bold shadow-md'
-                  : 'text-muted hover:text-white hover:bg-surface'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Trilha de Auditoria</span>
-            </button>
-          )}
-        </nav>
+      <div className="max-w-[1040px] mx-auto px-6 pt-14 pb-8 md:pt-20 md:pb-10">
+        <h1 className="font-display text-4xl md:text-6xl font-semibold tracking-[-0.035em] leading-[1.05] text-ink">
+          {hero.title}
+        </h1>
+        <p className="mt-3 text-lg md:text-xl text-muted max-w-[34ch] leading-snug">
+          {hero.subtitle}
+        </p>
       </div>
     </header>
   );

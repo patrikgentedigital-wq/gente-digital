@@ -16,7 +16,7 @@ export const ToastContainer: React.FC = () => {
       {toasts.map((t) => {
         let borderCls = 'border-line';
         let bgCls = 'bg-surface';
-        let textCls = 'text-white';
+        let textCls = 'text-ink';
         let IconComponent = Info;
         let iconColor = 'text-info';
 
@@ -37,14 +37,14 @@ export const ToastContainer: React.FC = () => {
           bgCls = 'bg-gold-soft';
           textCls = 'text-warn-pale';
           IconComponent = AlertTriangle;
-          iconColor = 'text-accent';
+          iconColor = 'text-accent-text';
         }
 
         return (
           <div
             key={t.id}
             role={t.type === 'error' ? 'alert' : 'status'}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border ${borderCls} ${bgCls} ${textCls} shadow-2xl backdrop-blur-md transition-all duration-300 transform translate-y-0 animate-in slide-in-from-top-2`}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border ${borderCls} ${bgCls} ${textCls} backdrop-blur-md transition-all duration-300 transform translate-y-0 animate-in slide-in-from-top-2`}
           >
             <IconComponent aria-hidden="true" className={`w-5 h-5 shrink-0 mt-0.5 ${iconColor}`} />
             <div className="flex-1 min-w-0">
@@ -55,7 +55,7 @@ export const ToastContainer: React.FC = () => {
               type="button"
               onClick={() => toast.remove(t.id)}
               aria-label="Fechar notificação"
-              className="text-slate-400 hover:text-white p-1 rounded-md transition-colors"
+              className="text-slate-400 hover:text-ink p-1 rounded-md transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>

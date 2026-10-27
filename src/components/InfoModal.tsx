@@ -22,7 +22,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
     >
       <div
         ref={dialogRef}
-        className="relative w-full max-w-2xl bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl bg-surface border border-line rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="info-modal-title"
@@ -32,11 +32,11 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-line bg-surface-2/60">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-app border border-line text-accent">
+            <div className="p-2.5 rounded-xl bg-app border border-line text-accent-text">
               {type === 'privacy' ? <Shield className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
             </div>
             <div>
-              <h3 id="info-modal-title" className="font-display font-bold text-lg text-white">
+              <h3 id="info-modal-title" className="font-display font-bold text-lg text-ink">
                 {type === 'privacy' ? 'Política de Privacidade & Proteção de Dados' : 'Suporte & Ajuda da Plataforma'}
               </h3>
               <p className="text-xs text-muted font-mono">Gente Digital • Governança Interna</p>
@@ -46,7 +46,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
             type="button"
             onClick={onClose}
             aria-label="Fechar informações"
-            className="p-2 text-faint hover:text-white rounded-lg hover:bg-line transition-colors"
+            className="p-2 text-faint hover:text-ink rounded-lg hover:bg-line transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,8 +57,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           {type === 'privacy' ? (
             <>
               <div className="p-4 rounded-xl bg-app border border-line">
-                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-accent" />
+                <h4 className="font-bold text-ink mb-2 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-accent-text" />
                   Confidencialidade de Avaliações & Desempenho
                 </h4>
                 <p className="text-xs leading-relaxed">
@@ -68,13 +68,13 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-white flex items-center gap-2">
+                <h4 className="font-bold text-ink flex items-center gap-2">
                   <Database className="w-4 h-4 text-success" />
                   Diretrizes de Segurança & LGPD
                 </h4>
                 <ul className="list-disc pl-5 space-y-2 text-xs">
                   <li>
-                    <strong>Controle de Acesso:</strong> O acesso é controlado via autenticação do Firebase com roles verificadas (`leader` ou `admin`).
+                    <strong>Controle de Acesso:</strong> O acesso é controlado por login com papéis verificados (líder ou admin).
                   </li>
                   <li>
                     <strong>Imutabilidade e Auditoria:</strong> Avaliações salvas geram histórico por ciclo garantindo rastreabilidade e integridade métrica.
@@ -88,8 +88,8 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           ) : (
             <>
               <div className="p-4 rounded-xl bg-app border border-line">
-                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-accent" />
+                <h4 className="font-bold text-ink mb-2 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-accent-text" />
                   Canais de Atendimento Interno
                 </h4>
                 <p className="text-xs leading-relaxed">
@@ -100,19 +100,19 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-app border border-line">
-                  <div className="font-bold text-white text-xs mb-1 flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-accent" />
+                  <div className="font-bold text-ink text-xs mb-1 flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-accent-text" />
                     Gente & Gestão (RH)
                   </div>
                   <p className="text-xs text-faint mb-2">Dúvidas sobre critérios, ciclos e regras de pontuação</p>
-                  <div className="flex items-center gap-2 font-mono text-xs text-accent">
+                  <div className="flex items-center gap-2 font-mono text-xs text-accent-text">
                     <Mail className="w-3.5 h-3.5" />
                     <span>rh@gentedigital.com.br</span>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-app border border-line">
-                  <div className="font-bold text-white text-xs mb-1 flex items-center gap-1.5">
+                  <div className="font-bold text-ink text-xs mb-1 flex items-center gap-1.5">
                     <Database className="w-4 h-4 text-primary" />
                     TI & Infraestrutura
                   </div>
@@ -132,7 +132,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-accent hover:bg-accent-hover text-accent-ink font-bold text-xs transition-colors"
+            className="px-5 py-2 rounded-brand bg-accent hover:bg-accent-hover text-accent-ink font-bold text-xs transition-colors"
           >
             Entendido
           </button>

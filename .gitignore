@@ -15,3 +15,7 @@ coverage/
 firebase-debug.log
 playwright-report/
 test-results/
+
+# Dados reais de funcionarios para o seed: ficam so no PC (o repositorio e publico)
+scripts/seed-data.json
+supabase/seed/*.sql

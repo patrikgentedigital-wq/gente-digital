@@ -2,10 +2,11 @@ import React, { lazy, Suspense } from 'react';
 import { TeamMember } from '../types';
 import type { EvaluationPayload } from '../lib/backend';
 import type { CriteriaCategory } from '../lib/criteria';
-import { ImageLinkModal } from './ImageLinkModal';
-import { MemberFormModal } from './MemberFormModal';
-import { KioskModeModal } from './KioskModeModal';
 
+// Modais pesados ou raros só são baixados quando alguém os abre.
+const ImageLinkModal = lazy(() => import('./ImageLinkModal').then((module) => ({ default: module.ImageLinkModal })));
+const MemberFormModal = lazy(() => import('./MemberFormModal').then((module) => ({ default: module.MemberFormModal })));
+const KioskModeModal = lazy(() => import('./KioskModeModal').then((module) => ({ default: module.KioskModeModal })));
 const EmployeeDetailModal = lazy(() => import('./EmployeeDetailModal').then((module) => ({ default: module.EmployeeDetailModal })));
 const ReportExportModal = lazy(() => import('./ReportExportModal').then((module) => ({ default: module.ReportExportModal })));
 

@@ -28,7 +28,14 @@ export default defineConfig(() => {
               if (id.includes('qrcode')) {
                 return 'vendor-qrcode';
               }
-              return 'vendor-core';
+              // Separados para o navegador reaproveitar o cache: React quase nunca muda; o app muda sempre.
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
+                return 'vendor-react';
+              }
+              return 'vendor-misc';
             }
           },
         },

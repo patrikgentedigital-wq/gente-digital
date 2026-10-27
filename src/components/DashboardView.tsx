@@ -78,7 +78,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }).filter((t) => t.count > 0);
 
     const sortedTeams = [...teams].sort((a, b) => b.avgPercent - a.avgPercent);
-    const topTeam = sortedTeams[0] || null;
+    // Sem nenhuma avaliação todas as médias são 0%: não há equipe em destaque.
+    const topTeam = sortedTeams[0] && sortedTeams[0].avgPercent > 0 ? sortedTeams[0] : null;
 
     const pie = [
       {

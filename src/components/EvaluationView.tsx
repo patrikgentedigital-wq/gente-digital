@@ -536,7 +536,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             Esta equipe ainda não tem perguntas de avaliação.
           </div>
         )}
-        {categories.map((cat) => {
+        {categories.map((cat, catIndex) => {
           const isOpen = openCategories[cat.id] !== false;
           const catSum = getCategorySum(cat.id);
           const catMax = cat.items.length * 5;
@@ -550,7 +550,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               >
                 <div className="font-display font-semibold text-sm text-ink flex items-center gap-2">
                   <span className="w-5 h-5 rounded-md bg-surface-2 text-accent-text font-mono text-xs flex items-center justify-center font-bold">
-                    {cat.id}
+                    {catIndex + 1}
                   </span>
                   {cat.name}
                 </div>

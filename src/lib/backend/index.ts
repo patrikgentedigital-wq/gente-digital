@@ -21,6 +21,7 @@ export {
   updateMember,
 } from './members';
 export { requestEvaluationDraft } from './aiDraft';
+export { askAssistant } from './assistant';
 export { countOpenClientErrors, listOpenClientErrors, reportError, resolveClientError } from './errors';
 export type { ClientErrorItem } from './errors';
 export { getCriteriaSet, saveCriteriaSet } from './criteria';

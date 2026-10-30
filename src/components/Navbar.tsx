@@ -2,7 +2,7 @@ import React from 'react';
 import { Tv, UserPlus } from 'lucide-react';
 import logo from '../assets/gente-digital-logo.svg';
 
-type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant';
+type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant' | 'success';
 
 interface NavbarProps {
   activeTab: Tab;
@@ -20,6 +20,10 @@ interface NavbarProps {
 }
 
 const HERO: Record<Tab, { title: string; subtitle: string }> = {
+  success: {
+    title: 'Sucesso do Cliente',
+    subtitle: 'A nota que o cliente dá ao técnico depois da ordem de serviço.',
+  },
   assistant: {
     title: 'Assistente',
     subtitle: 'Pergunte sobre os dados do quadro em linguagem natural.',
@@ -68,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { tab: 'leader', label: 'Avaliar', needsAuth: true },
     ...(role === 'admin' ? [{ tab: 'audit' as Tab, label: 'Auditoria' }] : []),
     ...(isAuthenticated && role ? [{ tab: 'criteria' as Tab, label: 'Perguntas' }] : []),
-    ...(role === 'admin' ? [{ tab: 'assistant' as Tab, label: 'Assistente' }] : []),
+    ...(role === 'admin' ? [{ tab: 'success' as Tab, label: 'Sucesso do Cliente' }, { tab: 'assistant' as Tab, label: 'Assistente' }] : []),
   ];
 
   const handleSelect = (tab: Tab, needsAuth?: boolean) => {

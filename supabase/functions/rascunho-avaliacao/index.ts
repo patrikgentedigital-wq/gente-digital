@@ -98,7 +98,7 @@ Deno.serve(async (request) => {
     headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       model: MODEL,
-      max_completion_tokens: 1024,
+      max_completion_tokens: 4096,
       messages: [
         { role: 'system', content: SYSTEM },
         { role: 'user', content: prompt },

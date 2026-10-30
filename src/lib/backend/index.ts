@@ -20,6 +20,7 @@ export {
   subscribeToMembers,
   updateMember,
 } from './members';
+export { requestEvaluationDraft } from './aiDraft';
 export { countOpenClientErrors, listOpenClientErrors, reportError, resolveClientError } from './errors';
 export type { ClientErrorItem } from './errors';
 export { getCriteriaSet, saveCriteriaSet } from './criteria';

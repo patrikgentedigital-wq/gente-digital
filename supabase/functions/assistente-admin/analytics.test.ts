@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  archivedMembers,
+  auditOverview,
+  buildAction,
   buildAliases,
   categoriesByTeam,
+  commentsList,
+  criteriaOverview,
+  openErrors,
+  pdiGoalsList,
   collaborators,
   evolution,
   hideNames,
@@ -119,5 +126,88 @@ describe('evolution', () => {
       { cycle: 'Outubro/2026', percent: 60 },
     ]);
     expect(evolution(dataset, aliases, 'P99')).toEqual([]);
+  });
+});
+
+// --- leitura extra e ações ---
+const extended: Dataset = {
+  ...dataset,
+  members: [...dataset.members, { id: 'm9', name: 'Davi Reis', teamId: 't1', jobTitle: 'Técnico', archived: true }],
+  evaluations: dataset.evaluations.map((e) =>
+    e.memberId === 'm1' && e.cycle === 'Outubro/2026'
+      ? { ...e, comments: 'Ana Souza melhorou, mas precisa de foco.', pdiGoals: [{ title: 'Curso de fibra', deadline: '30 dias', status: 'pending', dueDate: '2026-11-30' }] }
+      : e,
+  ),
+  auditLogs: [{ action: 'evaluation_saved', memberId: 'm1', cycle: 'Outubro/2026', score: 9, maxScore: 15, previousScore: 15, createdAt: '2026-10-30T10:00:00Z' }],
+  clientErrors: [
+    { id: 7, createdAt: '2026-10-30T09:00:00Z', source: 'save', message: 'Falha ao salvar', url: 'https://x/', resolved: false },
+    { id: 8, createdAt: '2026-10-29T09:00:00Z', source: 'window', message: 'Antigo', url: '', resolved: true },
+  ],
+};
+
+describe('leitura extra', () => {
+  it('lista comentários por código, sem o nome do avaliado no campo de código', () => {
+    const aliases = buildAliases(extended.members);
+    const rows = commentsList(extended, aliases, { cycle: 'Outubro/2026' });
+    expect(rows).toEqual([
+      { code: 'P1', team: 'Campo', cycle: 'Outubro/2026', percent: 60, comment: 'Ana Souza melhorou, mas precisa de foco.' },
+    ]);
+  });
+
+  it('lista metas de PDI da avaliação mais recente de cada pessoa', () => {
+    const aliases = buildAliases(extended.members);
+    expect(pdiGoalsList(extended, aliases, {})).toEqual([
+      { code: 'P1', team: 'Campo', cycle: 'Outubro/2026', title: 'Curso de fibra', deadline: '30 dias', status: 'pending', dueDate: '2026-11-30' },
+    ]);
+  });
+
+  it('mostra a versão mais recente das perguntas de cada equipe', () => {
+    const rows = criteriaOverview(extended, { teamName: 'Rede' });
+    expect(rows).toEqual([{ team: 'Rede', version: 1, maxScore: 5, categories: [{ name: 'Técnica', questions: ['z'] }] }]);
+  });
+
+  it('resume a auditoria por código e os erros abertos', () => {
+    const aliases = buildAliases(extended.members);
+    expect(auditOverview(extended, aliases, 10)).toEqual([
+      { when: '2026-10-30T10:00:00Z', action: 'evaluation_saved', code: 'P1', cycle: 'Outubro/2026', score: 9, maxScore: 15, previousScore: 15 },
+    ]);
+    expect(openErrors(extended)).toEqual([{ id: 7, when: '2026-10-30T09:00:00Z', source: 'save', message: 'Falha ao salvar', url: 'https://x/' }]);
+  });
+
+  it('lista arquivados e não conta arquivados no total da equipe', () => {
+    const aliases = buildAliases(extended.members);
+    expect(archivedMembers(extended, aliases)).toEqual([{ code: 'P4', team: 'Campo', jobTitle: 'Técnico' }]);
+    expect(teamsByCycle(extended).find((r) => r.team === 'Campo' && r.cycle === 'Outubro/2026')?.members).toBe(2);
+  });
+});
+
+describe('buildAction', () => {
+  it('monta arquivar, restaurar, mover e resolver erro, com resumo em linguagem clara', () => {
+    expect(buildAction(extended, { type: 'arquivar_membro', memberId: 'm1' })).toEqual({
+      action: { type: 'arquivar_membro', memberId: 'm1' },
+      summary: 'Arquivar Ana Souza (equipe Campo)',
+    });
+    expect(buildAction(extended, { type: 'restaurar_membro', memberId: 'm9' })).toEqual({
+      action: { type: 'restaurar_membro', memberId: 'm9' },
+      summary: 'Restaurar Davi Reis (equipe Campo)',
+    });
+    expect(buildAction(extended, { type: 'mover_membro', memberId: 'm1', teamId: 't2' })).toEqual({
+      action: { type: 'mover_membro', memberId: 'm1', teamId: 't2' },
+      summary: 'Mover Ana Souza da equipe Campo para a equipe Rede',
+    });
+    expect(buildAction(extended, { type: 'resolver_erro', errorId: 7 })).toEqual({
+      action: { type: 'resolver_erro', errorId: 7 },
+      summary: 'Marcar como resolvido o erro #7: Falha ao salvar',
+    });
+  });
+
+  it('recusa alvo inexistente, estado errado e tipo desconhecido', () => {
+    expect(buildAction(extended, { type: 'arquivar_membro', memberId: 'zzz' })).toEqual({ error: 'Colaborador não encontrado.' });
+    expect(buildAction(extended, { type: 'arquivar_membro', memberId: 'm9' })).toEqual({ error: 'Este colaborador já está arquivado.' });
+    expect(buildAction(extended, { type: 'restaurar_membro', memberId: 'm1' })).toEqual({ error: 'Este colaborador não está arquivado.' });
+    expect(buildAction(extended, { type: 'mover_membro', memberId: 'm1', teamId: 't1' })).toEqual({ error: 'O colaborador já está nessa equipe.' });
+    expect(buildAction(extended, { type: 'mover_membro', memberId: 'm1', teamId: 'nope' })).toEqual({ error: 'Equipe não encontrada.' });
+    expect(buildAction(extended, { type: 'resolver_erro', errorId: 8 })).toEqual({ error: 'Esse erro não está aberto.' });
+    expect(buildAction(extended, { type: 'apagar_tudo' as never })).toEqual({ error: 'Ação não permitida.' });
   });
 });

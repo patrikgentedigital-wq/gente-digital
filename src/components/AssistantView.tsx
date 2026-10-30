@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { askAssistant } from '../lib/backend';
-import { toHistory, type AssistantChart, type ChatMessage } from '../lib/assistant';
+import { askAssistant, confirmAssistantAction } from '../lib/backend';
+import { toHistory, type AssistantAction, type AssistantChart, type ChatMessage } from '../lib/assistant';
 
 const SUGGESTIONS = [
   'Qual equipe está melhor no último ciclo?',
@@ -11,6 +11,8 @@ const SUGGESTIONS = [
 ];
 
 const MAX_QUESTION_LENGTH = 500;
+
+type ActionState = 'running' | 'done' | 'cancelled';
 
 const ChartBlock: React.FC<{ chart: AssistantChart }> = ({ chart }) => {
   const data = chart.labels.map((label, index) => ({ label, value: chart.values[index] }));
@@ -49,6 +51,7 @@ export const AssistantView: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionStates, setActionStates] = useState<Record<string, ActionState>>({});
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,7 +61,7 @@ export const AssistantView: React.FC = () => {
   const send = async (question: string) => {
     const text = question.trim();
     if (!text || loading) return;
-    const next: ChatMessage[] = [...messages, { id: crypto.randomUUID(), role: 'user', text, chart: null }];
+    const next: ChatMessage[] = [...messages, { id: crypto.randomUUID(), role: 'user', text, chart: null, actions: [] }];
     setMessages(next);
     setInput('');
     setError(null);
@@ -76,13 +79,31 @@ export const AssistantView: React.FC = () => {
     }
   };
 
+  const confirmAction = async (key: string, action: AssistantAction) => {
+    setActionStates((current) => ({ ...current, [key]: 'running' }));
+    setError(null);
+    try {
+      const reply = await confirmAssistantAction(action);
+      setActionStates((current) => ({ ...current, [key]: 'done' }));
+      setMessages((current) => [...current, { id: crypto.randomUUID(), role: 'assistant', ...reply }]);
+    } catch (e) {
+      // Volta ao estado de espera para o admin poder tentar de novo ou cancelar.
+      setActionStates((current) => {
+        const rest = { ...current };
+        delete rest[key];
+        return rest;
+      });
+      setError(e instanceof Error ? e.message : 'Não foi possível executar a ação.');
+    }
+  };
+
   return (
     <section className="max-w-[760px] mx-auto px-6 pb-16 space-y-4" aria-label="Assistente de dados">
       <p className="flex items-start gap-2 text-xs text-muted">
         <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
         <span>
-          Pergunte sobre equipes, categorias e evolução. A IA lê só dados já avaliados e não recebe nomes: eles ficam no servidor
-          e voltam apenas na resposta. Confira números importantes antes de decidir.
+          Pergunte sobre equipes, avaliações, PDI, perguntas, auditoria e erros. A IA não recebe nomes: eles ficam no servidor e voltam
+          só na resposta. Ela pode propor ações (arquivar, restaurar, mover, resolver erro), mas só acontecem quando você confirma.
         </span>
       </p>
 
@@ -111,6 +132,38 @@ export const AssistantView: React.FC = () => {
             >
               {message.text}
               {message.chart && <ChartBlock chart={message.chart} />}
+              {message.actions.map((action, index) => {
+                const key = message.id + ':' + index;
+                const state = actionStates[key];
+                return (
+                  <div key={key} className="mt-3 rounded-xl border border-line bg-app p-3 space-y-2" role="group" aria-label="Ação proposta">
+                    <p className="text-[11px] font-mono font-bold text-accent-text">Ação proposta (nada foi feito ainda)</p>
+                    <p className="text-xs font-semibold">{action.summary}</p>
+                    {state === 'done' && <p className="text-xs text-success" role="status">Executada.</p>}
+                    {state === 'cancelled' && <p className="text-xs text-muted">Cancelada.</p>}
+                    {(state === undefined || state === 'running') && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={state === 'running'}
+                          onClick={() => confirmAction(key, action)}
+                          className="rounded-brand bg-accent px-3 py-1 text-xs font-bold text-accent-ink disabled:opacity-50 cursor-pointer"
+                        >
+                          {state === 'running' ? 'Executando...' : 'Confirmar'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={state === 'running'}
+                          onClick={() => setActionStates((current) => ({ ...current, [key]: 'cancelled' }))}
+                          className="px-3 py-1 text-xs text-muted disabled:opacity-50 cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </li>
         ))}

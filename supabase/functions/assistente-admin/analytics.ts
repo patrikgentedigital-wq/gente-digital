@@ -2,7 +2,7 @@
 
 export interface Dataset {
   teams: Array<{ id: string; name: string }>;
-  members: Array<{ id: string; name: string; teamId: string; jobTitle: string }>;
+  members: Array<{ id: string; name: string; teamId: string; jobTitle: string; archived?: boolean }>;
   criteriaSets: Array<{
     teamId: string;
     version: number;
@@ -17,7 +17,19 @@ export interface Dataset {
     score: number;
     maxScore: number;
     createdAt: string;
+    comments?: string;
+    pdiGoals?: Array<{ title: string; deadline: string; status: string; dueDate?: string }>;
   }>;
+  auditLogs?: Array<{
+    action: string;
+    memberId: string | null;
+    cycle: string | null;
+    score: number | null;
+    maxScore: number | null;
+    previousScore: number | null;
+    createdAt: string;
+  }>;
+  clientErrors?: Array<{ id: number; createdAt: string; source: string; message: string; url: string; resolved: boolean }>;
 }
 
 export interface Aliases {
@@ -92,7 +104,7 @@ function latestPerMemberCycle(ds: Dataset): Dataset['evaluations'] {
 /** Equipes, quantas pessoas e quais cargos, independente de haver avaliações. */
 export function structure(ds: Dataset) {
   return ds.teams.map((team) => {
-    const people = ds.members.filter((member) => member.teamId === team.id);
+    const people = ds.members.filter((member) => member.teamId === team.id && !member.archived);
     const jobTitles: Record<string, number> = {};
     for (const person of people) jobTitles[person.jobTitle] = (jobTitles[person.jobTitle] ?? 0) + 1;
     return { team: team.name, members: people.length, jobTitles };
@@ -110,7 +122,7 @@ export function teamsByCycle(ds: Dataset) {
         team: team.name,
         cycle,
         evaluated: inGroup.length,
-        members: ds.members.filter((member) => member.teamId === team.id).length,
+        members: ds.members.filter((member) => member.teamId === team.id && !member.archived).length,
         avgPercent: Math.round(mean(inGroup.map((e) => (e.maxScore > 0 ? (e.score * 100) / e.maxScore : 0)))),
       });
     }
@@ -175,4 +187,150 @@ export function evolution(ds: Dataset, aliases: Aliases, code: string) {
     .filter((e) => e.memberId === memberId)
     .sort((a, b) => order.indexOf(a.cycle) - order.indexOf(b.cycle))
     .map((e) => ({ cycle: e.cycle, percent: percentOf(e.score, e.maxScore) }));
+}
+
+const MAX_COMMENT_CHARS = 600;
+
+function memberFilter(ds: Dataset, aliases: Aliases, filter: Filter & { code?: string }) {
+  const memberId = filter.code ? aliases.memberIdByCode[filter.code] : undefined;
+  return (evaluation: Dataset['evaluations'][number]) =>
+    (!filter.cycle || evaluation.cycle === filter.cycle) &&
+    (!filter.teamName || teamName(ds, evaluation.teamId) === filter.teamName) &&
+    (!filter.code || evaluation.memberId === memberId);
+}
+
+/** Pareceres escritos pelos líderes (texto livre), por código. */
+export function commentsList(ds: Dataset, aliases: Aliases, filter: Filter & { code?: string } = {}) {
+  const order = cycleOrder(ds);
+  return latestPerMemberCycle(ds)
+    .filter(memberFilter(ds, aliases, filter))
+    .filter((e) => e.comments && e.comments.trim())
+    .sort((a, b) => order.indexOf(a.cycle) - order.indexOf(b.cycle) || a.memberId.localeCompare(b.memberId))
+    .map((e) => ({
+      code: aliases.codeByMemberId[e.memberId],
+      team: teamName(ds, e.teamId),
+      cycle: e.cycle,
+      percent: percentOf(e.score, e.maxScore),
+      comment: (e.comments as string).trim().slice(0, MAX_COMMENT_CHARS),
+    }));
+}
+
+/** Metas de PDI da avaliação mais recente de cada pessoa. */
+export function pdiGoalsList(ds: Dataset, aliases: Aliases, filter: Filter & { code?: string } = {}) {
+  const order = cycleOrder(ds);
+  const newest = new Map<string, Dataset['evaluations'][number]>();
+  for (const evaluation of latestPerMemberCycle(ds)) {
+    const current = newest.get(evaluation.memberId);
+    if (!current || order.indexOf(evaluation.cycle) > order.indexOf(current.cycle)) newest.set(evaluation.memberId, evaluation);
+  }
+  const rows: Array<{ code: string; team: string; cycle: string; title: string; deadline: string; status: string; dueDate?: string }> = [];
+  for (const evaluation of newest.values()) {
+    if (!memberFilter(ds, aliases, filter)(evaluation)) continue;
+    for (const goal of evaluation.pdiGoals ?? []) {
+      rows.push({
+        code: aliases.codeByMemberId[evaluation.memberId],
+        team: teamName(ds, evaluation.teamId),
+        cycle: evaluation.cycle,
+        title: goal.title,
+        deadline: goal.deadline,
+        status: goal.status,
+        ...(goal.dueDate ? { dueDate: goal.dueDate } : {}),
+      });
+    }
+  }
+  return rows.sort((a, b) => Number(a.code.slice(1)) - Number(b.code.slice(1)));
+}
+
+/** Perguntas atuais (versão mais recente) de cada equipe. */
+export function criteriaOverview(ds: Dataset, filter: { teamName?: string } = {}) {
+  const rows: Array<{ team: string; version: number; maxScore: number; categories: Array<{ name: string; questions: string[] }> }> = [];
+  for (const team of ds.teams) {
+    if (filter.teamName && team.name !== filter.teamName) continue;
+    const sets = ds.criteriaSets.filter((s) => s.teamId === team.id);
+    if (sets.length === 0) continue;
+    const latest = sets.reduce((a, b) => (b.version > a.version ? b : a));
+    rows.push({
+      team: team.name,
+      version: latest.version,
+      maxScore: latest.categories.reduce((total, c) => total + c.items.length, 0) * 5,
+      categories: latest.categories.map((c) => ({ name: c.name, questions: c.items.map((item) => item.text) })),
+    });
+  }
+  return rows;
+}
+
+/** Últimos registros da auditoria; o nome gravado no log não sai: só o código. */
+export function auditOverview(ds: Dataset, aliases: Aliases, limit = 30) {
+  return [...(ds.auditLogs ?? [])]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+    .map((log) => ({
+      when: log.createdAt,
+      action: log.action,
+      code: (log.memberId && aliases.codeByMemberId[log.memberId]) || 'desconhecido',
+      cycle: log.cycle,
+      score: log.score,
+      maxScore: log.maxScore,
+      previousScore: log.previousScore,
+    }));
+}
+
+export function openErrors(ds: Dataset) {
+  return (ds.clientErrors ?? [])
+    .filter((e) => !e.resolved)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((e) => ({ id: e.id, when: e.createdAt, source: e.source, message: e.message, url: e.url }));
+}
+
+export function archivedMembers(ds: Dataset, aliases: Aliases) {
+  return ds.members
+    .filter((m) => m.archived)
+    .map((m) => ({ code: aliases.codeByMemberId[m.id], team: teamName(ds, m.teamId), jobTitle: m.jobTitle }));
+}
+
+// --- Ações: a IA só propõe; quem executa é o clique do admin. O resumo é montado aqui, nunca pela IA. ---
+
+export type ActionType = 'arquivar_membro' | 'restaurar_membro' | 'mover_membro' | 'resolver_erro';
+
+export interface ActionInput {
+  type: ActionType;
+  memberId?: string;
+  teamId?: string;
+  errorId?: number;
+}
+
+export type ActionResult = { action: ActionInput; summary: string } | { error: string };
+
+export function buildAction(ds: Dataset, input: ActionInput): ActionResult {
+  const member = input.memberId ? ds.members.find((m) => m.id === input.memberId) : undefined;
+  const label = (m: Dataset['members'][number]) => `${m.name} (equipe ${teamName(ds, m.teamId)})`;
+
+  switch (input.type) {
+    case 'arquivar_membro':
+      if (!member) return { error: 'Colaborador não encontrado.' };
+      if (member.archived) return { error: 'Este colaborador já está arquivado.' };
+      return { action: { type: input.type, memberId: member.id }, summary: `Arquivar ${label(member)}` };
+    case 'restaurar_membro':
+      if (!member) return { error: 'Colaborador não encontrado.' };
+      if (!member.archived) return { error: 'Este colaborador não está arquivado.' };
+      return { action: { type: input.type, memberId: member.id }, summary: `Restaurar ${label(member)}` };
+    case 'mover_membro': {
+      if (!member) return { error: 'Colaborador não encontrado.' };
+      const target = ds.teams.find((t) => t.id === input.teamId);
+      if (!target) return { error: 'Equipe não encontrada.' };
+      if (member.teamId === target.id) return { error: 'O colaborador já está nessa equipe.' };
+      return {
+        action: { type: input.type, memberId: member.id, teamId: target.id },
+        summary: `Mover ${member.name} da equipe ${teamName(ds, member.teamId)} para a equipe ${target.name}`,
+      };
+    }
+    case 'resolver_erro': {
+      const error = (ds.clientErrors ?? []).find((e) => e.id === input.errorId);
+      if (!error) return { error: 'Erro não encontrado.' };
+      if (error.resolved) return { error: 'Esse erro não está aberto.' };
+      return { action: { type: input.type, errorId: error.id }, summary: `Marcar como resolvido o erro #${error.id}: ${error.message}` };
+    }
+    default:
+      return { error: 'Ação não permitida.' };
+  }
 }

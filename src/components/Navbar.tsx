@@ -1,6 +1,7 @@
 import React from 'react';
 import { Moon, Sun, Tv, UserPlus } from 'lucide-react';
 import logo from '../assets/gente-digital-logo.svg';
+import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 
 type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant' | 'success';
 
@@ -91,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header>
       <div className="sticky top-0 z-40 border-b border-line-soft bg-surface/75 backdrop-blur-xl backdrop-saturate-150">
         <div className="max-w-[1040px] mx-auto px-6 min-h-14 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-1.5">
-          <img src={logo} alt="Gente Digital" className="h-9 w-auto" />
+          <img src={theme === 'dark' ? logoEscuro : logo} alt="Gente Digital" className="h-9 w-auto" />
 
           <nav aria-label="Principal" className="order-3 md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto -mx-2 md:mx-0 px-2 md:px-0">
             {items.map(({ tab, label, needsAuth }) => (

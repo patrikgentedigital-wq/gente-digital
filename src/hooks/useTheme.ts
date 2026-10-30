@@ -22,12 +22,10 @@ export function useTheme(): { theme: Theme; toggleTheme: () => void } {
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme((current) => {
-      const next = nextTheme(current);
-      saveTheme(next);
-      return next;
-    });
-  }, []);
+    const next = nextTheme(theme);
+    setTheme(next);
+    saveTheme(next);
+  }, [theme]);
 
   return { theme, toggleTheme };
 }

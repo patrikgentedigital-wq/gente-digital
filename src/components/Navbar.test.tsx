@@ -24,6 +24,15 @@ describe('Navbar tema', () => {
     expect(onToggleTheme).toHaveBeenCalledTimes(1);
   });
 
+  it('troca o logo para a versão de fundo escuro no tema escuro', () => {
+    const { unmount } = render(<Navbar {...baseProps} role="admin" theme="light" onToggleTheme={vi.fn()} />);
+    const claro = (screen.getByAltText('Gente Digital') as HTMLImageElement).getAttribute('src');
+    unmount();
+    render(<Navbar {...baseProps} role="admin" theme="dark" onToggleTheme={vi.fn()} />);
+    const escuro = (screen.getByAltText('Gente Digital') as HTMLImageElement).getAttribute('src');
+    expect(escuro).not.toBe(claro);
+  });
+
   it('no escuro o botão oferece voltar ao claro; sem a troca, o botão não aparece', () => {
     const { unmount } = render(<Navbar {...baseProps} role="admin" theme="dark" onToggleTheme={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Ativar modo claro' })).toBeTruthy();

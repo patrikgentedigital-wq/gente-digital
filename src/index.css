@@ -90,6 +90,26 @@
   --color-bronze: #cd7f32;
 }
 
+/* Cores extras que só o site usa (selos, alertas, divisores) na versão escura. */
+.theme-dark-app {
+  --color-app-deep: #0a0a0a;
+  --color-line-deep: #333333;
+  --color-sky-deep: #39d3cf;
+  --color-silver: #a8a8a8;
+  --color-slate-deep: #a8a8a8;
+  --color-slate-faint: #7d7d7d;
+  --color-amber-deep: #ff9f0a;
+  --color-amber-ink: #ffcf7a;
+  --color-success-strong: #30d158;
+  --color-danger-strong: #ff453a;
+  --color-danger-pale: #3a1512;
+  --color-danger-hover: #ff6b61;
+  --color-danger-light: #ff453a;
+  --color-success-pale: #12301c;
+  --color-warn-pale: #36260a;
+  color-scheme: dark;
+}
+
 @utility rounded-brand {
   border-radius: 0 1.5rem 1.5rem 1.5rem;
 }

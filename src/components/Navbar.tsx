@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tv, UserPlus } from 'lucide-react';
+import { Moon, Sun, Tv, UserPlus } from 'lucide-react';
 import logo from '../assets/gente-digital-logo.svg';
 
 type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant' | 'success';
@@ -17,6 +17,9 @@ interface NavbarProps {
   onLogout?: () => void;
   /** Erros do sistema ainda abertos; vira um aviso no menu Auditoria (só para admin). */
   openErrorCount?: number;
+  /** Tema atual e como alternar; sem eles o botão de tema não aparece. */
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
 const HERO: Record<Tab, { title: string; subtitle: string }> = {
@@ -64,6 +67,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   role = null,
   onLogout,
   openErrorCount = 0,
+  theme = 'light',
+  onToggleTheme,
 }) => {
   const items: Array<{ tab: Tab; label: string; needsAuth?: boolean }> = [
     { tab: 'dashboard', label: 'Visão geral' },
@@ -123,6 +128,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <UserPlus className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Novo membro</span>
+              </button>
+            )}
+            {onToggleTheme && (
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                className="flex items-center rounded-full px-2.5 py-1.5 text-muted hover:text-ink transition-colors cursor-pointer"
+              >
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
               </button>
             )}
             {onOpenKioskMode && (

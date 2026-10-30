@@ -22,6 +22,7 @@ import { clientErrorReporter } from './lib/clientErrors';
 import { SetPasswordView } from './components/SetPasswordView';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
+import { useTheme } from './hooks/useTheme';
 import { Navbar } from './components/Navbar';
 import { AuthenticatedModals } from './components/AuthenticatedModals';
 import type { ReportModalState } from './components/AuthenticatedModals';
@@ -47,6 +48,7 @@ import {
 
 export default function App() {
   const { authUser, authReady, authRole, authRoleReady } = useAuthSession();
+  const { theme, toggleTheme } = useTheme();
   // Quem chega pelo link de convite ou de recuperação precisa definir a senha antes de usar o sistema.
   const [passwordSetupPending, setPasswordSetupPending] = useState(initialAuthLink.type !== null && !initialAuthLink.failed);
   useEffect(() => {
@@ -407,6 +409,8 @@ export default function App() {
         isAuthenticated={Boolean(authUser && authRole)}
         role={authRole}
         openErrorCount={openErrorCount}
+        theme={theme}
+        onToggleTheme={toggleTheme}
         onLogout={authUser ? () => logoutLeader().catch(() => toast.error('Não foi possível encerrar a sessão.')) : undefined}
       />
 

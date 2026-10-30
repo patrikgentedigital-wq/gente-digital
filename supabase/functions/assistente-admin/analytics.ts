@@ -89,6 +89,16 @@ function latestPerMemberCycle(ds: Dataset): Dataset['evaluations'] {
   return [...latest.values()];
 }
 
+/** Equipes, quantas pessoas e quais cargos, independente de haver avaliações. */
+export function structure(ds: Dataset) {
+  return ds.teams.map((team) => {
+    const people = ds.members.filter((member) => member.teamId === team.id);
+    const jobTitles: Record<string, number> = {};
+    for (const person of people) jobTitles[person.jobTitle] = (jobTitles[person.jobTitle] ?? 0) + 1;
+    return { team: team.name, members: people.length, jobTitles };
+  });
+}
+
 export function teamsByCycle(ds: Dataset) {
   const evaluations = latestPerMemberCycle(ds);
   const rows: Array<{ team: string; cycle: string; evaluated: number; members: number; avgPercent: number }> = [];

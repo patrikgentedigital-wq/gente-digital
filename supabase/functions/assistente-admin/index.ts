@@ -9,6 +9,7 @@ import {
   evolution,
   hideNames,
   revealNames,
+  structure,
   teamsByCycle,
   type Dataset,
 } from './analytics.ts';
@@ -26,7 +27,7 @@ const CORS = {
 };
 
 const SYSTEM = `Você é o assistente de dados do Quadro de Desempenho de um provedor de internet. Fala com o administrador, em português do Brasil, de forma direta.
-Responda SOMENTE com o que as ferramentas de consulta devolverem; se não houver dado, diga que ainda não há avaliações para isso. Nunca invente números.
+Responda SOMENTE com o que as ferramentas de consulta devolverem; se não houver dado, diga que ainda não há avaliações para isso. Para perguntas sobre quais equipes, cargos ou quantas pessoas existem, use consultar_estrutura, que não depende de avaliações. Nunca invente números.
 Os colaboradores aparecem como códigos (P1, P2...). Cite-os exatamente como vierem, sem alterar.
 Os percentuais são a nota dividida pelo máximo da equipe. Compare ciclos na ordem em que as ferramentas os devolvem.
 Quando um gráfico ajudar (comparações ou evolução), inclua-o na resposta final. Termine sempre chamando a ferramenta "responder".`;
@@ -37,6 +38,11 @@ const FILTER_PROPS = {
 };
 
 const TOOLS = [
+  {
+    name: 'consultar_estrutura',
+    description: 'Equipes existentes, quantas pessoas e quais cargos há em cada uma. Não depende de avaliações.',
+    parameters: { type: 'object', properties: {} },
+  },
   {
     name: 'consultar_equipes_por_ciclo',
     description: 'Média percentual, avaliados e total de membros por equipe e ciclo.',
@@ -167,6 +173,7 @@ Deno.serve(async (request) => {
 
   // deno-lint-ignore no-explicit-any
   const runTool = (name: string, args: any): unknown => {
+    if (name === 'consultar_estrutura') return structure(dataset);
     if (name === 'consultar_equipes_por_ciclo') return teamsByCycle(dataset);
     if (name === 'consultar_categorias') return categoriesByTeam(dataset, { teamName: args.equipe, cycle: args.ciclo });
     if (name === 'consultar_colaboradores') return collaborators(dataset, aliases, { teamName: args.equipe, cycle: args.ciclo });

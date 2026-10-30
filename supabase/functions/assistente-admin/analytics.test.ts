@@ -6,6 +6,7 @@ import {
   evolution,
   hideNames,
   percentOf,
+  structure,
   revealNames,
   teamsByCycle,
   type Dataset,
@@ -64,6 +65,16 @@ describe('hideNames', () => {
     const aliases = buildAliases(members);
     expect(hideNames('Como foi ana souza? E a Ana?', members, aliases)).toBe('Como foi P1? E a P4?');
     expect(hideNames('Sem nomes aqui', members, aliases)).toBe('Sem nomes aqui');
+  });
+});
+
+describe('structure', () => {
+  it('lista equipes com pessoas e cargos, mesmo sem nenhuma avaliação', () => {
+    const empty = { ...dataset, evaluations: [] };
+    expect(structure(empty)).toEqual([
+      { team: 'Campo', members: 2, jobTitles: { Técnico: 2 } },
+      { team: 'Rede', members: 1, jobTitles: { Analista: 1 } },
+    ]);
   });
 });
 

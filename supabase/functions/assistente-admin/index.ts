@@ -14,6 +14,8 @@ import {
 } from './analytics.ts';
 
 const MODEL = Deno.env.get('ASSISTENTE_MODEL') ?? Deno.env.get('RASCUNHO_MODEL') ?? 'gpt-4.1-mini';
+// Modelos gpt-5 em diante só aceitam chamada de função com o raciocínio desligado neste endpoint.
+const REASONING = /^gpt-[5-9]/.test(MODEL) ? { reasoning_effort: 'none' } : {};
 const MAX_BODY_BYTES = 12_000;
 const MAX_ROUNDS = 6;
 const MAX_ROWS = 5000;
@@ -182,7 +184,7 @@ Deno.serve(async (request) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: MODEL, max_completion_tokens: 4096, messages, tools: TOOLS, tool_choice: 'required' }),
+      body: JSON.stringify({ model: MODEL, max_completion_tokens: 4096, ...REASONING, messages, tools: TOOLS, tool_choice: 'required' }),
     });
     if (!response.ok) {
       console.error('Falha na IA', response.status, await response.text());

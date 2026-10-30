@@ -4,6 +4,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const MODEL = Deno.env.get('RASCUNHO_MODEL') ?? 'gpt-4.1-mini';
+// Modelos gpt-5 em diante só aceitam chamada de função com o raciocínio desligado neste endpoint.
+const REASONING = /^gpt-[5-9]/.test(MODEL) ? { reasoning_effort: 'none' } : {};
 const MAX_BODY_BYTES = 20_000;
 
 const CORS = {
@@ -98,7 +100,7 @@ Deno.serve(async (request) => {
     headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       model: MODEL,
-      max_completion_tokens: 4096,
+      max_completion_tokens: 4096, ...REASONING,
       messages: [
         { role: 'system', content: SYSTEM },
         { role: 'user', content: prompt },

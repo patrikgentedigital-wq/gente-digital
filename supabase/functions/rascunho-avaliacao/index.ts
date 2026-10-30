@@ -1,9 +1,9 @@
 // Edge Function: rascunho do parecer e das metas de PDI a partir das notas.
-// A chave da IA fica só aqui (secret ANTHROPIC_API_KEY); o navegador nunca a vê.
+// A chave da IA fica só aqui (secret OPENAI_API_KEY); o navegador nunca a vê.
 // Só quem tem perfil (admin ou líder) consegue chamar, e nada que identifique o colaborador chega aqui.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const MODEL = Deno.env.get('RASCUNHO_MODEL') ?? 'claude-sonnet-5-5';
+const MODEL = Deno.env.get('RASCUNHO_MODEL') ?? 'gpt-4.1-mini';
 const MAX_BODY_BYTES = 20_000;
 
 const CORS = {
@@ -66,7 +66,7 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) return json({ error: 'ia_nao_configurada' }, 503);
 
   // Confere que quem chama é um admin ou líder com perfil (a RLS de profiles só devolve a própria linha).
@@ -93,16 +93,18 @@ Deno.serve(async (request) => {
   );
   const prompt = `Cargo: ${body.jobTitle || 'não informado'}\n\n${lines.join('\n\n')}`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1024,
-      system: SYSTEM,
-      tools: [TOOL],
-      tool_choice: { type: 'tool', name: TOOL.name },
-      messages: [{ role: 'user', content: prompt }],
+      max_completion_tokens: 1024,
+      messages: [
+        { role: 'system', content: SYSTEM },
+        { role: 'user', content: prompt },
+      ],
+      tools: [{ type: 'function', function: { name: TOOL.name, description: TOOL.description, parameters: TOOL.input_schema } }],
+      tool_choice: { type: 'function', function: { name: TOOL.name } },
     }),
   });
   if (!response.ok) {
@@ -111,7 +113,11 @@ Deno.serve(async (request) => {
   }
 
   const result = await response.json();
-  const toolUse = (result.content ?? []).find((block: { type: string }) => block.type === 'tool_use');
-  if (!toolUse) return json({ error: 'ia_sem_resposta' }, 502);
-  return json(toolUse.input);
+  const args = result.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+  if (typeof args !== 'string') return json({ error: 'ia_sem_resposta' }, 502);
+  try {
+    return json(JSON.parse(args));
+  } catch {
+    return json({ error: 'ia_sem_resposta' }, 502);
+  }
 });

@@ -29,6 +29,7 @@ const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
+const AssistantView = lazy(() => import('./components/AssistantView').then((module) => ({ default: module.AssistantView })));
 const AuditLogsView = lazy(() => import('./components/AuditLogsView').then((module) => ({ default: module.AuditLogsView })));
 import { LeaderLoginModal } from './components/LeaderLoginModal';
 import { InfoModal, InfoModalType } from './components/InfoModal';
@@ -53,7 +54,7 @@ export default function App() {
     }
   }, []);
   const { members, setMembers, membersError, membersLoading } = useMembers(authUser, authRole);
-  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria'>('ranking');
+  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant'>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
@@ -86,7 +87,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria') {
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant') {
       setActiveTab(tab);
     }
     const query = params.get('q');
@@ -376,6 +377,7 @@ export default function App() {
            )
          )}
         {activeTab === 'criteria' && authRole && <CriteriaEditorView role={authRole} />}
+        {activeTab === 'assistant' && authRole === 'admin' && <AssistantView />}
         {activeTab === 'audit' && authRole === 'admin' && (
           <>
             <ClientErrorsPanel onChange={refreshErrorCount} />

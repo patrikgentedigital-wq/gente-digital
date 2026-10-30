@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TeamMember, PdiGoal } from '../types';
+import { AiDraftPanel } from './AiDraftPanel';
+import { goalsToPdi } from '../lib/aiDraft';
 import type { EvaluationPayload } from '../lib/backend';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
@@ -751,6 +753,25 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           rows={3}
           placeholder="Insira as principais considerações do feedback..."
           className="w-full bg-app border border-line rounded-xl p-3 text-xs text-ink focus:outline-none focus:border-accent resize-none"
+        />
+        <AiDraftPanel
+          jobTitle={selectedMember.role}
+          categories={categories}
+          scores={scores}
+          onUseComment={(comment) => {
+            setIsDirty(true);
+            setLeaderComments(comment);
+          }}
+          onAddGoals={(goals) => {
+            const room = 50 - pdiGoals.length;
+            if (room <= 0) {
+              toast.error('O limite de 50 metas de PDI foi atingido.');
+              return;
+            }
+            setIsDirty(true);
+            setPdiGoals((prev) => [...prev, ...goalsToPdi(goals.slice(0, room))]);
+            toast.info('Metas sugeridas adicionadas ao PDI.');
+          }}
         />
       </div>
 

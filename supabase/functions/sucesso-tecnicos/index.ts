@@ -1,6 +1,7 @@
 // Edge Function: notas da pesquisa pós-OS por técnico, para a aba "Sucesso do Cliente" (só admin).
-// Lê o webhook do n8n (protegido por token que fica só aqui, em N8N_PAINEL_TOKEN) e devolve as linhas.
-// O n8n já entrega sem dado de cliente; aqui o corpo é refeito campo a campo mesmo assim.
+// Confere aqui que quem chama é admin e repassa o login dele ao webhook do n8n, que confere de novo
+// no Supabase. Não há segredo compartilhado entre os dois. O n8n já entrega sem dado de cliente;
+// aqui o corpo é refeito campo a campo mesmo assim.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const N8N_URL = 'https://n8n.srv1693737.hstgr.cloud/webhook/sucesso-tecnicos';
@@ -21,11 +22,9 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
-  const token = Deno.env.get('N8N_PAINEL_TOKEN');
-  if (!token) return json({ error: 'painel_nao_configurado' }, 503);
-
+  const authorization = request.headers.get('Authorization') ?? '';
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: request.headers.get('Authorization') ?? '' } },
+    global: { headers: { Authorization: authorization } },
   });
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return json({ error: 'nao_autenticado' }, 401);
@@ -34,7 +33,7 @@ Deno.serve(async (request) => {
 
   let payload: { geradoEm?: unknown; linhas?: unknown };
   try {
-    const response = await fetch(N8N_URL, { headers: { 'x-painel-token': token }, signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(N8N_URL, { headers: { Authorization: authorization }, signal: AbortSignal.timeout(15_000) });
     if (!response.ok) {
       console.error('n8n respondeu', response.status);
       return json({ error: 'fonte_indisponivel' }, 502);

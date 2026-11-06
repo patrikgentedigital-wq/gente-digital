@@ -102,6 +102,34 @@ describe('EvaluationView integration', () => {
       0,
     );
   });
+
+  it('explica por que o botão Salvar está travado e mostra o selo "Salva às" depois de salvar', async () => {
+    const { onSaveEvaluation, onLoadEvaluation } = renderEvaluation();
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+
+    expect(screen.getByText(/marque a nota de todas as perguntas \(faltam 31\)/)).toBeTruthy();
+    expect(screen.getByText(/preencha o parecer da liderança/)).toBeTruthy();
+    expect(screen.queryByText(/Salva às/)).toBeNull();
+
+    for (const button of screen.getAllByRole('button', { name: '+' })) {
+      fireEvent.click(button);
+    }
+    fireEvent.change(screen.getByPlaceholderText('Insira as principais considerações do feedback...'), {
+      target: { value: 'Parecer validado pela liderança.' },
+    });
+    expect(screen.queryByText(/Para salvar:/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar Avaliação' }));
+    await waitFor(() => expect(onSaveEvaluation).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText(/Salva às .* revisão 2 · 31\/155/)).toBeTruthy());
+  });
+
+  it('mostra o total máximo do conjunto de perguntas do membro, não um valor fixo', async () => {
+    const own = [{ id: 'c1', name: 'Própria', items: [{ id: '9-0', text: 'Z' }, { id: '9-1', text: 'Y' }] }];
+    const { onLoadEvaluation } = renderEvaluation({ criteria: own });
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+    expect(screen.getByText('/ 10')).toBeTruthy();
+  });
 });
 
 describe('EvaluationView sem perguntas da equipe', () => {

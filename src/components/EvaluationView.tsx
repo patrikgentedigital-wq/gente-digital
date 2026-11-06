@@ -114,6 +114,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<{ at: string; revision: number; score: number; max: number } | null>(null);
   const restoredDraftKeys = useRef<Set<string>>(new Set());
 
   const runOrConfirmDiscard = (action: () => void) => {
@@ -150,6 +151,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setIsLoadingEvaluation(true);
     setEvaluationRevision(0);
     setDraftSavedAt(null);
+    setLastSaved(null);
 
     onLoadEvaluation(memberId, cycle)
       .then((evaluation) => {
@@ -327,9 +329,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       setIsDirty(false);
       clearDraft(selectedMember.id, cycle);
       setDraftSavedAt(null);
+      setLastSaved({ at: new Date().toISOString(), revision: savedRevision, score: grandTotal, max: maxScore });
       toast.success(
         `Avaliação de ${selectedMember.name} salva com sucesso! Pontuação: ${grandTotal}/${maxScore}`,
-        'Avaliação Concluída'
+        'Avaliação Concluída',
+        8000,
       );
     } catch (error) {
       if (error instanceof Error && error.message === 'evaluation-conflict') {
@@ -781,9 +785,18 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           <div>
             <div className="text-[11px] font-mono text-faint">Pontuação Final ({cycle})</div>
             <div className="font-mono font-bold text-2xl text-accent-text">
-              {grandTotal} <span className="text-xs text-faint font-normal">/ 155</span>
+              {grandTotal} <span className="text-xs text-faint font-normal">/ {maxScore}</span>
             </div>
           </div>
+          {lastSaved && !isDirty && (
+            <span
+              role="status"
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-success bg-success-soft border border-success/40 rounded-lg px-2.5 py-1"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Salva às {new Date(lastSaved.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · revisão {lastSaved.revision} · {lastSaved.score}/{lastSaved.max}
+            </span>
+          )}
           {draftSavedAt && (
             <span
               className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted bg-surface-2 border border-line rounded-lg px-2 py-1"
@@ -795,6 +808,14 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           )}
         </div>
 
+        {!isLoadingEvaluation && categories.length > 0 && (!hasAllScores || !leaderComments.trim()) && (
+          <div role="status" className="text-[11px] font-mono text-warn-pale sm:ml-auto sm:text-right">
+            Para salvar:
+            {!hasAllScores && ` marque a nota de todas as perguntas (faltam ${scoreKeys.filter((key) => typeof scores[key] !== 'number').length})`}
+            {!hasAllScores && !leaderComments.trim() && ' e'}
+            {!leaderComments.trim() && ' preencha o parecer da liderança'}
+          </div>
+        )}
         <button
           onClick={handleSave}
           disabled={isLoadingEvaluation || !hasAllScores || !leaderComments.trim()}

@@ -278,7 +278,10 @@ export default function App() {
     expectedRevision = 0,
   ): Promise<number> => {
     const targetMember = members.find((member) => member.id === memberId);
-    if (!targetMember || !authUser) return 0;
+    if (!targetMember || !authUser) {
+      toast.error('Sua sessão expirou ou o colaborador não foi encontrado. Entre de novo e tente salvar.');
+      throw new Error('evaluation-save-failed');
+    }
 
     try {
       // A nota, o máximo e o status são calculados no servidor: o navegador não decide a classificação.

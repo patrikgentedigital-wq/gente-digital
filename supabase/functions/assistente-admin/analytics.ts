@@ -328,7 +328,7 @@ export function buildAction(ds: Dataset, input: ActionInput): ActionResult {
     case 'mover_membro': {
       if (!member) return { error: 'Colaborador não encontrado.' };
       const target = ds.teams.find((t) => t.id === input.teamId);
-      if (!target) return { error: 'Equipe não encontrada.' };
+      if (!target || isCriteriaOnlySet(ds, target.id)) return { error: 'Equipe não encontrada.' };
       if (member.teamId === target.id) return { error: 'O colaborador já está nessa equipe.' };
       return {
         action: { type: input.type, memberId: member.id, teamId: target.id },

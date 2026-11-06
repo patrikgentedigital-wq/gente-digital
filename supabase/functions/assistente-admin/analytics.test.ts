@@ -248,6 +248,12 @@ describe('conjunto de perguntas próprio de um membro', () => {
     expect(structure(own)).toEqual([{ team: 'Rede', members: 2, jobTitles: { Analista: 1, Diretora: 1 } }]);
   });
 
+  it('não deixa propor mover alguém para um conjunto próprio como se fosse equipe', () => {
+    const base: Dataset = { ...own, teams: [...own.teams, { id: 't3', name: 'Campo' }], members: [...own.members] };
+    expect(buildAction(base, { type: 'mover_membro', memberId: 'm1', teamId: 't2-dani' })).toEqual({ error: 'Equipe não encontrada.' });
+    expect('error' in buildAction(base, { type: 'mover_membro', memberId: 'm1', teamId: 't3' })).toBe(false);
+  });
+
   it('uma equipe nova e vazia continua aparecendo na estrutura', () => {
     expect(structure({ ...own, teams: [...own.teams, { id: 't9', name: 'Nova' }] }).map((t) => t.team)).toEqual(['Rede', 'Nova']);
   });

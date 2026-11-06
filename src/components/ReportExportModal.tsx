@@ -105,7 +105,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <div className="text-right border-t md:border-t-0 border-line pt-3 md:pt-0 w-full md:w-auto">
               <div className="font-mono text-[10px] text-faint uppercase">Pontuação Final</div>
               <div className="text-4xl font-mono font-bold text-accent-text">
-                {member.score} <span className="text-sm font-normal text-faint">/ 155</span>
+                {member.score} <span className="text-sm font-normal text-faint">/ {member.maxScore || 155}</span>
               </div>
               <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-gold-soft text-accent-text border border-accent/30 uppercase">
                 {member.status}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { TeamMember } from '../types';
 import {
   CRITERIA_SCORE_KEYS,
+  cleanCriteriaScores,
   getCategoryScorePercent,
   generateEvaluationCycles,
   getDefaultEvaluationCycle,
@@ -9,6 +11,7 @@ import {
   isPdiGoalOverdue,
   makeEvaluationId,
   normalizeCriteriaScores,
+  rankMembers,
   sumCriteriaScores,
 } from './evaluation';
 
@@ -68,5 +71,36 @@ describe('evaluation domain rules', () => {
 
     expect(isPdiGoalOverdue({ status: 'pending', dueDate: '2026-03-10' }, localDate)).toBe(false);
     expect(isPdiGoalOverdue({ status: 'pending', dueDate: '2026-03-09' }, localDate)).toBe(true);
+  });
+});
+
+describe('rankMembers', () => {
+  const member = (name: string, score: number, maxScore: number) =>
+    ({ name, score, maxScore, rank: 0 }) as unknown as TeamMember;
+
+  it('ordena pelo percentual do máximo, não pelos pontos', () => {
+    // 140/150 = 93,3% passa 142/155 = 91,6%, mesmo com menos pontos.
+    const ranked = rankMembers([member('Ana', 142, 155), member('Danielle', 140, 150)]);
+    expect(ranked.map((m) => m.name)).toEqual(['Danielle', 'Ana']);
+    expect(ranked.map((m) => m.rank)).toEqual([1, 2]);
+  });
+
+  it('desempata por nome', () => {
+    expect(rankMembers([member('Bia', 10, 20), member('Ana', 10, 20)]).map((m) => m.name)).toEqual(['Ana', 'Bia']);
+  });
+});
+
+describe('cleanCriteriaScores', () => {
+  it('mantém notas válidas de qualquer pergunta, inclusive de ids que não são os padrão', () => {
+    expect(cleanCriteriaScores({ '1-0': 4, novo_7: 5, ruim: 9, texto: 'x', nan: Number.NaN, zero: 0 })).toEqual({
+      '1-0': 4,
+      novo_7: 5,
+      zero: 0,
+    });
+  });
+
+  it('devolve vazio para entradas que não são objeto', () => {
+    expect(cleanCriteriaScores(null)).toEqual({});
+    expect(cleanCriteriaScores('oi')).toEqual({});
   });
 });

@@ -54,6 +54,13 @@ describe('getCriteriaSet', () => {
     expect(fake.calls).toEqual(['from:criteria_sets', 'eq:team_id=Brenda', 'order:version:desc', 'limit:1']);
   });
 
+  it('com versão, pede exatamente aquela versão (a que uma avaliação antiga usou)', async () => {
+    fake.maybeSingleResult = { data: { team_id: 'Brenda', version: 2, categories, max_score: 15 }, error: null };
+    const set = await getCriteriaSet('Brenda', 2);
+    expect(set?.version).toBe(2);
+    expect(fake.calls).toEqual(['from:criteria_sets', 'eq:team_id=Brenda', 'eq:version=2', 'order:version:desc', 'limit:1']);
+  });
+
   it('devolve null quando a equipe ainda não tem perguntas', async () => {
     expect(await getCriteriaSet('Nova')).toBeNull();
   });

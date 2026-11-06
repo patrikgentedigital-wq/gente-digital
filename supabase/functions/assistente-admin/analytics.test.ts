@@ -211,3 +211,44 @@ describe('buildAction', () => {
     expect(buildAction(extended, { type: 'apagar_tudo' as never })).toEqual({ error: 'Ação não permitida.' });
   });
 });
+
+describe('conjunto de perguntas próprio de um membro', () => {
+  // Dani é da equipe Rede, mas avaliada com as perguntas do conjunto "Rede - Dani" (mesmos ids, categorias diferentes).
+  const own: Dataset = {
+    teams: [{ id: 't2', name: 'Rede' }, { id: 't2-dani', name: 'Rede - Dani' }],
+    members: [
+      { id: 'm1', name: 'Carla Dias', teamId: 't2', jobTitle: 'Analista' },
+      { id: 'm2', name: 'Dani Reis', teamId: 't2', jobTitle: 'Diretora', criteriaSetId: 't2-dani' },
+    ],
+    criteriaSets: [
+      { teamId: 't2', version: 1, categories: [{ id: 'c1', name: 'Técnica', items: [{ id: 'q1', text: 'a' }] }] },
+      { teamId: 't2-dani', version: 1, categories: [{ id: 'c1', name: 'Liderança', items: [{ id: 'q1', text: 'b' }] }] },
+    ],
+    evaluations: [
+      { memberId: 'm1', teamId: 't2', criteriaTeamId: 't2', cycle: 'Outubro/2026', criteriaVersion: 1, scores: { q1: 4 }, score: 4, maxScore: 5, createdAt: '2026-10-30T10:00:00Z' },
+      { memberId: 'm2', teamId: 't2', criteriaTeamId: 't2-dani', cycle: 'Outubro/2026', criteriaVersion: 1, scores: { q1: 2 }, score: 2, maxScore: 5, createdAt: '2026-10-30T11:00:00Z' },
+    ],
+  };
+
+  it('calcula as categorias com as perguntas do conjunto que a avaliação usou', () => {
+    expect(categoriesByTeam(own, { cycle: 'Outubro/2026' })).toEqual([
+      { team: 'Rede', cycle: 'Outubro/2026', category: 'Técnica', avgPercent: 80 },
+      { team: 'Rede', cycle: 'Outubro/2026', category: 'Liderança', avgPercent: 40 },
+    ]);
+  });
+
+  it('sem criteriaTeamId (avaliação antiga), usa o conjunto da equipe', () => {
+    const old: Dataset = { ...own, evaluations: own.evaluations.map(({ criteriaTeamId: _ignored, ...rest }) => rest) };
+    expect(categoriesByTeam(old, { cycle: 'Outubro/2026' })).toEqual([
+      { team: 'Rede', cycle: 'Outubro/2026', category: 'Técnica', avgPercent: 60 },
+    ]);
+  });
+
+  it('a estrutura não conta o conjunto próprio como se fosse uma equipe', () => {
+    expect(structure(own)).toEqual([{ team: 'Rede', members: 2, jobTitles: { Analista: 1, Diretora: 1 } }]);
+  });
+
+  it('uma equipe nova e vazia continua aparecendo na estrutura', () => {
+    expect(structure({ ...own, teams: [...own.teams, { id: 't9', name: 'Nova' }] }).map((t) => t.team)).toEqual(['Rede', 'Nova']);
+  });
+});

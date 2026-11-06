@@ -41,8 +41,8 @@ import { Skeleton } from './components/Skeleton';
 import { toast } from './utils/toastUtils';
 import {
   getDefaultEvaluationCycle,
+  cleanCriteriaScores,
   makeEvaluationId,
-  normalizeCriteriaScores,
   rankMembers,
 } from './lib/evaluation';
 
@@ -116,11 +116,15 @@ export default function App() {
   const evaluationCriteria = useTeamCriteria(
     selectedEvaluationMember ? (selectedEvaluationMember.criteriaTeamId ?? selectedEvaluationMember.team) : null,
   );
+  // Uma avaliação já salva é mostrada com as perguntas (e a versão) que valiam quando foi feita.
+  const detailSaved = detailEvaluation && detailEvaluation.memberId === detailModalMember?.id ? detailEvaluation : null;
   const detailCriteria = useTeamCriteria(
-    detailModalMember ? (detailModalMember.criteriaTeamId ?? detailModalMember.team) : null,
+    detailModalMember ? (detailSaved?.criteriaTeamId ?? detailModalMember.criteriaTeamId ?? detailModalMember.team) : null,
+    detailSaved?.criteriaVersion,
   );
   const reportCriteria = useTeamCriteria(
-    reportModal ? (reportModal.member.criteriaTeamId ?? reportModal.member.team) : null,
+    reportModal ? (reportModal.criteriaTeamId ?? reportModal.member.criteriaTeamId ?? reportModal.member.team) : null,
+    reportModal?.criteriaVersion,
   );
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
@@ -161,9 +165,11 @@ export default function App() {
       const evaluation = await loadEvaluation(member.id, getDefaultEvaluationCycle());
       setReportModal({
         member,
-        criteriaScores: normalizeCriteriaScores(evaluation?.criteriaScores),
+        criteriaScores: cleanCriteriaScores(evaluation?.criteriaScores),
         leaderComments: evaluation?.comments,
         cycle: evaluation?.cycle || getDefaultEvaluationCycle(),
+        criteriaTeamId: evaluation?.criteriaTeamId,
+        criteriaVersion: evaluation?.criteriaVersion,
       });
     } catch (error) {
       console.error('Unable to load report data:', error);
@@ -309,7 +315,7 @@ export default function App() {
       return saved.revision;
     } catch (error) {
       if (isEvaluationConflictError(error)) {
-        toast.error('Esta avaliação foi alterada por outra pessoa. Recarregue os dados antes de salvar novamente.');
+        toast.error('Esta avaliação foi alterada por outra pessoa. O que você preencheu continua na tela; se salvar de novo, a sua versão substitui a dela.');
         throw new Error('evaluation-conflict');
       }
       if (isEvaluationCriteriaOutdatedError(error)) {

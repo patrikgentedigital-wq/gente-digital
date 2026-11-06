@@ -28,11 +28,12 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
-  const [team, setTeam] = useState<LeaderName>('Djemerson');
+  // Equipe sugerida para um colaborador novo: a primeira da lista (a pessoa escolhe a certa no seletor).
+  const defaultTeam = deriveTeams(members, TEAMS, { includeEmpty: true })[0]?.leader ?? '';
+  const [team, setTeam] = useState<LeaderName>(defaultTeam);
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarError, setAvatarError] = useState(false);
-  const [score, setScore] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -42,14 +43,12 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       setTeam(memberToEdit.team);
       setEmail(memberToEdit.email || '');
       setAvatarUrl(memberToEdit.avatarUrl || '');
-       setScore(memberToEdit.score ?? 0);
     } else {
       setName('');
       setRole('');
-      setTeam('Djemerson');
+      setTeam(defaultTeam);
       setEmail('');
       setAvatarUrl('');
-       setScore(0);
     }
     setShowDeleteConfirm(false);
     setAvatarError(false);
@@ -64,7 +63,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
     e.preventDefault();
     if (!name.trim() || !role.trim()) return;
 
-    const finalScore = isEditing ? (memberToEdit?.score ?? score) : score;
+    const finalScore = isEditing ? (memberToEdit?.score ?? 0) : 0;
     let status: TeamMember['status'] = 'Caminho Certo';
     if (finalScore > 140) status = 'Voando';
     else if (finalScore > 130) status = 'Caminho Certo';
@@ -82,7 +81,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       rank: memberToEdit?.rank || 99,
       previousRank: memberToEdit?.previousRank,
       score: finalScore,
-      maxScore: 155,
+      maxScore: memberToEdit?.maxScore || 155,
       status,
       avatarUrl: avatarUrl.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
       evaluationStatus: memberToEdit?.evaluationStatus || 'Pendente',
@@ -280,26 +279,18 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
               </div>
             </div>
 
-            {/* Score slider */}
+            {/* A pontuação nunca é digitada: um colaborador novo começa em 0 e só muda por uma avaliação da liderança. */}
             <div className="space-y-1 bg-surface-2 p-3 rounded-xl border border-line">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-muted font-semibold">{isEditing ? 'Pontuação atual:' : 'Pontuação inicial:'}</span>
-                <span className="font-mono font-bold text-accent-text">{isEditing ? memberToEdit?.score : score} / 155 pts</span>
+                <span className="font-mono font-bold text-accent-text">
+                  {isEditing ? memberToEdit?.score : 0} / {isEditing ? (memberToEdit?.maxScore || 155) : 'definido pelas perguntas da equipe'}
+                  {isEditing ? ' pts' : ''}
+                </span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="155"
-                value={isEditing ? memberToEdit?.score ?? 0 : score}
-                disabled={isEditing}
-                onChange={(e) => setScore(Number(e.target.value))}
-                className="w-full accent-accent enabled:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              />
-              {isEditing && (
-                <p className="text-[11px] text-faint">
-                  A pontuação de um colaborador existente só muda por uma avaliação completa da liderança.
-                </p>
-              )}
+              <p className="text-[11px] text-faint">
+                A pontuação só muda por uma avaliação completa da liderança.
+              </p>
             </div>
 
             {/* Form actions */}

@@ -12,6 +12,9 @@ export interface EvaluationPayload {
   comments: string;
   pdiGoals: PdiGoal[];
   criteriaScores: Record<string, number>;
+  /** Conjunto e versão de perguntas que valiam quando a avaliação foi salva. */
+  criteriaTeamId?: string;
+  criteriaVersion?: number;
   revision?: number;
   createdAt?: unknown;
   updatedAt?: unknown;
@@ -73,6 +76,8 @@ interface EvaluationRow {
   comments: string;
   pdi_goals: PdiGoal[];
   leader_id: string | null;
+  criteria_team_id?: string | null;
+  criteria_version?: number | null;
   revision: number;
   created_at: string;
   updated_at: string;
@@ -83,7 +88,7 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('evaluations')
-    .select('id, member_id, cycle, scores, score, status, comments, pdi_goals, leader_id, revision, created_at, updated_at, members(name)')
+    .select('id, member_id, cycle, scores, score, status, comments, pdi_goals, leader_id, criteria_team_id, criteria_version, revision, created_at, updated_at, members(name)')
     .eq('id', evaluationId)
     .maybeSingle();
   if (error) throw error;
@@ -108,6 +113,8 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
     comments: row.comments,
     pdiGoals: Array.isArray(row.pdi_goals) ? row.pdi_goals : [],
     criteriaScores: row.scores,
+    criteriaTeamId: row.criteria_team_id ?? undefined,
+    criteriaVersion: row.criteria_version ?? undefined,
     revision: row.revision,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

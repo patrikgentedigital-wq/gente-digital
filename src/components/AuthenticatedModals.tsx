@@ -15,6 +15,9 @@ export interface ReportModalState {
   criteriaScores?: Record<string, number>;
   leaderComments?: string;
   cycle?: string;
+  /** Conjunto e versão de perguntas da avaliação salva; sem eles vale a versão atual. */
+  criteriaTeamId?: string;
+  criteriaVersion?: number;
 }
 
 interface AuthenticatedModalsProps {

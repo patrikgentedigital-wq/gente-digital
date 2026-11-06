@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EvaluationView } from './EvaluationView';
 import type { TeamMember } from '../types';
-import { CRITERIA_SCORE_KEYS } from '../lib/evaluation';
+import { CRITERIA_SCORE_KEYS, getDefaultEvaluationCycle } from '../lib/evaluation';
+import { clearDraft, saveDraft } from '../lib/draftUtils';
 import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
 
 const member: TeamMember = {
@@ -129,6 +130,65 @@ describe('EvaluationView integration', () => {
     const { onLoadEvaluation } = renderEvaluation({ criteria: own });
     await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
     expect(screen.getByText('/ 10')).toBeTruthy();
+  });
+});
+
+describe('EvaluationView com avaliação já salva', () => {
+  const saved = Object.fromEntries(CRITERIA_SCORE_KEYS.map((key) => [key, 2]));
+  const savedEvaluation = {
+    id: 'evaluation_member-1_x',
+    memberId: member.id,
+    memberName: member.name,
+    leaderName: '',
+    score: 62,
+    status: 'Alarme' as const,
+    cycle: 'x',
+    comments: 'Parecer salvo.',
+    pdiGoals: [],
+    criteriaScores: saved,
+    revision: 3,
+  };
+  const baseProps = (): React.ComponentProps<typeof EvaluationView> => ({
+    members: [member],
+    criteria: null,
+    selectedMember: member,
+    onSelectMember: vi.fn(),
+    onSaveEvaluation: vi.fn().mockResolvedValue(4),
+    onOpenReportModal: vi.fn(),
+    onLoadEvaluation: vi.fn().mockResolvedValue(savedEvaluation),
+  });
+
+  it('mostra as notas salvas mesmo quando as perguntas chegam depois da avaliação', async () => {
+    const props = baseProps();
+    const { rerender } = render(<EvaluationView {...props} />);
+    await waitFor(() => expect(props.onLoadEvaluation).toHaveBeenCalled());
+    await waitFor(() => expect((screen.getByRole('button', { name: /salvar/i }) as HTMLButtonElement).disabled).toBe(true));
+
+    rerender(<EvaluationView {...props} criteria={DEFAULT_CRITERIA_CATEGORIES} />);
+    await waitFor(() => expect(screen.getByText('62')).toBeTruthy());
+  });
+
+  it('restaura o rascunho com a revisão do servidor, para o salvar não dar conflito', async () => {
+    const props = { ...baseProps(), criteria: DEFAULT_CRITERIA_CATEGORIES };
+    const cycle = getDefaultEvaluationCycle();
+    saveDraft(member.id, cycle, {
+      scores: Object.fromEntries(CRITERIA_SCORE_KEYS.map((key) => [key, 5])),
+      leaderComments: 'Rascunho novo.',
+      pdiGoals: [],
+    });
+    try {
+      render(<EvaluationView {...props} />);
+      const saveButton = screen.getByRole('button', { name: 'Salvar Avaliação' });
+      await waitFor(() => expect((saveButton as HTMLButtonElement).disabled).toBe(false));
+      fireEvent.click(saveButton);
+
+      await waitFor(() => expect(props.onSaveEvaluation).toHaveBeenCalledTimes(1));
+      expect(props.onSaveEvaluation).toHaveBeenCalledWith(
+        member.id, 155, expect.any(Object), 'Rascunho novo.', cycle, [], 3,
+      );
+    } finally {
+      clearDraft(member.id, cycle);
+    }
   });
 });
 

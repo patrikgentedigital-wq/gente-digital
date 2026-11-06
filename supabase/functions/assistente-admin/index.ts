@@ -136,11 +136,11 @@ function parseConfirm(value: unknown): ActionInput | null {
 async function loadDataset(supabase: any): Promise<Dataset> {
   const [teams, members, sets, evaluations, audit, errors] = await Promise.all([
     supabase.from('teams').select('id, name'),
-    supabase.from('members').select('id, name, team_id, job_title, deleted_at'),
+    supabase.from('members').select('id, name, team_id, job_title, deleted_at, criteria_set_id'),
     supabase.from('criteria_sets').select('team_id, version, categories'),
     supabase
       .from('evaluations')
-      .select('member_id, team_id, cycle, criteria_version, scores, score, max_score, created_at, comments, pdi_goals')
+      .select('member_id, team_id, criteria_team_id, cycle, criteria_version, scores, score, max_score, created_at, comments, pdi_goals')
       .order('created_at', { ascending: false })
       .limit(MAX_ROWS),
     supabase
@@ -157,14 +157,14 @@ async function loadDataset(supabase: any): Promise<Dataset> {
   for (const result of [teams, members, sets, evaluations, audit, errors]) if (result.error) throw result.error;
   return {
     teams: teams.data,
-    members: members.data.map((m: { id: string; name: string; team_id: string; job_title: string; deleted_at: string | null }) => ({
-      id: m.id, name: m.name, teamId: m.team_id, jobTitle: m.job_title, archived: m.deleted_at !== null,
+    members: members.data.map((m: { id: string; name: string; team_id: string; job_title: string; deleted_at: string | null; criteria_set_id: string | null }) => ({
+      id: m.id, name: m.name, teamId: m.team_id, jobTitle: m.job_title, archived: m.deleted_at !== null, criteriaSetId: m.criteria_set_id,
     })),
     criteriaSets: sets.data.map((s: { team_id: string; version: number; categories: Dataset['criteriaSets'][number]['categories'] }) => ({
       teamId: s.team_id, version: s.version, categories: s.categories,
     })),
     evaluations: evaluations.data.map((e: Record<string, unknown>) => ({
-      memberId: e.member_id as string, teamId: e.team_id as string, cycle: e.cycle as string,
+      memberId: e.member_id as string, teamId: e.team_id as string, criteriaTeamId: (e.criteria_team_id ?? null) as string | null, cycle: e.cycle as string,
       criteriaVersion: e.criteria_version as number, scores: (e.scores ?? {}) as Record<string, number>,
       score: e.score as number, maxScore: e.max_score as number, createdAt: e.created_at as string,
       comments: (e.comments ?? '') as string,

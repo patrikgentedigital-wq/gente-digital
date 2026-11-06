@@ -1,6 +1,7 @@
 import { PerformanceStatus, TeamMember } from '../types';
 import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
 import type { CriteriaCategory } from './criteria';
+import { compareByPercent } from './scoring';
 
 export interface EvaluationCycleOption {
   id: string;
@@ -66,6 +67,19 @@ export function normalizeCriteriaScores(
   );
 }
 
+/**
+ * Mantém só as notas válidas (número de 0 a 5), sem olhar quais perguntas existem:
+ * serve para uma avaliação salva, cujas perguntas ainda não foram carregadas.
+ */
+export function cleanCriteriaScores(scores: unknown): Record<string, number> {
+  if (!scores || typeof scores !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(scores as Record<string, unknown>).filter(
+      (entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] >= 0 && entry[1] <= 5,
+    ),
+  );
+}
+
 export function getCategoryScorePercent(
   criteriaScores: Record<string, number> | undefined,
   categoryId: number | string,
@@ -116,9 +130,10 @@ export function sumCriteriaScores(scores: Record<string, number>, keys: string[]
   return keys.reduce((total, key) => total + scores[key], 0);
 }
 
+/** Mesma ordem do banco (view members_ranked): maior percentual do máximo primeiro, empate por nome. */
 export function rankMembers(members: TeamMember[]) {
   return [...members]
-    .sort((a, b) => b.score - a.score)
+    .sort(compareByPercent)
     .map((member, index) => ({
       ...member,
       previousRank: member.rank,

@@ -15,12 +15,17 @@ interface CriteriaSetRow {
   max_score: number;
 }
 
-/** Perguntas vigentes da equipe (a versão de maior número), ou null se ainda não há. */
-export async function getCriteriaSet(teamId: string): Promise<CriteriaSet | null> {
-  const { data, error } = await getSupabase()
+/**
+ * Perguntas vigentes da equipe (a versão de maior número), ou null se ainda não há.
+ * Com `version`, devolve exatamente aquela versão: é a que uma avaliação antiga usou.
+ */
+export async function getCriteriaSet(teamId: string, version?: number): Promise<CriteriaSet | null> {
+  let query = getSupabase()
     .from('criteria_sets')
     .select('team_id, version, categories, max_score')
-    .eq('team_id', teamId)
+    .eq('team_id', teamId);
+  if (version !== undefined) query = query.eq('version', version);
+  const { data, error } = await query
     .order('version', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -82,9 +82,10 @@ interface CustomTooltipProps {
   active?: boolean;
   payload?: Array<{ value: number }>;
   label?: string;
+  maxScore?: number;
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label, maxScore = 155 }) => {
   if (active && payload && payload.length) {
     const data = payload[0];
     return (
@@ -94,7 +95,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
         </p>
         <p className="text-sm font-mono font-bold text-accent-text flex items-center gap-1">
           <span>{data.value}</span>
-          <span className="text-[11px] text-faint font-normal">/ 155 pts</span>
+          <span className="text-[11px] text-faint font-normal">/ {maxScore} pts</span>
         </p>
       </div>
     );
@@ -117,6 +118,9 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   if (!member) return null;
 
   const historyData = member.history || [];
+  // Quem tem conjunto próprio de perguntas pode ter máximo diferente de 155; a meta (140/155) acompanha em proporção.
+  const chartMax = member.maxScore > 0 ? member.maxScore : 155;
+  const chartGoal = Math.round((140 * chartMax) / 155);
 
   const badges = getMemberBadges(member, allMembers);
   const unlockedCount = badges.filter((b) => b.unlocked).length;
@@ -478,19 +482,19 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                   axisLine={{ stroke: '#d2d2d7' }}
                 />
                 <YAxis
-                  domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
+                  domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), chartMax]}
                   stroke="#86868b"
                   fontSize={11}
                   tickLine={false}
                   axisLine={{ stroke: '#d2d2d7' }}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip maxScore={chartMax} />} />
                 <ReferenceLine
-                  y={140}
+                  y={chartGoal}
                   stroke="#000000"
                   strokeDasharray="4 4"
                   strokeOpacity={0.6}
-                  label={{ value: 'Meta (140)', fill: '#000000', fontSize: 10, position: 'insideTopRight' }}
+                  label={{ value: `Meta (${chartGoal})`, fill: '#000000', fontSize: 10, position: 'insideTopRight' }}
                 />
                 <Line
                   type="monotone"

@@ -111,6 +111,20 @@ describe('getEvaluation', () => {
     });
   });
 
+  it('informa o conjunto e a versão de perguntas usados na avaliação', async () => {
+    fake.evaluationResult = {
+      data: {
+        id: 'e', member_id: 'ana_ta', cycle: 'Outubro/2026', scores: {}, score: 0, status: 'Alarme', comments: '',
+        pdi_goals: [], leader_id: null, criteria_team_id: 'Mariza Leite - Ana', criteria_version: 2, revision: 1,
+        created_at: 'x', updated_at: 'y', members: null,
+      },
+      error: null,
+    };
+    const loaded = await getEvaluation('e');
+    expect(loaded?.criteriaTeamId).toBe('Mariza Leite - Ana');
+    expect(loaded?.criteriaVersion).toBe(2);
+  });
+
   it('devolve null quando a avaliação não existe', async () => {
     expect(await getEvaluation('nao-existe')).toBeNull();
   });

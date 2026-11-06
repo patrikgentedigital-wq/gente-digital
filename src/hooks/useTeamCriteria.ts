@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { getCriteriaSet } from '../lib/backend';
 import type { CriteriaCategory } from '../lib/criteria';
 
-/** Perguntas vigentes da equipe. Devolve null sem equipe, enquanto carrega ou quando a equipe ainda não tem perguntas. */
-export function useTeamCriteria(teamId: string | null): CriteriaCategory[] | null {
+/**
+ * Perguntas vigentes da equipe (ou de uma versão específica, para ver uma avaliação antiga).
+ * Devolve null sem equipe, enquanto carrega ou quando a equipe ainda não tem perguntas.
+ */
+export function useTeamCriteria(teamId: string | null, version?: number): CriteriaCategory[] | null {
   const [categories, setCategories] = useState<CriteriaCategory[] | null>(null);
 
   useEffect(() => {
@@ -11,7 +14,7 @@ export function useTeamCriteria(teamId: string | null): CriteriaCategory[] | nul
     if (!teamId) return undefined;
 
     let active = true;
-    getCriteriaSet(teamId)
+    getCriteriaSet(teamId, version)
       .then((set) => {
         if (active) setCategories(set?.categories ?? null);
       })
@@ -23,7 +26,7 @@ export function useTeamCriteria(teamId: string | null): CriteriaCategory[] | nul
     return () => {
       active = false;
     };
-  }, [teamId]);
+  }, [teamId, version]);
 
   return categories;
 }

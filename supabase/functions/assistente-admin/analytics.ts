@@ -2,7 +2,7 @@
 
 export interface Dataset {
   teams: Array<{ id: string; name: string }>;
-  members: Array<{ id: string; name: string; teamId: string; jobTitle: string; archived?: boolean }>;
+  members: Array<{ id: string; name: string; teamId: string; jobTitle: string; archived?: boolean; criteriaSetId?: string | null }>;
   criteriaSets: Array<{
     teamId: string;
     version: number;
@@ -11,6 +11,8 @@ export interface Dataset {
   evaluations: Array<{
     memberId: string;
     teamId: string;
+    /** Conjunto de perguntas usado; quando falta, vale o da equipe do membro. */
+    criteriaTeamId?: string | null;
     cycle: string;
     criteriaVersion: number;
     scores: Record<string, number>;
@@ -101,9 +103,17 @@ function latestPerMemberCycle(ds: Dataset): Dataset['evaluations'] {
   return [...latest.values()];
 }
 
+/** Um conjunto de perguntas só de um membro (ex.: "Mariza Leite - Danielle"): existe em `teams`, mas não é uma equipe. */
+function isCriteriaOnlySet(ds: Dataset, teamId: string): boolean {
+  return (
+    ds.members.some((member) => member.criteriaSetId === teamId) &&
+    !ds.members.some((member) => member.teamId === teamId)
+  );
+}
+
 /** Equipes, quantas pessoas e quais cargos, independente de haver avaliações. */
 export function structure(ds: Dataset) {
-  return ds.teams.map((team) => {
+  return ds.teams.filter((team) => !isCriteriaOnlySet(ds, team.id)).map((team) => {
     const people = ds.members.filter((member) => member.teamId === team.id && !member.archived);
     const jobTitles: Record<string, number> = {};
     for (const person of people) jobTitles[person.jobTitle] = (jobTitles[person.jobTitle] ?? 0) + 1;
@@ -141,7 +151,8 @@ export function categoriesByTeam(ds: Dataset, filter: Filter = {}) {
       if (inGroup.length === 0) continue;
       const perCategory = new Map<string, number[]>();
       for (const evaluation of inGroup) {
-        const set = ds.criteriaSets.find((s) => s.teamId === team.id && s.version === evaluation.criteriaVersion);
+        const criteriaTeam = evaluation.criteriaTeamId ?? team.id;
+        const set = ds.criteriaSets.find((s) => s.teamId === criteriaTeam && s.version === evaluation.criteriaVersion);
         if (!set) continue;
         for (const category of set.categories) {
           const values = category.items.map((item) => evaluation.scores[item.id]).filter((v): v is number => typeof v === 'number');

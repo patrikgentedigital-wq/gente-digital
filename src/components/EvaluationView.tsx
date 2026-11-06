@@ -112,8 +112,12 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
   const [evaluationRevision, setEvaluationRevision] = useState(0);
   const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  // Notas como vieram do servidor, sem filtrar: as perguntas podem chegar depois da avaliação.
+  const [loadedScores, setLoadedScores] = useState<unknown>(null);
+  const isDirtyRef = useRef(false);
+  isDirtyRef.current = isDirty;
+  const autosaveTimer = useRef<number | undefined>(undefined);
   const [lastSaved, setLastSaved] = useState<{ at: string; revision: number; score: number; max: number } | null>(null);
   const restoredDraftKeys = useRef<Set<string>>(new Set());
 
@@ -152,6 +156,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setEvaluationRevision(0);
     setDraftSavedAt(null);
     setLastSaved(null);
+    setLoadedScores(null);
 
     onLoadEvaluation(memberId, cycle)
       .then((evaluation) => {
@@ -164,12 +169,19 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             setScores(draft.scores);
             setLeaderComments(draft.leaderComments);
             setPdiGoals(draft.pdiGoals);
+            // A revisão do servidor vale mesmo com rascunho: sem ela, salvar daria "conflito" e o rascunho se perderia.
+            setEvaluationRevision(evaluation?.revision ?? 0);
             setIsDirty(true);
             setDraftSavedAt(draft.updatedAt);
-            toast.info('Rascunho local restaurado.');
+            toast.info(
+              evaluation
+                ? 'Rascunho local restaurado. Já existe uma avaliação salva deste ciclo; se você salvar, o rascunho a substitui.'
+                : 'Rascunho local restaurado.',
+            );
             return;
           }
         }
+        setLoadedScores(evaluation?.criteriaScores ?? null);
         setScores(normalizeCriteriaScores(evaluation?.criteriaScores, categories));
         setLeaderComments(evaluation?.comments || '');
         setPdiGoals(evaluation?.pdiGoals || memberPdiGoals || []);
@@ -187,7 +199,13 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cycle, memberId, onLoadEvaluation, reloadToken]);
+  }, [cycle, memberId, onLoadEvaluation]);
+
+  // As perguntas podem chegar depois da avaliação salva: refiltra as notas quando chegarem (sem tocar no que o líder já editou).
+  useEffect(() => {
+    if (loadedScores == null || isDirtyRef.current) return;
+    setScores(normalizeCriteriaScores(loadedScores, criteria ?? []));
+  }, [criteria, loadedScores]);
 
   // Autosave draft (debounced) to localStorage whenever the form changes.
   useEffect(() => {
@@ -198,13 +216,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       const saved = saveDraft(memberId, cycle, { scores, leaderComments, pdiGoals });
       if (saved) setDraftSavedAt(saved.updatedAt);
     }, 600);
+    autosaveTimer.current = timer;
 
     return () => window.clearTimeout(timer);
   }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation]);
-
-  const reloadEvaluation = () => {
-    setReloadToken((token) => token + 1);
-  };
 
 
   const toggleCategory = (catId: string) => {
@@ -315,17 +330,21 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       return;
     }
 
+    // Um rascunho agendado não pode reaparecer depois que a avaliação for salva.
+    window.clearTimeout(autosaveTimer.current);
+    const scoresToSave = Object.fromEntries(scoreKeys.map((key) => [key, scores[key] as number]));
     try {
       const savedRevision = await onSaveEvaluation(
         selectedMember.id,
         grandTotal,
-        Object.fromEntries(scoreKeys.map((key) => [key, scores[key] as number])),
+        scoresToSave,
         leaderComments.trim(),
         cycle,
         pdiGoals,
         evaluationRevision,
       );
       setEvaluationRevision(savedRevision);
+      setLoadedScores(scoresToSave);
       setIsDirty(false);
       clearDraft(selectedMember.id, cycle);
       setDraftSavedAt(null);
@@ -337,8 +356,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       );
     } catch (error) {
       if (error instanceof Error && error.message === 'evaluation-conflict') {
-        toast.info('Conflito detectado. Carregando a versão mais recente da avaliação...');
-        reloadEvaluation();
+        // Mantém o que o líder digitou: só atualiza a revisão, para que um novo "Salvar" substitua a versão da outra pessoa de propósito.
+        const latest = await onLoadEvaluation(selectedMember.id, cycle).catch(() => null);
+        if (latest?.revision !== undefined) setEvaluationRevision(latest.revision);
         return;
       }
       // The parent reports persistence errors and keeps the draft in memory.

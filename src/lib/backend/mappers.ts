@@ -9,6 +9,7 @@ export interface MemberRow {
   job_title: string;
   team_id: string;
   team_color?: string | null;
+  criteria_team_id?: string | null;
   teams?: { color: string } | null;
   avatar_url: string;
   email: string;
@@ -57,6 +58,7 @@ export function rowToTeamMember(row: MemberRow): TeamMember {
     name: row.name,
     role: row.job_title,
     team: row.team_id,
+    criteriaTeamId: row.criteria_team_id ?? undefined,
     teamColor: row.team_color ?? row.teams?.color ?? NEUTRAL_TEAM_COLOR,
     rank: Number(row.rank ?? 0),
     score: row.score,

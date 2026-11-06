@@ -56,6 +56,7 @@ export interface TeamMember {
   name: string;
   role: string;
   team: LeaderName; // Team leader name as per organogram
+  criteriaTeamId?: string; // Conjunto de perguntas do membro, quando diferente do da equipe
   teamColor: string;
   rank: number;
   previousRank?: number;

@@ -113,9 +113,15 @@ export default function App() {
     }
   }, [authUser]);
 
-  const evaluationCriteria = useTeamCriteria(selectedEvaluationMember?.team ?? null);
-  const detailCriteria = useTeamCriteria(detailModalMember?.team ?? null);
-  const reportCriteria = useTeamCriteria(reportModal?.member.team ?? null);
+  const evaluationCriteria = useTeamCriteria(
+    selectedEvaluationMember ? (selectedEvaluationMember.criteriaTeamId ?? selectedEvaluationMember.team) : null,
+  );
+  const detailCriteria = useTeamCriteria(
+    detailModalMember ? (detailModalMember.criteriaTeamId ?? detailModalMember.team) : null,
+  );
+  const reportCriteria = useTeamCriteria(
+    reportModal ? (reportModal.member.criteriaTeamId ?? reportModal.member.team) : null,
+  );
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
     return getEvaluation(makeEvaluationId(memberId, cycle));

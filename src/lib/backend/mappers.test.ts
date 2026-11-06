@@ -42,6 +42,13 @@ describe('rowToTeamMember', () => {
     });
   });
 
+  it('guarda de qual equipe/conjunto vêm as perguntas do membro, quando o banco informa', () => {
+    expect(rowToTeamMember({ ...row, criteria_team_id: 'Mariza Leite - Danielle' }).criteriaTeamId).toBe(
+      'Mariza Leite - Danielle',
+    );
+    expect(rowToTeamMember(row).criteriaTeamId).toBeUndefined();
+  });
+
   it('usa a cor da equipe embutida e cai numa cor neutra quando não há nenhuma', () => {
     const { team_color: _ignored, ...withoutColor } = row;
     expect(rowToTeamMember({ ...withoutColor, teams: { color: '#16A34A' } }).teamColor).toBe('#16A34A');

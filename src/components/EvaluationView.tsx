@@ -809,7 +809,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         </div>
 
         {!isLoadingEvaluation && categories.length > 0 && (!hasAllScores || !leaderComments.trim()) && (
-          <div role="status" className="text-[11px] font-mono text-warn-pale sm:ml-auto sm:text-right">
+          <div role="status" className="text-xs font-semibold text-ink bg-gold-soft border border-accent/50 rounded-lg px-3 py-2 sm:ml-auto sm:text-right">
             Para salvar:
             {!hasAllScores && ` marque a nota de todas as perguntas (faltam ${scoreKeys.filter((key) => typeof scores[key] !== 'number').length})`}
             {!hasAllScores && !leaderComments.trim() && ' e'}
@@ -819,7 +819,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         <button
           onClick={handleSave}
           disabled={isLoadingEvaluation || !hasAllScores || !leaderComments.trim()}
-          className="bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-brand cursor-pointer transition-all shadow-md flex items-center gap-2"
+          className="bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-brand cursor-pointer transition-all shadow-md flex items-center gap-2 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:shadow-none disabled:hover:bg-accent"
         >
           <Save className="w-4 h-4" />
           Salvar Avaliação

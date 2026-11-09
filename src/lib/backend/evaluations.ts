@@ -26,6 +26,8 @@ export interface SavedEvaluation {
   score: number;
   maxScore: number;
   status: PerformanceStatus;
+  /** false quando o ciclo salvo é mais antigo que outro já avaliado: a nota atual do membro não mudou. */
+  isCurrent: boolean;
 }
 
 export class EvaluationConflictError extends Error {
@@ -143,6 +145,7 @@ export async function saveEvaluation({
     if (error.message.includes('perguntas_desatualizadas')) throw new EvaluationCriteriaOutdatedError();
     throw new Error(error.message);
   }
-  const saved = data as { revision: number; score: number; max_score: number; status: PerformanceStatus };
-  return { revision: saved.revision, score: saved.score, maxScore: saved.max_score, status: saved.status };
+  const saved = data as { revision: number; score: number; max_score: number; status: PerformanceStatus; is_current?: boolean };
+  // Servidor sem o campo (antes da migração 0009): vale o comportamento anterior, em que todo ciclo salvo atualiza o membro.
+  return { revision: saved.revision, score: saved.score, maxScore: saved.max_score, status: saved.status, isCurrent: saved.is_current !== false };
 }

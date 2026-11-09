@@ -296,18 +296,22 @@ export default function App() {
         evaluation: { cycle, comments, pdiGoals, criteriaScores },
         expectedRevision,
       });
-      const updatedMember: TeamMember = {
-        ...targetMember,
-        score: saved.score,
-        maxScore: saved.maxScore,
-        status: saved.status,
-        evaluationStatus: 'Concluído',
-        pdiGoals,
-        history: [
-          ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
-          { month: cycle, score: saved.score },
-        ],
-      };
+      const history = [
+        ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
+        { month: cycle, score: saved.score },
+      ];
+      // Um ciclo antigo entra só no histórico: a nota, o status e as metas atuais continuam os do ciclo mais recente.
+      const updatedMember: TeamMember = saved.isCurrent
+        ? {
+          ...targetMember,
+          score: saved.score,
+          maxScore: saved.maxScore,
+          status: saved.status,
+          evaluationStatus: 'Concluído',
+          pdiGoals,
+          history,
+        }
+        : { ...targetMember, history };
       setMembers((previous) => rankMembers(previous.map((member) =>
         member.id === memberId ? updatedMember : member
       )));

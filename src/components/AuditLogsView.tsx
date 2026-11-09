@@ -94,6 +94,11 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
     return [...seen].sort();
   }, [logs]);
 
+  const memberName = (log: EvaluationAuditLog) => {
+    const member = members.find((m) => m.id === log.memberId);
+    return member?.name || log.memberName || log.memberId;
+  };
+
   const filteredLogs = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return logs.filter((log) => {
@@ -106,11 +111,6 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
       return true;
     });
   }, [logs, memberFilter, cycleFilter, searchQuery]);
-
-  const memberName = (log: EvaluationAuditLog) => {
-    const member = members.find((m) => m.id === log.memberId);
-    return member?.name || log.memberName || log.memberId;
-  };
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">

@@ -59,7 +59,13 @@ describe('saveEvaluation', () => {
       p_pdi_goals: [],
       p_expected_revision: 1,
     });
-    expect(saved).toEqual({ revision: 2, score: 12, maxScore: 15, status: 'Atenção' });
+    expect(saved).toEqual({ revision: 2, score: 12, maxScore: 15, status: 'Atenção', isCurrent: true });
+  });
+
+  it('informa quando o ciclo salvo é antigo e não vira a nota atual do membro', async () => {
+    fake.rpc.mockResolvedValue({ data: { id: 'x', revision: 1, score: 5, max_score: 15, status: 'Alarme', is_current: false }, error: null });
+    const saved = await saveEvaluation({ member, evaluation });
+    expect(saved.isCurrent).toBe(false);
   });
 
   it('reconhece conflito de revisão', async () => {

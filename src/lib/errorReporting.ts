@@ -54,7 +54,8 @@ export function createErrorReporter(
           source,
           message,
           stack,
-          url: typeof location === 'undefined' ? '' : location.href,
+          // Sem o trecho # e a busca: no convite e na recuperação de senha eles carregam tokens.
+          url: typeof location === 'undefined' ? '' : location.origin + location.pathname,
           userAgent: typeof navigator === 'undefined' ? '' : navigator.userAgent,
         }).catch(() => undefined);
       } catch {

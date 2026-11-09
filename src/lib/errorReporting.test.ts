@@ -39,6 +39,19 @@ describe('createErrorReporter', () => {
     expect(send.mock.calls[2][0]).toMatchObject({ source: 'boundary', message: 'Quebrou B' });
   });
 
+  it('não envia o trecho # nem a busca do endereço, onde podem estar tokens de convite', async () => {
+    window.history.replaceState(null, '', '/?tab=audit&q=ana#access_token=segredo&refresh_token=outro&type=invite');
+    const send = vi.fn().mockResolvedValue(undefined);
+    createErrorReporter(send, () => 0).report(new Error('Falha no convite'), 'window');
+    await Promise.resolve();
+
+    const { url } = send.mock.calls[0][0];
+    expect(url).not.toContain('segredo');
+    expect(url).not.toContain('access_token');
+    expect(url).not.toContain('q=ana');
+    window.history.replaceState(null, '', '/');
+  });
+
   it('não envia ruído e nunca lança, mesmo se o envio falhar', async () => {
     const send = vi.fn().mockRejectedValue(new Error('sem rede'));
     const reporter = createErrorReporter(send, () => 0);

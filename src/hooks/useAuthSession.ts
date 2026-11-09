@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCurrentUserRole, subscribeToAuth } from '../lib/backend';
 import type { AuthUser } from '../lib/backend';
 
@@ -8,9 +8,15 @@ export function useAuthSession() {
   const [authRole, setAuthRole] = useState<'leader' | 'admin' | null>(null);
   const [authRoleReady, setAuthRoleReady] = useState(false);
 
+  const currentUserId = useRef<string | null>(null);
+
   useEffect(() => subscribeToAuth((user) => {
-    setAuthUser(user);
     setAuthReady(true);
+    // O Supabase avisa também na renovação do token e ao voltar para a aba, sempre com o mesmo usuário.
+    // Só recomeça (e desmonta a tela) quando a pessoa realmente muda.
+    if (user && user.id === currentUserId.current) return;
+    currentUserId.current = user?.id ?? null;
+    setAuthUser(user);
     setAuthRole(null);
     setAuthRoleReady(!user);
   }), []);

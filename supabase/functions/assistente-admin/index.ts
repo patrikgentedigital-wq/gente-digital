@@ -310,6 +310,16 @@ Deno.serve(async (request) => {
 
     const final = calls.find((call: { function: { name: string } }) => call.function.name === 'responder');
     if (final) {
+      // A IA pode propor uma ação na mesma rodada da resposta final: registra as propostas antes de responder,
+      // senão o texto diria "preparei a ação" e o botão de confirmar não apareceria.
+      for (const call of calls) {
+        if (call.function.name !== 'propor_acao') continue;
+        try {
+          runTool(call.function.name, JSON.parse(call.function.arguments || '{}'));
+        } catch {
+          // Argumentos inválidos: a proposta é ignorada.
+        }
+      }
       try {
         const { texto, grafico } = JSON.parse(final.function.arguments);
         if (typeof texto !== 'string' || !texto.trim()) return json({ error: 'ia_sem_resposta' }, 502);

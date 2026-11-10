@@ -209,7 +209,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   // Autosave draft (debounced) to localStorage whenever the form changes.
   useEffect(() => {
-    if (isLoadingEvaluation) return;
+    if (isLoadingEvaluation || !isDirty) return;
     if (isEmptyDraft({ scores, leaderComments, pdiGoals })) return;
 
     const timer = window.setTimeout(() => {
@@ -219,7 +219,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     autosaveTimer.current = timer;
 
     return () => window.clearTimeout(timer);
-  }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation]);
+  }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation, isDirty]);
 
 
   const toggleCategory = (catId: string) => {
@@ -321,12 +321,13 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       toast.error('Esta equipe ainda não tem perguntas. Peça ao admin para cadastrá-las na aba Perguntas.');
       return;
     }
-    if (!hasAllScores) {
-      toast.error('Preencha todos os critérios antes de salvar.');
-      return;
-    }
-    if (!leaderComments.trim()) {
-      toast.error('Informe o parecer da liderança antes de salvar.');
+    if (!hasAllScores || !leaderComments.trim()) {
+      const missingScores = scoreKeys.filter((key) => typeof scores[key] !== 'number').length;
+      const missing = [
+        missingScores > 0 ? `${missingScores} ${missingScores === 1 ? 'nota' : 'notas'}` : null,
+        leaderComments.trim() ? null : 'o parecer da liderança',
+      ].filter(Boolean);
+      toast.error(`Ainda não foi salva. Faltam ${missing.join(' e ')}.`);
       return;
     }
 
@@ -817,7 +818,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               Salva às {new Date(lastSaved.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · revisão {lastSaved.revision} · {lastSaved.score}/{lastSaved.max}
             </span>
           )}
-          {draftSavedAt && (
+          {draftSavedAt && isDirty && (
             <span
               className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted bg-surface-2 border border-line rounded-lg px-2 py-1"
               title="Seus dados são salvos localmente a cada edição e restaurados se você sair sem salvar"
@@ -838,8 +839,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         )}
         <button
           onClick={handleSave}
-          disabled={isLoadingEvaluation || !hasAllScores || !leaderComments.trim()}
-          className="bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-brand cursor-pointer transition-all shadow-md flex items-center gap-2 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:shadow-none disabled:hover:bg-accent"
+          disabled={isLoadingEvaluation || categories.length === 0}
+          aria-disabled={!hasAllScores || !leaderComments.trim() ? true : undefined}
+          className={`bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-brand cursor-pointer transition-all shadow-md flex items-center gap-2 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:shadow-none disabled:hover:bg-accent ${!hasAllScores || !leaderComments.trim() ? 'opacity-60 grayscale' : ''}`}
         >
           <Save className="w-4 h-4" />
           Salvar Avaliação

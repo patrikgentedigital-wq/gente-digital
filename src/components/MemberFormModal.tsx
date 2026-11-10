@@ -29,7 +29,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   // Equipe sugerida para um colaborador novo: a primeira da lista (a pessoa escolhe a certa no seletor).
-  const defaultTeam = deriveTeams(members, TEAMS, { includeEmpty: true })[0]?.leader ?? '';
+  const defaultTeam = deriveTeams(members, TEAMS)[0]?.leader ?? '';
   const [team, setTeam] = useState<LeaderName>(defaultTeam);
   const [email, setEmail] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -56,7 +56,7 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
 
   if (!isOpen) return null;
 
-  const teamOptions = deriveTeams(members, TEAMS, { includeEmpty: true });
+  const teamOptions = deriveTeams(members, TEAMS);
   const selectedTeamData = teamOptions.find((t) => t.leader === team) || teamOptions[0];
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -7,6 +7,8 @@ import type { TeamMember } from '../types';
 import { CRITERIA_SCORE_KEYS, getDefaultEvaluationCycle } from '../lib/evaluation';
 import { clearDraft, saveDraft } from '../lib/draftUtils';
 import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
+import { loadDraft } from '../lib/draftUtils';
+import { toast } from '../utils/toastUtils';
 
 const member: TeamMember = {
   id: 'member-1',
@@ -123,6 +125,41 @@ describe('EvaluationView integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar Avaliação' }));
     await waitFor(() => expect(onSaveEvaluation).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.getByText(/Salva às .* revisão 2 · 31\/155/)).toBeTruthy());
+  });
+
+  it('clicar em Salvar com notas ou parecer faltando avisa o que falta, em vez de não fazer nada', async () => {
+    const errorSpy = vi.spyOn(toast, 'error').mockImplementation(() => undefined as never);
+    const { onSaveEvaluation, onLoadEvaluation } = renderEvaluation();
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+
+    const saveButton = screen.getByRole('button', { name: 'Salvar Avaliação' }) as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(false);
+    fireEvent.click(saveButton);
+
+    expect(onSaveEvaluation).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringMatching(/Faltam 31 notas e o parecer da liderança/));
+    errorSpy.mockRestore();
+  });
+
+  it('depois de salvar, não mostra nem deixa guardado o rascunho local', async () => {
+    const { onSaveEvaluation, onLoadEvaluation } = renderEvaluation();
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+
+    for (const button of screen.getAllByRole('button', { name: '+' })) {
+      fireEvent.click(button);
+    }
+    fireEvent.change(screen.getByPlaceholderText('Insira as principais considerações do feedback...'), {
+      target: { value: 'Parecer validado pela liderança.' },
+    });
+    await waitFor(() => expect(screen.getByText(/Rascunho salvo às/)).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar Avaliação' }));
+    await waitFor(() => expect(onSaveEvaluation).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText(/Salva às/)).toBeTruthy());
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    expect(screen.queryByText(/Rascunho salvo às/)).toBeNull();
+    expect(loadDraft(member.id, getDefaultEvaluationCycle())).toBeNull();
   });
 
   it('mostra o total máximo do conjunto de perguntas do membro, não um valor fixo', async () => {

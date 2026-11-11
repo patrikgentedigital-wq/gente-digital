@@ -1,117 +1,48 @@
 import React from 'react';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from 'recharts';
-import { PieChart as PieChartIcon } from 'lucide-react';
+import type { LevelKey } from '../../lib/dashboardStats';
 
 interface StatusDistributionChartProps {
-  pieData: Array<{
-    name: string;
-    shortName: string;
-    value: number;
-    color: string;
-    pct: number;
-  }>;
+  levelCounts: Record<LevelKey, number>;
   totalMembers: number;
 }
 
-interface StatusPieTooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    payload: {
-      name: string;
-      value: number;
-      color: string;
-      pct: number;
-    };
-  }>;
-}
+const STRIPES = 'repeating-linear-gradient(45deg, var(--color-line-soft) 0 5px, var(--color-surface-2) 5px 10px)';
 
-const StatusPieTooltip: React.FC<StatusPieTooltipProps> = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-surface p-3 rounded-xl text-xs space-y-1">
-        <p className="font-bold text-ink flex items-center gap-1.5">
-          <span
-            className="w-2.5 h-2.5 rounded-full inline-block"
-            style={{ backgroundColor: data.color }}
-          />
-          {data.name}
-        </p>
-        <p className="text-muted">
-          Qtd: <strong className="text-ink font-mono">{data.value}</strong> colaboradores ({data.pct}%)
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
+const LEVELS: Array<{ key: LevelKey; label: string; fill: string }> = [
+  { key: 'Voando', label: 'Voando', fill: 'var(--color-accent)' },
+  { key: 'Caminho Certo', label: 'Caminho certo', fill: 'var(--color-success)' },
+  { key: 'Atenção', label: 'Atenção', fill: 'var(--color-warn)' },
+  { key: 'Alarme', label: 'Alarme', fill: 'var(--color-danger)' },
+  { key: 'Sem avaliação', label: 'Sem avaliação', fill: STRIPES },
+];
 
-export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({
-  pieData,
-  totalMembers,
-}) => {
-  return (
-    <div className="bg-surface p-5 rounded-3xl flex flex-col justify-between space-y-4">
-      <div>
-        <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
-          <PieChartIcon className="w-4 h-4 text-accent-text" />
-          Distribuição por Nível
-        </h3>
-        <p className="text-xs text-muted mt-0.5">
-          Proporção de colaboradores por faixa de status de desempenho.
-        </p>
-      </div>
-
-      <div className="w-full h-48 relative my-auto">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={pieData}
-              cx="50%"
-              cy="50%"
-              innerRadius={52}
-              outerRadius={75}
-              paddingAngle={4}
-              dataKey="value"
-            >
-              {pieData.map((entry, index) => (
-                <Cell key={`pie-cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip content={<StatusPieTooltip />} />
-          </PieChart>
-        </ResponsiveContainer>
-
-        {/* Center Donut Label */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl font-bold font-mono text-ink">{totalMembers}</span>
-          <span className="text-[10px] font-mono text-faint">Membros</span>
-        </div>
-      </div>
-
-      {/* Legend Items */}
-      <div className="space-y-1.5 pt-2 border-t border-line">
-        {pieData.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-xs shrink-0"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-muted">{item.shortName}</span>
-            </div>
-            <span className="font-mono font-bold text-ink">
-              {item.value} <span className="text-faint font-normal">({item.pct}%)</span>
-            </span>
-          </div>
-        ))}
-      </div>
+/** Uma barra dividida por nível, com quem ainda não foi avaliado à parte. */
+export const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({ levelCounts, totalMembers }) => (
+  <section aria-label="Distribuição por nível" className="blk p-5 text-ink">
+    <h3 className="font-display font-extrabold text-base mb-4">Por nível</h3>
+    <div className="flex h-6 rounded-md border-2 border-block-edge overflow-hidden mb-4" aria-hidden="true">
+      {LEVELS.filter((level) => levelCounts[level.key] > 0).map((level) => (
+        <div
+          key={level.key}
+          className="h-full border-r-2 border-block-edge last:border-r-0"
+          style={{ width: `${(levelCounts[level.key] / (totalMembers || 1)) * 100}%`, background: level.fill }}
+        />
+      ))}
     </div>
-  );
-};
+    <ul className="space-y-1.5 text-xs">
+      {LEVELS.map((level) => (
+        <li key={level.key} className={`flex items-center justify-between ${level.key === 'Sem avaliação' ? 'text-muted' : ''}`}>
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={`w-3 h-3 rounded-sm border-[1.5px] ${level.key === 'Sem avaliação' ? 'border-dashed border-faint' : 'border-block-edge'}`}
+              style={{ background: level.fill }}
+            />
+            {level.label}
+          </span>
+          <span className="font-bold">{levelCounts[level.key]}</span>
+        </li>
+      ))}
+    </ul>
+  </section>
+);

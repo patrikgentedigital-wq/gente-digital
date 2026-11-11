@@ -47,19 +47,25 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
   const firstMonth = timelineData[0]?.month;
   const lastMonth = timelineData[timelineData.length - 1]?.month;
   const hasWindow = Boolean(firstMonth && lastMonth);
+  const hasData = timelineData.some((point) => point.avg !== null);
 
   return (
-    <div className="bg-surface p-5 rounded-3xl space-y-3">
+    <section aria-label="Evolução da média geral" className="blk p-5 space-y-3 text-ink">
       <div>
-        <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-accent-text" />
-          Evolução da Média Geral{hasWindow ? ` (${firstMonth} a ${lastMonth})` : ''}
+        <h3 className="font-display font-extrabold text-base flex items-center gap-2">
+          <TrendingUp className="w-4 h-4" />
+          Evolução da média geral{hasWindow ? ` (${firstMonth} a ${lastMonth})` : ''}
         </h3>
         <p className="text-xs text-muted mt-0.5">
           Trajetória do desempenho médio (em % do máximo de cada avaliação) nos últimos meses.
         </p>
       </div>
 
+      {!hasData ? (
+        <div className="h-52 flex items-center justify-center rounded-md border-2 border-dashed border-line text-xs text-muted">
+          Ainda não há histórico para mostrar.
+        </div>
+      ) : (
       <div className="w-full h-52 pt-2">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={timelineData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
@@ -69,10 +75,11 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
                 <stop offset="95%" stopColor="#ffe708" stopOpacity={0.0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="#e5e5ea" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke="var(--color-line-soft)" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" stroke="#86868b" fontSize={11} tickLine={false} />
             <YAxis
-              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 100]}
+              domain={[0, 100]}
+              ticks={[0, 20, 40, 60, 80, 100]}
               unit="%"
               stroke="#86868b"
               fontSize={11}
@@ -83,7 +90,7 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
               type="monotone"
               dataKey="avg"
               connectNulls
-              stroke="#000000"
+              stroke="var(--color-block-edge)"
               strokeWidth={3}
               fillOpacity={1}
               fill="url(#scoreColor)"
@@ -91,6 +98,7 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+      )}
+    </section>
   );
 };

@@ -1,118 +1,63 @@
 import React from 'react';
-import { TeamMember } from '../../types';
-import { Trophy, Users, TrendingUp, Award, ArrowUpRight } from 'lucide-react';
+import type { DashboardStats } from '../../lib/dashboardStats';
 
 interface DashboardKpiCardsProps {
-  members: TeamMember[];
-  avgPercent: number;
-  voandoPercent: number;
-  statusCounts: { Voando: number; 'Caminho Certo': number; Atenção: number; Alarme: number };
-  bestTeam: { leader: string; avgPercent: number; count: number } | null;
-  completedEvaluationsCount: number;
-  teamCount: number;
+  stats: DashboardStats;
 }
 
-export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({
-  members,
-  avgPercent,
-  voandoPercent,
-  statusCounts,
-  bestTeam,
-  completedEvaluationsCount,
-  teamCount,
-}) => {
-  const totalMembers = members.length;
-  const evalPercent = totalMembers > 0 ? Math.round((completedEvaluationsCount / totalMembers) * 100) : 0;
+const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="text-[11px] font-bold uppercase tracking-[0.06em]">{children}</div>
+);
+
+const Big: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="font-display text-4xl font-extrabold leading-tight">{children}</div>
+);
+
+export const DashboardKpiCards: React.FC<DashboardKpiCardsProps> = ({ stats }) => {
+  const { avgPercent, evaluatedCount, totalMembers, onTargetCount, bestTeam } = stats;
+  const evaluatedShare = totalMembers > 0 ? Math.round((evaluatedCount / totalMembers) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Card 1: Média Geral */}
-      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
-        <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold ">
-            Média Geral da Empresa
-          </span>
-          <TrendingUp className="w-4 h-4 text-accent-text" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <section aria-label="Média geral" className="blk-hero p-4">
+        <Label>Média geral</Label>
+        <Big>{avgPercent === null ? '—' : `${avgPercent}%`}</Big>
+        <div className="text-xs opacity-80">
+          {evaluatedCount === 0 ? 'ninguém avaliado ainda' : `dos ${evaluatedCount} avaliados`}
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-mono text-accent-text">
-            {avgPercent}
-          </span>
-          <span className="text-xs text-faint font-mono">% do máximo</span>
-        </div>
-        <div className="mt-2 text-[11px] text-success flex items-center gap-1 font-mono">
-          <ArrowUpRight className="w-3.5 h-3.5" />
-          <span>Desempenho consolidado</span>
-        </div>
-      </div>
+      </section>
 
-      {/* Card 2: Nível Voando */}
-      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
-        <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold ">
-            Taxa na meta (Voando)
-          </span>
-          <Trophy className="w-4 h-4 text-accent-text" />
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-mono text-ink">
-            {voandoPercent}%
-          </span>
-          <span className="text-xs text-faint font-mono">
-            ({statusCounts.Voando}/{totalMembers})
-          </span>
-        </div>
-        <div className="mt-2 text-[11px] text-muted font-mono">
-          Meta desejada: &ge; 60% da equipe
-        </div>
-      </div>
+      <section aria-label="Na meta" className="blk p-4 text-ink">
+        <Label>Na meta</Label>
+        <Big>{onTargetCount}</Big>
+        <div className="text-xs text-muted">{onTargetCount === 1 ? 'pessoa' : 'pessoas'} acima de 90%</div>
+      </section>
 
-      {/* Card 3: Total Colaboradores */}
-      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
-        <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold ">
-            Colaboradores Avaliados
-          </span>
-          <Users className="w-4 h-4 text-primary" />
+      <section aria-label="Avaliados" className="blk p-4" style={{ background: 'var(--color-teal)', color: '#000000' }}>
+        <Label>Avaliados</Label>
+        <Big>
+          {evaluatedCount}
+          <span className="text-lg">/{totalMembers}</span>
+        </Big>
+        <div className="h-2 mt-1 rounded border-[1.5px] border-black bg-white overflow-hidden">
+          <div className="h-full bg-black" style={{ width: `${evaluatedShare}%` }} />
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-extrabold font-mono text-ink">
-            {totalMembers}
-          </span>
-          <span className="text-xs text-faint font-mono">em {teamCount} {teamCount === 1 ? 'equipe' : 'equipes'}</span>
-        </div>
-        <div className="mt-2 text-[11px] text-success font-mono">
-          {evalPercent}% com avaliação concluída ({completedEvaluationsCount}/{totalMembers})
-        </div>
-      </div>
+      </section>
 
-      {/* Card 4: Equipe Destaque */}
-      <div className="bg-surface p-4 rounded-3xl relative overflow-hidden group">
-        <div className="flex items-center justify-between text-faint mb-2">
-          <span className="text-[11px] font-mono font-bold ">
-            Equipe em Destaque
-          </span>
-          <Award className="w-4 h-4 text-accent-text" />
-        </div>
+      <section aria-label="Equipe destaque" className="blk p-4 text-ink">
+        <Label>Equipe destaque</Label>
         {bestTeam ? (
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-ink truncate">
-                Time {bestTeam.leader}
-              </span>
-              <span className="font-mono text-sm font-bold text-accent-text">
-                {bestTeam.avgPercent}%
-              </span>
-            </div>
-            <div className="mt-2 text-[11px] text-muted flex justify-between font-mono">
-              <span>{bestTeam.count} integrantes</span>
-              <span className="text-success">Top Performance</span>
-            </div>
-          </div>
+          <>
+            <div className="font-display text-2xl font-extrabold leading-tight mt-1 truncate">{bestTeam.leader}</div>
+            <div className="text-xs text-muted">média {bestTeam.avgPercent}%</div>
+          </>
         ) : (
-          <span className="text-xs text-faint">Sem dados</span>
+          <>
+            <Big>—</Big>
+            <div className="text-xs text-muted">sem avaliações suficientes</div>
+          </>
         )}
-      </div>
+      </section>
     </div>
   );
 };

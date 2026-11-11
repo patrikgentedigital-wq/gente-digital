@@ -482,6 +482,8 @@ export default function App() {
           <ErrorBoundary>{authenticatedContent}</ErrorBoundary>
         </Suspense>
       ) : (
+        <>
+        <PageHeader tab={activeTab} />
         <main className="flex-1 flex items-center justify-center p-8">
           <div className="blk max-w-md p-8 text-center">
             <h2 className="text-xl font-bold text-ink">Acesso autenticado necessário</h2>
@@ -495,6 +497,7 @@ export default function App() {
             </button>
           </div>
         </main>
+        </>
       )}
 
       <LeaderLoginModal

@@ -21,9 +21,9 @@ const SIZE_CLASSES: Record<NonNullable<AvatarProps['size']>, string> = {
 
 export function getInitials(name: string): string {
   return name
-    .split(' ')
-    .map((part) => part[0])
-    .filter(Boolean)
+    .split(/\s+/)
+    .map((part) => part.match(/\p{L}/u)?.[0])
+    .filter((letter): letter is string => Boolean(letter))
     .slice(0, 2)
     .join('')
     .toUpperCase();

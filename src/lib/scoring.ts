@@ -1,4 +1,9 @@
-import type { PerformanceStatus } from '../types';
+import type { PerformanceStatus, TeamMember } from '../types';
+
+/** Avaliado = já tem alguma avaliação salva. O status não volta a "Pendente" quando o ciclo muda. */
+export function isEvaluated(member: Pick<TeamMember, 'evaluationStatus'>): boolean {
+  return member.evaluationStatus === 'Concluído';
+}
 
 /** Percentual do máximo, de 0 a 100; 0 quando a equipe não tem perguntas. */
 export function percentOf(score: number, maxScore: number): number {

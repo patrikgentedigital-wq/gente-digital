@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
-import { TEAMS } from '../data/catalogData';
-import { deriveTeams } from '../lib/teams';
-import { compareByPercent, percentOf } from '../lib/scoring';
+import { percentOf } from '../lib/scoring';
+import { dashboardStats } from '../lib/dashboardStats';
 import { monthlyTrend } from '../lib/trend';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
@@ -39,48 +38,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     scoreBuckets,
     timelineData,
   } = useMemo(() => {
-    const total = members.length;
-    const average =
-      total > 0
-        ? Math.round(members.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / total)
-        : 0;
-
-    const completedCount = members.filter((m) => m.evaluationStatus === 'Concluído').length;
-
+    const stats = dashboardStats(members);
+    const total = stats.totalMembers;
     const counts = {
-      Voando: members.filter((m) => m.status === 'Voando').length,
-      'Caminho Certo': members.filter((m) => m.status === 'Caminho Certo').length,
-      Atenção: members.filter((m) => m.status === 'Atenção').length,
-      Alarme: members.filter((m) => m.status === 'Alarme').length,
+      Voando: stats.levelCounts.Voando,
+      'Caminho Certo': stats.levelCounts['Caminho Certo'],
+      Atenção: stats.levelCounts.Atenção,
+      Alarme: stats.levelCounts.Alarme,
     };
-
     const voandoPct = Math.round((counts.Voando / (total || 1)) * 100);
-
-    const teams = deriveTeams(members, TEAMS).map((t) => {
-      const teamMembers = members.filter((m) => m.team === t.leader);
-      const count = teamMembers.length;
-      const teamAvg =
-        count > 0
-          ? Math.round(teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / count)
-          : 0;
-      const topMember =
-        count > 0
-          ? [...teamMembers].sort(compareByPercent)[0] || null
-          : null;
-
-      return {
-        leader: t.leader,
-        color: t.color,
-        count,
-        avgPercent: teamAvg,
-        topMember,
-        voandoCount: teamMembers.filter((m) => m.status === 'Voando').length,
-      };
-    }).filter((t) => t.count > 0);
-
-    const sortedTeams = [...teams].sort((a, b) => b.avgPercent - a.avgPercent);
-    // Sem nenhuma avaliação todas as médias são 0%: não há equipe em destaque.
-    const topTeam = sortedTeams[0] && sortedTeams[0].avgPercent > 0 ? sortedTeams[0] : null;
+    // Até os gráficos ganharem o estado "sem avaliação", null aparece como 0.
+    const sortedTeams = stats.teamStats.map((t) => ({
+      leader: t.leader,
+      color: t.color,
+      count: t.count,
+      avgPercent: t.avgPercent ?? 0,
+      topMember: t.topMember,
+      voandoCount: t.onTargetCount,
+    }));
+    const topTeam = stats.bestTeam
+      ? { leader: stats.bestTeam.leader, avgPercent: stats.bestTeam.avgPercent ?? 0, count: stats.bestTeam.count }
+      : null;
+    const average = stats.avgPercent ?? 0;
+    const completedCount = stats.evaluatedCount;
 
     const pie = [
       {

@@ -10,7 +10,7 @@ const formatNumber = (value: number | null, suffix = '') =>
 const formatDate = (iso: string) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '');
 
 const Kpi: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="rounded-2xl bg-surface p-4">
+  <div className="blk p-4">
     <p className="text-[11px] font-mono text-faint">{label}</p>
     <p className="mt-1 font-display text-3xl font-semibold text-ink">{value}</p>
   </div>
@@ -70,7 +70,7 @@ export const SuccessView: React.FC = () => {
           </div>
 
           {summary.totals.respondidas === 0 && (
-            <p className="rounded-2xl bg-surface p-4 text-sm text-muted" role="status">
+            <p className="blk p-4 text-sm text-muted" role="status">
               Ainda não há notas respondidas. {summary.totals.aguardando} aguardando resposta, {summary.totals.semResposta} sem resposta
               {summary.totals.naoEntendidas > 0 ? `, ${summary.totals.naoEntendidas} com resposta que não pareceu nota` : ''}. As
               notas aparecem aqui assim que os clientes responderem.
@@ -78,7 +78,7 @@ export const SuccessView: React.FC = () => {
           )}
 
           {summary.tecnicos.length > 0 && (
-            <div className="rounded-2xl bg-surface p-4 overflow-x-auto">
+            <div className="blk p-4 overflow-x-auto">
               <table className="w-full text-xs">
                 <caption className="sr-only">Notas por técnico</caption>
                 <thead>
@@ -106,7 +106,7 @@ export const SuccessView: React.FC = () => {
           )}
 
           {chartData.length > 0 && (
-            <figure className="rounded-2xl bg-surface p-4">
+            <figure className="blk p-4">
               <figcaption className="mb-2 text-[11px] font-mono font-bold text-accent-text">Nota média por técnico</figcaption>
               <div className="h-60 w-full" role="img" aria-label="Nota média por técnico">
                 <ResponsiveContainer width="100%" height="100%">
@@ -123,7 +123,7 @@ export const SuccessView: React.FC = () => {
           )}
 
           {summary.baixas.length > 0 && (
-            <div className="rounded-2xl bg-surface p-4 space-y-2">
+            <div className="blk p-4 space-y-2">
               <h2 className="text-sm font-semibold text-ink">Notas baixas recentes</h2>
               <ul className="space-y-1.5 text-xs text-ink">
                 {summary.baixas.map((b) => (

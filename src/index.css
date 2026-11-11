@@ -7,11 +7,15 @@
   --font-display: 'Sora', 'Sen', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Sen', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
-  --color-app: #f5f5f7;
+  --color-app: #f4f3ee;
   --color-surface: #ffffff;
-  --color-surface-2: #efeff2;
-  --color-line: #d2d2d7;
-  --color-line-soft: #e5e5ea;
+  --color-surface-2: #efeee8;
+  --color-line: #cfcdc4;
+  --color-line-soft: #e3e1d8;
+  /* Estilo B (blocos de cor): contorno dos blocos e faixa do topo. */
+  --color-block-edge: #000000;
+  --color-band: #ffe708;
+  --color-band-ink: #000000;
   --color-ink: #000000;
   --color-muted: #5c5c63;
   --color-faint: #86868b;
@@ -59,8 +63,11 @@
 
 /* Modo TV e telas de apresentacao: preto com amarelo, como a versao escura da logo. */
 .theme-dark {
-  --color-app: #000000;
-  --color-surface: #121212;
+  --color-app: #0b0b0b;
+  --color-surface: #161616;
+  --color-block-edge: #ffe708;
+  --color-band: #000000;
+  --color-band-ink: #ffe708;
   --color-surface-2: #1d1d1d;
   --color-line: #333333;
   --color-line-soft: #222222;
@@ -108,6 +115,30 @@
   --color-success-pale: #12301c;
   --color-warn-pale: #36260a;
   color-scheme: dark;
+}
+
+/* Bloco: contorno grosso com base mais pesada. Só nos blocos de primeiro nível. */
+@utility blk {
+  background: var(--color-surface);
+  border: 2px solid var(--color-block-edge);
+  border-bottom-width: 6px;
+  border-radius: 10px;
+}
+
+/* Bloco de destaque: cores invertidas da faixa (preto e amarelo no claro, amarelo e preto no escuro). */
+@utility blk-hero {
+  background: var(--color-band-ink);
+  color: var(--color-band);
+  border: 2px solid var(--color-block-edge);
+  border-bottom-width: 6px;
+  border-radius: 10px;
+}
+
+/* Faixa do topo da página. */
+@utility band {
+  background: var(--color-band);
+  color: var(--color-band-ink);
+  border-bottom: 2px solid var(--color-block-edge);
 }
 
 @utility rounded-brand {

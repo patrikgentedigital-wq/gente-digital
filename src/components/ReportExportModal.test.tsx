@@ -34,3 +34,12 @@ describe('ReportExportModal', () => {
     expect(screen.queryByText(/c8k2x1ab/)).toBeNull();
   });
 });
+
+describe('ReportExportModal sem avaliação', () => {
+  it('quem nunca foi avaliado aparece como Sem avaliação, sem posição nem nota', () => {
+    render(<ReportExportModal member={{ ...member, score: 0, status: 'Alarme', rank: 7, evaluationStatus: 'Pendente' }} isOpen onClose={vi.fn()} />);
+    expect(screen.getAllByText('Sem avaliação').length).toBeGreaterThan(0);
+    expect(screen.queryByText('#7')).toBeNull();
+    expect(screen.queryByText('Alarme')).toBeNull();
+  });
+});

@@ -33,7 +33,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       if (this.props.fallback) return this.props.fallback;
       return (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-3xl bg-surface p-6 text-center">
+          <div className="blk max-w-md p-6 text-center">
             <h2 className="text-xl font-bold text-ink">Algo deu errado</h2>
             <p className="mt-2 text-sm text-muted">
               Ocorreu um erro inesperado na interface. Seus dados não foram afetados.

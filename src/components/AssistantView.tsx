@@ -180,7 +180,7 @@ export const AssistantView: React.FC = () => {
           event.preventDefault();
           void send(input);
         }}
-        className="sticky bottom-4 flex items-end gap-2 rounded-2xl border border-line bg-surface/95 p-2 backdrop-blur-md"
+        className="blk sticky bottom-4 flex items-end gap-2 p-2"
       >
         <textarea
           aria-label="Pergunte sobre os dados"

@@ -1,6 +1,6 @@
 import { TeamMember, Badge } from '../types';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
-import { percentOf, scaleScore } from '../lib/scoring';
+import { isEvaluated, percentOf, scaleScore } from '../lib/scoring';
 
 const getCurrentCycleLabel = () => `Ciclo ${getDefaultEvaluationCycle()}`;
 
@@ -10,10 +10,14 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
   const on155 = scaleScore(member.score, member.maxScore, 155);
   const myPercent = percentOf(member.score, member.maxScore);
 
-  const teamMembers = allMembers.filter((m) => m.team === member.team);
+  // Só quem foi avaliado disputa a coroa: sem isso, um empate em 0% dava a coroa a todos.
+  const evaluated = isEvaluated(member);
+  const evaluatedTeammates = allMembers.filter((m) => m.team === member.team && isEvaluated(m));
   const isTeamLeader =
-    teamMembers.length > 0 &&
-    teamMembers.every((m) => percentOf(m.score, m.maxScore) <= myPercent);
+    evaluated &&
+    myPercent > 0 &&
+    evaluatedTeammates.every((m) => percentOf(m.score, m.maxScore) <= myPercent);
+  const onPodium = evaluated && member.rank <= 3;
 
   const previous = member.history && member.history.length >= 2 ? member.history[member.history.length - 2] : undefined;
   const prevScore = previous ? scaleScore(previous.score, previous.max, member.maxScore) : undefined;
@@ -48,8 +52,8 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
       iconName: 'Award',
       category: 'performance',
       rarity: 'gold',
-      unlocked: member.rank <= 3,
-      unlockedAt: member.rank <= 3 ? getCurrentCycleLabel() : undefined,
+      unlocked: onPodium,
+      unlockedAt: onPodium ? getCurrentCycleLabel() : undefined,
       progress: {
         current: member.rank <= 3 ? 3 : Math.max(0, 4 - member.rank),
         max: 3,

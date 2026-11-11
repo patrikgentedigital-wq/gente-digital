@@ -1,90 +1,49 @@
 import React from 'react';
-import { TeamMember } from '../../types';
+import type { TeamStat } from '../../lib/dashboardStats';
 
 interface TeamAnalyticSummaryProps {
-  sortedTeamStats: Array<{
-    leader: string;
-    color: string;
-    count: number;
-    avgPercent: number;
-    topMember: TeamMember | null;
-    voandoCount: number;
-  }>;
+  teamStats: TeamStat[];
   onSelectTeamFilter: (team: string) => void;
-  onSelectMemberForDetail: (member: TeamMember) => void;
 }
 
-export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({
-  sortedTeamStats,
-  onSelectTeamFilter,
-  onSelectMemberForDetail,
-}) => {
-  return (
-    <div className="bg-surface p-5 rounded-3xl space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-display font-bold text-base text-ink">
-            Resumo Analítico por Equipe
-          </h3>
-          <p className="text-xs text-muted">
-            Detalhamento de métricas por líder e atalho rápido para filtragem.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        {sortedTeamStats.map((team) => (
-          <div
-            key={team.leader}
-            className="bg-app border border-line hover:border-accent/50 p-4 rounded-xl space-y-3 transition-colors group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: team.color }}
-                />
-                <span className="font-bold text-sm text-ink group-hover:text-accent-text transition-colors">
-                  Time {team.leader}
-                </span>
-              </div>
-              <span className="text-xs font-mono font-bold text-accent-text bg-surface-2 px-2 py-0.5 rounded border border-line">
-                {team.avgPercent}%
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono text-muted bg-surface p-2.5 rounded-lg border border-line">
-              <div>
-                <span className="text-[10px] text-faint block">MEMBROS</span>
-                <span className="font-bold text-ink">{team.count} colaboradores</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-faint block">NA META (VOANDO)</span>
-                <span className="font-bold text-success">{team.voandoCount} pessoas</span>
-              </div>
-            </div>
-
-            {team.topMember && (
-              <div className="flex items-center justify-between text-xs pt-1">
-                <span className="text-faint">Destaque do Time:</span>
-                <button
-                  onClick={() => onSelectMemberForDetail(team.topMember!)}
-                  className="font-bold text-ink hover:text-accent-text hover:underline cursor-pointer truncate max-w-[140px]"
-                >
-                  {team.topMember.name} ({team.topMember.score}p)
-                </button>
-              </div>
-            )}
-
-            <button
-              onClick={() => onSelectTeamFilter(team.leader)}
-              className="w-full py-1.5 rounded-lg bg-surface-2 hover:bg-accent hover:text-accent-ink text-xs font-bold text-ink transition-all border border-line cursor-pointer"
-            >
-              Ver Integrantes no Ranking
-            </button>
+/** Um bloco por equipe; clicar abre o ranking filtrado pela equipe. */
+export const TeamAnalyticSummary: React.FC<TeamAnalyticSummaryProps> = ({ teamStats, onSelectTeamFilter }) => (
+  <section aria-label="Resumo por equipe">
+    <h3 className="font-display font-extrabold text-base text-ink mb-3">Equipes</h3>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      {teamStats.map((team) => (
+        <button
+          key={team.leader}
+          type="button"
+          onClick={() => onSelectTeamFilter(team.leader)}
+          className="blk p-4 text-left text-ink cursor-pointer hover:-translate-y-0.5 transition-transform"
+          title={`Ver o Time ${team.leader} no ranking`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2 font-bold text-sm min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: team.color }} aria-hidden="true" />
+              <span className="truncate">Time {team.leader}</span>
+            </span>
+            <span className="font-display font-extrabold text-xl">
+              {team.avgPercent === null ? <span className="text-faint">—</span> : `${team.avgPercent}%`}
+            </span>
           </div>
-        ))}
-      </div>
+          <div className="mt-3 pt-3 border-t border-line-soft grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <div className="text-muted">Pessoas</div>
+              <div className="font-bold">{team.count}</div>
+            </div>
+            <div>
+              <div className="text-muted">Avaliadas</div>
+              <div className="font-bold">{team.evaluatedCount}</div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-muted">Destaque</div>
+              <div className="font-bold truncate">{team.topMember?.name ?? '—'}</div>
+            </div>
+          </div>
+        </button>
+      ))}
     </div>
-  );
-};
+  </section>
+);

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
-import { compareByPercent, percentOf } from '../lib/scoring';
+import { compareByPercent, isEvaluated, percentOf } from '../lib/scoring';
 import { Avatar } from './Avatar';
 import { Users, Award, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
@@ -24,11 +24,14 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
       const teamMembers = members.filter((m) => m.team === teamStruct.leader);
       if (teamMembers.length === 0) return null;
 
-      const avgPercent = Math.round(
-        teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / teamMembers.length
-      );
+      // Média e destaque só entre quem já foi avaliado; sem avaliados, a média fica em branco.
+      const evaluated = teamMembers.filter(isEvaluated);
+      const avgPercent =
+        evaluated.length > 0
+          ? Math.round(evaluated.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / evaluated.length)
+          : null;
 
-      const topPerformer = [...teamMembers].sort(compareByPercent)[0];
+      const topPerformer = [...evaluated].filter((m) => percentOf(m.score, m.maxScore) > 0).sort(compareByPercent)[0];
 
       return {
         ...teamStruct,
@@ -48,15 +51,15 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           const { leader, color, teamMembers, avgPercent, topPerformer } = teamStruct;
 
           return (
-            <div
+            <section
               key={leader}
-              className="bg-surface border border-line rounded-3xl p-5 flex flex-col justify-between gap-5 hover:border-accent/50 transition-all group"
+              className="blk p-5 flex flex-col justify-between gap-5 text-ink"
             >
               <div>
                 {/* Title & Leader */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-display font-bold text-ink group-hover:text-accent-text transition-colors">
+                    <h3 className="text-lg font-display font-extrabold text-ink">
                       Time {leader}
                     </h3>
                     <p className="text-xs text-muted flex items-center gap-1 mt-0.5">
@@ -65,15 +68,15 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                     </p>
                   </div>
 
-                  <div className="bg-app border border-line px-3 py-1.5 rounded-xl text-right">
-                    <span className="text-[10px] font-mono text-faint block">MÉDIA</span>
-                    <span className="text-base font-bold font-mono text-accent-text">{avgPercent}%</span>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-muted block uppercase">Média</span>
+                    <span className="font-display text-2xl font-extrabold">{avgPercent === null ? '—' : `${avgPercent}%`}</span>
                   </div>
                 </div>
 
                 {/* Top Performer Card */}
                 {topPerformer && (
-                  <div className="bg-app border border-line rounded-xl p-3 flex items-center gap-3">
+                  <div className="border-t border-line-soft pt-3 flex items-center gap-3">
                     <div className="relative group/avatar shrink-0">
                       <Avatar
                         name={topPerformer.name}
@@ -81,7 +84,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
                         teamColor={topPerformer.teamColor || color}
                         size="md"
                         shape="circle"
-                        className="border-2 border-accent bg-surface-2"
+                        className="border-2 border-block-edge bg-surface-2"
                       />
                       {onOpenImageModal && (
                         <button
@@ -113,7 +116,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
               </div>
 
               {/* Members Avatars Row */}
-              <div className="flex items-center justify-between border-t border-line pt-3.5">
+              <div className="flex items-center justify-between border-t border-line-soft pt-3.5">
                 <div className="flex -space-x-2">
                   {teamMembers.map((m) => (
                     <span
@@ -136,12 +139,12 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
 
                 <button
                   onClick={() => onSelectTeamFilter(leader)}
-                  className="text-xs font-bold font-mono text-accent-text hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-bold text-ink hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   Filtrar <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
+            </section>
           );
         })}
       </div>

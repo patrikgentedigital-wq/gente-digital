@@ -39,7 +39,7 @@ export const SetPasswordView: React.FC<SetPasswordViewProps> = ({ onDone }) => {
 
   return (
     <main className="flex-1 flex items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-md bg-surface rounded-3xl p-6 space-y-5" noValidate>
+      <form onSubmit={handleSubmit} className="blk w-full max-w-md p-6 space-y-5" noValidate>
         <img src={logo} alt="Gente Digital" className="h-12 w-auto" />
         <div>
           <h1 className="font-display text-2xl font-semibold text-ink">Crie a sua senha</h1>

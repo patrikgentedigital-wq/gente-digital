@@ -106,3 +106,28 @@ describe('badgeUtils - conjuntos com máximos diferentes', () => {
     expect(getMemberBadges(fell, [fell]).find((b) => b.id === 'rapid_growth')?.unlocked).toBe(false);
   });
 });
+
+describe('badgeUtils - quem não foi avaliado', () => {
+  const zero = (over: Partial<TeamMember>): TeamMember => ({ ...mockPeer, score: 0, status: 'Alarme', ...over });
+
+  it('ninguém ganha a coroa num empate em 0%', () => {
+    const a = zero({ id: 'a', evaluationStatus: 'Concluído' });
+    const b = zero({ id: 'b', evaluationStatus: 'Pendente' });
+    for (const m of [a, b]) {
+      expect(getMemberBadges(m, [a, b]).find((x) => x.id === 'team_leader')?.unlocked).toBe(false);
+    }
+  });
+
+  it('quem não foi avaliado não ganha coroa nem pódio', () => {
+    const p = zero({ id: 'p', rank: 2, evaluationStatus: 'Pendente' });
+    const badges = getMemberBadges(p, [p]);
+    expect(badges.find((x) => x.id === 'team_leader')?.unlocked).toBe(false);
+    expect(badges.find((x) => x.id === 'podium')?.unlocked).toBe(false);
+  });
+
+  it('a coroa compara só com colegas avaliados', () => {
+    const avaliado = { ...mockPeer, id: 'v', score: 124, maxScore: 155, evaluationStatus: 'Concluído' as const };
+    const pendente = zero({ id: 'z', score: 150, evaluationStatus: 'Pendente' });
+    expect(getMemberBadges(avaliado, [avaliado, pendente]).find((x) => x.id === 'team_leader')?.unlocked).toBe(true);
+  });
+});

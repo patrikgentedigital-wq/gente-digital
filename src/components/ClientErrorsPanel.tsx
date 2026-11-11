@@ -46,7 +46,7 @@ export const ClientErrorsPanel: React.FC<ClientErrorsPanelProps> = ({ onChange }
   };
 
   return (
-    <section className="bg-surface rounded-3xl p-5 mb-6 space-y-3" aria-labelledby="client-errors-title">
+    <section className="blk p-5 mb-6 space-y-3" aria-labelledby="client-errors-title">
       <div className="flex items-center gap-2">
         <AlertTriangle className="w-4 h-4 text-danger" aria-hidden="true" />
         <h2 id="client-errors-title" className="font-display text-lg font-semibold text-ink">Erros do sistema</h2>

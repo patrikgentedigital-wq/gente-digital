@@ -114,7 +114,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
-      <div className="bg-surface p-6 rounded-3xl mb-6">
+      <div className="blk p-6 mb-6">
         <p className="text-xs text-muted mt-0.5">
           Registro imutável de avaliações salvas: quem alterou o quê e quando.
         </p>
@@ -271,7 +271,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({ members, onRestore
         </>
       )}
 
-      <div className="bg-surface p-6 rounded-3xl mt-6">
+      <div className="blk p-6 mt-6">
         <div className="flex items-center gap-2 mb-1">
           <ArchiveRestore className="w-5 h-5 text-accent-text" />
           <h3 className="font-display font-bold text-lg text-ink">Membros Arquivados</h3>

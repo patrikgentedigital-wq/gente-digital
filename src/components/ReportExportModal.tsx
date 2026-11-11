@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { isEvaluated } from '../lib/scoring';
 import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
 import { TeamMember } from '../types';
 import type { CriteriaCategory } from '../lib/criteria';
@@ -25,6 +26,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   cycle = 'Ciclo atual',
   criteria = null,
 }) => {
+  const evaluated = isEvaluated(member);
   const printRef = useRef<HTMLDivElement>(null);
   const dialogRef = useDialog(isOpen, onClose);
 
@@ -42,7 +44,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
       {/* Modal Box */}
       <div
         ref={dialogRef}
-        className="report-print-modal bg-surface border border-line w-full max-w-3xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-ink"
+        className="blk report-print-modal w-full max-w-3xl relative flex flex-col max-h-[90vh] overflow-hidden text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-export-title"
@@ -97,7 +99,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 <div className="flex items-center gap-2 mt-2 font-mono text-[11px] text-faint">
                   <span>Líder: <strong className="text-ink">{member.team}</strong></span>
                   <span>•</span>
-                  <span>Rank: <strong className="text-accent-text">#{member.rank}</strong></span>
+                  <span>Rank: <strong className="text-accent-text">{evaluated ? `#${member.rank}` : '—'}</strong></span>
                 </div>
               </div>
             </div>
@@ -105,10 +107,10 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             <div className="text-right border-t md:border-t-0 border-line pt-3 md:pt-0 w-full md:w-auto">
               <div className="font-mono text-[10px] text-faint uppercase">Pontuação Final</div>
               <div className="text-4xl font-mono font-bold text-accent-text">
-                {member.score} <span className="text-sm font-normal text-faint">/ {member.maxScore || 155}</span>
+                {evaluated ? member.score : '—'} <span className="text-sm font-normal text-faint">/ {member.maxScore || 155}</span>
               </div>
               <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-gold-soft text-accent-text border border-accent/30 uppercase">
-                {member.status}
+                {evaluated ? member.status : 'Sem avaliação'}
               </div>
             </div>
           </div>

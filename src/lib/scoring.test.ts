@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareByPercent, historyPercent, percentOf, scaleScore, statusForScore } from './scoring';
+import { compareByPercent, historyPercent, isEvaluated, percentOf, scaleScore, statusForScore } from './scoring';
 
 describe('statusForScore (faixas de 155 pontos)', () => {
   it.each([
@@ -66,5 +66,13 @@ describe('scaleScore e historyPercent (conjuntos com máximos diferentes)', () =
     expect(historyPercent({ score: 75, max: 150 })).toBeCloseTo(50);
     expect(historyPercent({ score: 175, max: 175 })).toBeCloseTo(100);
     expect(historyPercent({ score: 155 })).toBeCloseTo(100);
+  });
+});
+
+describe('isEvaluated', () => {
+  it('só quem tem avaliação concluída conta como avaliado', () => {
+    expect(isEvaluated({ evaluationStatus: 'Concluído' })).toBe(true);
+    expect(isEvaluated({ evaluationStatus: 'Pendente' })).toBe(false);
+    expect(isEvaluated({ evaluationStatus: 'Forms Respondido' })).toBe(false);
   });
 });

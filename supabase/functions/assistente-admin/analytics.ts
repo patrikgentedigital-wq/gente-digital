@@ -80,14 +80,36 @@ export function revealNames(text: string, nameByCode: Record<string, string>): s
   return text.replace(/\bP\d+\b/g, (code) => nameByCode[code] ?? code);
 }
 
-/** Ciclos na ordem em que apareceram (pela data da primeira avaliação de cada um). */
+const MONTHS_PT = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+/** Posição de um ciclo no calendário ("Novembro/2026" = ano * 12 + mês); null para outro formato. */
+export function cycleRank(cycle: string): number | null {
+  const match = /^([A-Za-zÀ-ÿ]+)\/(\d{4})$/.exec(cycle);
+  if (!match) return null;
+  const month = MONTHS_PT.indexOf(match[1]);
+  return month === -1 ? null : Number(match[2]) * 12 + month + 1;
+}
+
+/**
+ * Ciclos em ordem de calendário. Um ciclo antigo gravado depois (correção) continua antes dos mais novos.
+ * Formatos desconhecidos vão para o fim, na ordem em que apareceram (pela data da primeira avaliação).
+ */
 function cycleOrder(ds: Dataset): string[] {
   const first = new Map<string, string>();
   for (const evaluation of ds.evaluations) {
     const current = first.get(evaluation.cycle);
     if (!current || evaluation.createdAt < current) first.set(evaluation.cycle, evaluation.createdAt);
   }
-  return [...first.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([cycle]) => cycle);
+  return [...first.entries()]
+    .sort((a, b) => {
+      const rankA = cycleRank(a[0]);
+      const rankB = cycleRank(b[0]);
+      if (rankA !== null && rankB !== null) return rankA - rankB;
+      if (rankA !== null) return -1;
+      if (rankB !== null) return 1;
+      return a[1].localeCompare(b[1]);
+    })
+    .map(([cycle]) => cycle);
 }
 
 const teamName = (ds: Dataset, id: string) => ds.teams.find((team) => team.id === id)?.name ?? id;

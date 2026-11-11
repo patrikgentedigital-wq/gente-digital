@@ -3,6 +3,7 @@ import { TeamMember } from '../types';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
 import { compareByPercent, percentOf } from '../lib/scoring';
+import { monthlyTrend } from '../lib/trend';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
 import { exportMembersToCSV } from '../utils/exportUtils';
 import { toast } from '../utils/toastUtils';
@@ -139,39 +140,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       },
     ];
 
-    const reference = new Date();
-    const months = Array.from({ length: 4 }, (_, i) => {
-      const date = new Date(reference.getFullYear(), reference.getMonth() - (3 - i), 1);
-      const shortName = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
-      const fullName = date.toLocaleDateString('pt-BR', { month: 'long' });
-      return {
-        label: shortName.charAt(0).toUpperCase() + shortName.slice(1),
-        year: date.getFullYear(),
-        searchTerms: [shortName.toLowerCase(), fullName.toLowerCase()],
-      };
-    });
-    const trend = months.map(({ label, year, searchTerms }) => {
-      const monthScores = members
-        .map((m) =>
-          m.history?.find((h) =>
-            searchTerms.some((term) => h.month.toLowerCase().includes(term))
-          )?.score
-        )
-        .filter((s): s is number => typeof s === 'number');
-
-      const monthAvg =
-        monthScores.length > 0
-          ? Math.round(monthScores.reduce((acc, s) => acc + s, 0) / monthScores.length)
-          : null;
-
-      return {
-        month: label,
-        year,
-        avg: monthAvg,
-        max: monthScores.length > 0 ? Math.max(...monthScores) : null,
-        min: monthScores.length > 0 ? Math.min(...monthScores) : null,
-      };
-    });
+    // Em percentual do máximo de cada avaliação: cada pessoa pode ter um conjunto de perguntas com máximo diferente.
+    const trend = monthlyTrend(members);
 
     return {
       totalMembers: total,

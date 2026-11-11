@@ -30,3 +30,18 @@ export function compareByPercent(a: Rankable, b: Rankable): number {
   const difference = percentOf(b.score, b.maxScore) - percentOf(a.score, a.maxScore);
   return difference !== 0 ? difference : a.name.localeCompare(b.name, 'pt-BR');
 }
+
+/** Escala em que as avaliações antigas (sem máximo gravado no histórico) foram feitas. */
+export const LEGACY_MAX = 155;
+
+/** Leva uma pontuação de um máximo (`fromMax`) para outro (`toMax`); sem máximo de origem, assume 155. */
+export function scaleScore(score: number, fromMax: number | undefined, toMax: number): number {
+  if (toMax <= 0) return 0;
+  const from = fromMax && fromMax > 0 ? fromMax : LEGACY_MAX;
+  return (score * toMax) / from;
+}
+
+/** Percentual de uma entrada do histórico (mês, nota e máximo do conjunto daquele mês). */
+export function historyPercent(entry: { score: number; max?: number }): number {
+  return percentOf(entry.score, entry.max && entry.max > 0 ? entry.max : LEGACY_MAX);
+}

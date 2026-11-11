@@ -48,3 +48,11 @@ export function deriveTeams(
 
   return [...fromKnown, ...extras];
 }
+
+/**
+ * Conjunto de perguntas de uma pessoa ("Equipe - Pessoa"): existe na tabela de equipes só para guardar as
+ * perguntas dela; não é uma equipe de verdade.
+ */
+export function isIndividualSetId(id: string): boolean {
+  return id.includes(' - ');
+}

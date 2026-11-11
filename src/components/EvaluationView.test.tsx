@@ -8,6 +8,7 @@ import { CRITERIA_SCORE_KEYS, getDefaultEvaluationCycle } from '../lib/evaluatio
 import { clearDraft, saveDraft } from '../lib/draftUtils';
 import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
 import { loadDraft } from '../lib/draftUtils';
+import { criteriaFingerprint } from '../lib/criteria';
 import { toast } from '../utils/toastUtils';
 
 const member: TeamMember = {
@@ -205,6 +206,30 @@ describe('EvaluationView com avaliação já salva', () => {
     await waitFor(() => expect(screen.getByText('62')).toBeTruthy());
   });
 
+  it('descarta um rascunho feito com outras perguntas, em vez de aplicá-lo às perguntas novas', async () => {
+    const props = { ...baseProps(), criteria: DEFAULT_CRITERIA_CATEGORIES };
+    const cycle = getDefaultEvaluationCycle();
+    // rascunho de quando a pessoa usava OUTRAS perguntas (outra chave), com todas as notas preenchidas
+    saveDraft(member.id, cycle, {
+      scores: Object.fromEntries(CRITERIA_SCORE_KEYS.map((key) => [key, 4])),
+      leaderComments: 'Parecer de outras perguntas.',
+      pdiGoals: [],
+      criteriaKey: 'chave-de-outro-conjunto',
+    });
+    try {
+      render(<EvaluationView {...props} />);
+      await waitFor(() => expect(props.onLoadEvaluation).toHaveBeenCalled());
+      await waitFor(() => expect(loadDraft(member.id, cycle, 'chave-de-outro-conjunto')).toBeNull());
+
+      // nada do rascunho antigo foi aplicado: aparece a avaliação salva no servidor, não as notas 4 nem o parecer antigo
+      expect((screen.getByPlaceholderText('Insira as principais considerações do feedback...') as HTMLTextAreaElement).value).toBe('Parecer salvo.');
+      expect(screen.queryByText(/Rascunho salvo às/)).toBeNull();
+      expect(screen.getByText('62')).toBeTruthy(); // 31 perguntas x nota 2 (servidor), e não 124 (rascunho antigo)
+    } finally {
+      clearDraft(member.id, cycle);
+    }
+  });
+
   it('restaura o rascunho com a revisão do servidor, para o salvar não dar conflito', async () => {
     const props = { ...baseProps(), criteria: DEFAULT_CRITERIA_CATEGORIES };
     const cycle = getDefaultEvaluationCycle();
@@ -212,6 +237,7 @@ describe('EvaluationView com avaliação já salva', () => {
       scores: Object.fromEntries(CRITERIA_SCORE_KEYS.map((key) => [key, 5])),
       leaderComments: 'Rascunho novo.',
       pdiGoals: [],
+      criteriaKey: criteriaFingerprint(DEFAULT_CRITERIA_CATEGORIES),
     });
     try {
       render(<EvaluationView {...props} />);

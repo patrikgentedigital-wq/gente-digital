@@ -130,7 +130,7 @@ export function summarize(rows: readonly RatingRow[]): SuccessSummary {
 
   const byWeek = new Map<string, number[]>();
   for (const row of rated) {
-    if (!row.respondidaEm) continue;
+    if (!row.respondidaEm || Number.isNaN(Date.parse(row.respondidaEm))) continue;
     const week = weekStart(row.respondidaEm);
     byWeek.set(week, [...(byWeek.get(week) ?? []), row.nota]);
   }

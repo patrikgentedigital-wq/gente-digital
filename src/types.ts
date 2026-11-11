@@ -70,6 +70,8 @@ export interface TeamMember {
   history?: {
     month: string;
     score: number;
+    /** Máximo do conjunto de perguntas daquele mês; ausente nas entradas antigas (valem 155). */
+    max?: number;
   }[];
   pdiGoals?: PdiGoal[];
   selfEvaluationScores?: Record<string, number>;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { TeamMember } from '../types';
+import { percentOf, scaleScore } from '../lib/scoring';
 import type { EvaluationPayload } from '../lib/backend';
 import type { CriteriaCategory } from '../lib/criteria';
 import { getCategoryScorePercent, isPdiGoalOverdue } from '../lib/evaluation';
@@ -117,9 +118,10 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
 
   if (!member) return null;
 
-  const historyData = member.history || [];
   // Quem tem conjunto próprio de perguntas pode ter máximo diferente de 155; a meta (140/155) acompanha em proporção.
   const chartMax = member.maxScore > 0 ? member.maxScore : 155;
+  // Os meses anteriores podem ter sido avaliados com outro máximo: todos entram na escala atual do gráfico.
+  const historyData = (member.history || []).map((entry) => ({ ...entry, score: Math.round(scaleScore(entry.score, entry.max, chartMax)) }));
   const chartGoal = Math.round((140 * chartMax) / 155);
 
   const badges = getMemberBadges(member, allMembers);
@@ -215,7 +217,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
           <div className="bg-app border border-line p-3.5 rounded-xl text-center">
             <span className="text-[10px] font-mono text-faint block mb-1">APROVEITAMENTO</span>
             <span className="text-2xl font-bold text-ink font-mono">
-              {Math.round((member.score / member.maxScore) * 100)}%
+              {Math.round(percentOf(member.score, member.maxScore))}%
             </span>
           </div>
 

@@ -3,7 +3,7 @@ import { TeamMember } from '../types';
 import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
-import { compareByPercent, percentOf } from '../lib/scoring';
+import { compareByPercent, percentOf, scaleScore } from '../lib/scoring';
 import { activeSlide, availableSlides, nextSlide } from '../lib/kioskSlides';
 import {
   X,
@@ -105,13 +105,17 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     .slice(0, 6);
 
   // Level-up recognition (members who improved vs previous cycle)
+  // A pontuação do ciclo anterior é levada para o máximo atual da pessoa: o conjunto de perguntas pode ter mudado.
+  const previousScoreOf = (m: TeamMember): number | undefined => {
+    const last = m.history?.[m.history.length - 1];
+    return last ? scaleScore(last.score, last.max, m.maxScore) : undefined;
+  };
   const levelUpLeaders = sortedMembers
-    .filter((m) => m.history && m.history.length > 0 && m.score > m.history[m.history.length - 1].score)
-    .sort((a, b) => {
-      const aDelta = a.score - (a.history?.[a.history.length - 1].score ?? 0);
-      const bDelta = b.score - (b.history?.[b.history.length - 1].score ?? 0);
-      return bDelta - aDelta;
+    .filter((m) => {
+      const previous = previousScoreOf(m);
+      return previous !== undefined && m.score > previous;
     })
+    .sort((a, b) => (b.score - (previousScoreOf(b) ?? 0)) - (a.score - (previousScoreOf(a) ?? 0)))
     .slice(0, 6);
 
   // Teams summary calculations
@@ -443,8 +447,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto w-full pt-4">
               {levelUpLeaders.map((m) => {
-                const prevScore = m.history?.[m.history.length - 1]?.score ?? m.score;
-                const delta = m.score - prevScore;
+                const delta = Math.round(m.score - (previousScoreOf(m) ?? m.score));
                 return (
                   <div
                     key={m.id}

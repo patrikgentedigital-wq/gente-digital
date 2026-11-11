@@ -2,7 +2,6 @@ import { parseRatingRows, type RatingRow } from '../successDashboard';
 import { getSupabase } from './client';
 
 const ERROR_MESSAGES: Record<string, string> = {
-  painel_nao_configurado: 'O painel ainda não foi configurado no servidor (falta o segredo N8N_PAINEL_TOKEN no Supabase).',
   nao_autenticado: 'Sua sessão expirou. Entre de novo.',
   sem_permissao: 'Só o administrador pode ver este painel.',
   fonte_indisponivel: 'Não foi possível ler as notas agora. Tente de novo em instantes.',

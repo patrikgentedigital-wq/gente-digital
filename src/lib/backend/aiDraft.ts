@@ -7,6 +7,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   sem_permissao: 'Sua conta não tem permissão para usar o rascunho.',
   ia_indisponivel: 'A IA está indisponível agora. Tente de novo em instantes.',
   ia_sem_resposta: 'A IA não conseguiu montar o rascunho. Tente de novo.',
+  pedido_invalido: 'Não foi possível montar o pedido do rascunho. Confira as notas e tente de novo.',
+  muitas_chamadas: 'Muitos pedidos seguidos. Aguarde alguns minutos e tente de novo.',
 };
 
 /** Pede à função do servidor um rascunho de parecer e metas; lança Error com mensagem em português. */

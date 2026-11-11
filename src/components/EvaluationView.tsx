@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { TeamMember, PdiGoal } from '../types';
 import { AiDraftPanel } from './AiDraftPanel';
 import { goalsToPdi } from '../lib/aiDraft';
 import type { EvaluationPayload } from '../lib/backend';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
-import type { CriteriaCategory } from '../lib/criteria';
+import { criteriaFingerprint, type CriteriaCategory } from '../lib/criteria';
 import {
   FileText,
   Save,
@@ -45,6 +45,7 @@ import {
 import {
   clearDraft,
   isEmptyDraft,
+  discardStaleDraft,
   loadDraft,
   saveDraft,
 } from '../lib/draftUtils';
@@ -99,6 +100,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
   const categories = criteria ?? [];
+  // Identifica estas perguntas: um rascunho só vale se foi feito com as mesmas (os conjuntos reutilizam os mesmos ids).
+  const criteriaKey = criteriaFingerprint(categories);
 
   const [leaderComments, setLeaderComments] = useState<string>('');
   const [isDirty, setIsDirty] = useState<boolean>(false);
@@ -110,6 +113,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [newGoalDueDate, setNewGoalDueDate] = useState('');
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
+  // Membro e ciclo cuja avaliação salva já terminou de carregar: só então o rascunho local pode ser aplicado por cima.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [evaluationRevision, setEvaluationRevision] = useState(0);
   const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
@@ -157,30 +162,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setDraftSavedAt(null);
     setLastSaved(null);
     setLoadedScores(null);
+    setLoadedKey(null);
 
     onLoadEvaluation(memberId, cycle)
       .then((evaluation) => {
         if (!active) return;
-        const key = `${memberId}::${cycle}`;
-        if (!restoredDraftKeys.current.has(key)) {
-          restoredDraftKeys.current.add(key);
-          const draft = loadDraft(memberId, cycle);
-          if (draft) {
-            setScores(draft.scores);
-            setLeaderComments(draft.leaderComments);
-            setPdiGoals(draft.pdiGoals);
-            // A revisão do servidor vale mesmo com rascunho: sem ela, salvar daria "conflito" e o rascunho se perderia.
-            setEvaluationRevision(evaluation?.revision ?? 0);
-            setIsDirty(true);
-            setDraftSavedAt(draft.updatedAt);
-            toast.info(
-              evaluation
-                ? 'Rascunho local restaurado. Já existe uma avaliação salva deste ciclo; se você salvar, o rascunho a substitui.'
-                : 'Rascunho local restaurado.',
-            );
-            return;
-          }
-        }
         setLoadedScores(evaluation?.criteriaScores ?? null);
         setScores(normalizeCriteriaScores(evaluation?.criteriaScores, categories));
         setLeaderComments(evaluation?.comments || '');
@@ -192,7 +178,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         if (active) toast.error('Não foi possível carregar a avaliação salva.');
       })
       .finally(() => {
-        if (active) setIsLoadingEvaluation(false);
+        if (!active) return;
+        setIsLoadingEvaluation(false);
+        setLoadedKey(`${memberId}::${cycle}`);
       });
 
     return () => {
@@ -207,19 +195,49 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     setScores(normalizeCriteriaScores(loadedScores, criteria ?? []));
   }, [criteria, loadedScores]);
 
+  // Restaura o rascunho local, mas só quando as perguntas já chegaram e são as mesmas de quando ele foi feito.
+  // Em useLayoutEffect para aplicar na mesma atualização da tela: sem isso, o Salvar ficaria clicável por um instante com os dados do servidor.
+  useLayoutEffect(() => {
+    if (loadedKey !== `${memberId}::${cycle}` || categories.length === 0) return;
+    const key = `${memberId}::${cycle}::${criteriaKey}`;
+    if (restoredDraftKeys.current.has(key)) return;
+    restoredDraftKeys.current.add(key);
+
+    const draft = loadDraft(memberId, cycle, criteriaKey);
+    if (!draft) {
+      if (discardStaleDraft(memberId, cycle, criteriaKey)) {
+        toast.info('Um rascunho antigo foi descartado: as perguntas desta avaliação mudaram desde que ele foi feito.');
+      }
+      return;
+    }
+    // O efeito das notas salvas (abaixo) lê esta marca antes de a tela atualizar: sem ela, apagaria as notas do rascunho.
+    isDirtyRef.current = true;
+    setScores(draft.scores);
+    setLeaderComments(draft.leaderComments);
+    setPdiGoals(draft.pdiGoals);
+    setIsDirty(true);
+    setDraftSavedAt(draft.updatedAt);
+    toast.info(
+      evaluationRevision > 0
+        ? 'Rascunho local restaurado. Já existe uma avaliação salva deste ciclo; se você salvar, o rascunho a substitui.'
+        : 'Rascunho local restaurado.',
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedKey, memberId, cycle, criteriaKey]);
+
   // Autosave draft (debounced) to localStorage whenever the form changes.
   useEffect(() => {
-    if (isLoadingEvaluation || !isDirty) return;
+    if (isLoadingEvaluation || !isDirty || !criteriaKey) return;
     if (isEmptyDraft({ scores, leaderComments, pdiGoals })) return;
 
     const timer = window.setTimeout(() => {
-      const saved = saveDraft(memberId, cycle, { scores, leaderComments, pdiGoals });
+      const saved = saveDraft(memberId, cycle, { scores, leaderComments, pdiGoals, criteriaKey });
       if (saved) setDraftSavedAt(saved.updatedAt);
     }, 600);
     autosaveTimer.current = timer;
 
     return () => window.clearTimeout(timer);
-  }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation, isDirty]);
+  }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation, isDirty, criteriaKey]);
 
 
   const toggleCategory = (catId: string) => {

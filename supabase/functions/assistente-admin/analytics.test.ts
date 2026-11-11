@@ -16,6 +16,7 @@ import {
   structure,
   revealNames,
   teamsByCycle,
+  cycleRank,
   type Dataset,
 } from './analytics';
 
@@ -256,5 +257,28 @@ describe('conjunto de perguntas próprio de um membro', () => {
 
   it('uma equipe nova e vazia continua aparecendo na estrutura', () => {
     expect(structure({ ...own, teams: [...own.teams, { id: 't9', name: 'Nova' }] }).map((t) => t.team)).toEqual(['Rede', 'Nova']);
+  });
+});
+
+describe('ordem dos ciclos', () => {
+  it('cycleRank ordena pelo calendário e ignora formatos desconhecidos', () => {
+    expect(cycleRank('Dezembro/2025')).toBeLessThan(cycleRank('Janeiro/2026') as number);
+    expect(cycleRank('Outubro/2026')).toBeLessThan(cycleRank('Novembro/2026') as number);
+    expect(cycleRank('Março/2026')).toBeLessThan(cycleRank('Abril/2026') as number);
+    expect(cycleRank('qualquer coisa')).toBeNull();
+  });
+
+  it('um ciclo antigo gravado depois continua antes do mais novo', () => {
+    const ds: Dataset = {
+      teams: [{ id: 't1', name: 'Campo' }],
+      members: [{ id: 'm1', name: 'Ana Souza', teamId: 't1', jobTitle: 'Técnico' }],
+      criteriaSets: [],
+      evaluations: [
+        { memberId: 'm1', teamId: 't1', cycle: 'Novembro/2026', criteriaVersion: 1, scores: {}, score: 10, maxScore: 15, createdAt: '2026-11-01T10:00:00Z' },
+        // corrigido depois: gravado em 05/11, mas é de outubro
+        { memberId: 'm1', teamId: 't1', cycle: 'Outubro/2026', criteriaVersion: 1, scores: {}, score: 5, maxScore: 15, createdAt: '2026-11-05T10:00:00Z' },
+      ],
+    };
+    expect(teamsByCycle(ds).map((row) => row.cycle)).toEqual(['Outubro/2026', 'Novembro/2026']);
   });
 });

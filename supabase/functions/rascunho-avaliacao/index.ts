@@ -8,13 +8,24 @@ const MODEL = Deno.env.get('RASCUNHO_MODEL') ?? 'gpt-4.1-mini';
 const REASONING = /^gpt-[5-9]/.test(MODEL) ? { reasoning_effort: 'none' } : {};
 const MAX_BODY_BYTES = 20_000;
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Só o site do quadro (e o ambiente local) pode chamar esta função a partir do navegador.
+const EXTRA_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+function isAllowedOrigin(origin: string): boolean {
+  return /^https:\/\/quadro-desempenho[a-z0-9-]*\.vercel\.app$/.test(origin)
+    || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+    || EXTRA_ORIGINS.includes(origin);
+}
+function corsFor(request: Request): Record<string, string> {
+  const origin = request.headers.get('Origin') ?? '';
+  return {
+    'Access-Control-Allow-Origin': isAllowedOrigin(origin) ? origin : 'https://quadro-desempenho.vercel.app',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  };
+}
 
 const SYSTEM = `Você ajuda líderes de um provedor de internet a redigir avaliações de desempenho em português do Brasil.
-Receberá o cargo e as notas (de 1 a 5) de cada pergunta, agrupadas por categoria.
+Receberá o cargo e as notas (de 0 a 5; 0 = não atende) de cada pergunta, agrupadas por categoria.
 Escreva um rascunho de parecer da liderança: 3 a 5 frases, tom profissional, respeitoso e direto, citando os pontos fortes (notas altas) e o que precisa melhorar (notas baixas), sem inventar fatos que as notas não mostrem.
 Proponha de 1 a 3 metas de desenvolvimento (PDI) concretas, mensuráveis e ligadas às notas mais baixas, cada uma com um prazo curto (ex.: "30 dias", "Próximo ciclo").
 Não use nome de pessoa. O líder vai revisar e editar tudo.`;
@@ -43,8 +54,28 @@ const TOOL = {
   },
 };
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+// Limite de uso por pessoa (cada chamada custa dinheiro na IA). Vale por instância da função: é uma proteção
+// simples contra uso em excesso, não uma contagem exata.
+const RATE_WINDOW_MS = 10 * 60_000;
+const RATE_MAX_CALLS = 30;
+const recentCalls = new Map<string, number[]>();
+function tooManyCalls(userId: string): boolean {
+  const now = Date.now();
+  const recent = (recentCalls.get(userId) ?? []).filter((time) => now - time < RATE_WINDOW_MS);
+  if (recent.length >= RATE_MAX_CALLS) {
+    recentCalls.set(userId, recent);
+    return true;
+  }
+  recent.push(now);
+  recentCalls.set(userId, recent);
+  if (recentCalls.size > 500) {
+    for (const [id, times] of recentCalls) if (times.every((time) => now - time >= RATE_WINDOW_MS)) recentCalls.delete(id);
+  }
+  return false;
+}
+
+function json(body: unknown, status: number, cors: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 }
 
 function isValidRequest(body: unknown): body is { jobTitle: string; categories: Array<{ name: string; items: Array<{ text: string; score: number }> }> } {
@@ -59,36 +90,39 @@ function isValidRequest(body: unknown): body is { jobTitle: string; categories: 
     return items.every((item) => {
       if (typeof item !== 'object' || item === null) return false;
       const { text, score } = item as Record<string, unknown>;
-      return typeof text === 'string' && text.length <= 200 && typeof score === 'number' && Number.isInteger(score) && score >= 1 && score <= 5;
+      return typeof text === 'string' && text.length <= 200 && typeof score === 'number' && Number.isInteger(score) && score >= 0 && score <= 5;
     });
   });
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  const cors = corsFor(request);
+  const reply = (body: unknown, status = 200) => json(body, status, cors);
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
 
   const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) return json({ error: 'ia_nao_configurada' }, 503);
+  if (!apiKey) return reply({ error: 'ia_nao_configurada' }, 503);
 
   // Confere que quem chama é um admin ou líder com perfil (a RLS de profiles só devolve a própria linha).
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: request.headers.get('Authorization') ?? '' } },
   });
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return json({ error: 'nao_autenticado' }, 401);
+  if (!userData.user) return reply({ error: 'nao_autenticado' }, 401);
+  if (tooManyCalls(userData.user.id)) return reply({ error: 'muitas_chamadas' }, 429);
   const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', userData.user.id).maybeSingle();
-  if (!profile) return json({ error: 'sem_permissao' }, 403);
+  if (!profile) return reply({ error: 'sem_permissao' }, 403);
 
   const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return json({ error: 'pedido_grande_demais' }, 413);
+  if (raw.length > MAX_BODY_BYTES) return reply({ error: 'pedido_grande_demais' }, 413);
   let body: unknown;
   try {
     body = JSON.parse(raw);
   } catch {
-    return json({ error: 'pedido_invalido' }, 400);
+    return reply({ error: 'pedido_invalido' }, 400);
   }
-  if (!isValidRequest(body)) return json({ error: 'pedido_invalido' }, 400);
+  if (!isValidRequest(body)) return reply({ error: 'pedido_invalido' }, 400);
 
   const lines = body.categories.map(
     (category) => `${category.name}:\n${category.items.map((item) => `- ${item.text}: ${item.score}/5`).join('\n')}`,
@@ -111,15 +145,20 @@ Deno.serve(async (request) => {
   });
   if (!response.ok) {
     console.error('Falha na IA', response.status, await response.text());
-    return json({ error: 'ia_indisponivel' }, 502);
+    return reply({ error: 'ia_indisponivel' }, 502);
   }
 
-  const result = await response.json();
-  const args = result.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
-  if (typeof args !== 'string') return json({ error: 'ia_sem_resposta' }, 502);
+  let result;
   try {
-    return json(JSON.parse(args));
+    result = await response.json();
   } catch {
-    return json({ error: 'ia_sem_resposta' }, 502);
+    return reply({ error: 'ia_sem_resposta' }, 502);
+  }
+  const args = result.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+  if (typeof args !== 'string') return reply({ error: 'ia_sem_resposta' }, 502);
+  try {
+    return reply(JSON.parse(args));
+  } catch {
+    return reply({ error: 'ia_sem_resposta' }, 502);
   }
 });

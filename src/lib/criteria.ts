@@ -45,3 +45,22 @@ export function validateCriteriaCategories(categories: readonly CriteriaCategory
 
   return [...errors];
 }
+
+/**
+ * Identifica o conjunto de perguntas pelo conteúdo (ids e textos). Um rascunho só vale enquanto as perguntas
+ * forem as mesmas: os conjuntos reutilizam os mesmos ids ("1-0", "1-1"...), então o id sozinho não basta.
+ * Vazio quando não há nenhuma pergunta.
+ */
+export function criteriaFingerprint(categories: readonly CriteriaCategory[]): string {
+  const total = categories.reduce((count, category) => count + category.items.length, 0);
+  if (total === 0) return '';
+  const raw = categories
+    .map((category) => `${category.id}${category.name}${category.items.map((item) => `${item.id}${item.text}`).join('')}`)
+    .join('');
+  let hash = 0x811c9dc5; // FNV-1a de 32 bits
+  for (let index = 0; index < raw.length; index++) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `${total}-${hash.toString(36)}`;
+}

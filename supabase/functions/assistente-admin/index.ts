@@ -34,10 +34,21 @@ const MAX_ROWS = 5000;
 const MAX_PROPOSALS = 3;
 const ACTION_TYPES: ActionType[] = ['arquivar_membro', 'restaurar_membro', 'mover_membro', 'resolver_erro'];
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Só o site do quadro (e o ambiente local) pode chamar esta função a partir do navegador.
+const EXTRA_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+function isAllowedOrigin(origin: string): boolean {
+  return /^https:\/\/quadro-desempenho[a-z0-9-]*\.vercel\.app$/.test(origin)
+    || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)
+    || EXTRA_ORIGINS.includes(origin);
+}
+function corsFor(request: Request): Record<string, string> {
+  const origin = request.headers.get('Origin') ?? '';
+  return {
+    'Access-Control-Allow-Origin': isAllowedOrigin(origin) ? origin : 'https://quadro-desempenho.vercel.app',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  };
+}
 
 const SYSTEM = `Você é o assistente do Quadro de Desempenho de um provedor de internet. Fala com o administrador, em português do Brasil, de forma direta.
 Responda SOMENTE com o que as ferramentas de consulta devolverem; se não houver dado, diga que ainda não há avaliações para isso. Para perguntas sobre quais equipes, cargos ou quantas pessoas existem, use consultar_estrutura, que não depende de avaliações. Nunca invente números.
@@ -104,8 +115,28 @@ const TOOLS = [
   },
 ].map((tool) => ({ type: 'function', function: tool }));
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+// Limite de uso por pessoa (cada chamada custa dinheiro na IA). Vale por instância da função: é uma proteção
+// simples contra uso em excesso, não uma contagem exata.
+const RATE_WINDOW_MS = 10 * 60_000;
+const RATE_MAX_CALLS = 30;
+const recentCalls = new Map<string, number[]>();
+function tooManyCalls(userId: string): boolean {
+  const now = Date.now();
+  const recent = (recentCalls.get(userId) ?? []).filter((time) => now - time < RATE_WINDOW_MS);
+  if (recent.length >= RATE_MAX_CALLS) {
+    recentCalls.set(userId, recent);
+    return true;
+  }
+  recent.push(now);
+  recentCalls.set(userId, recent);
+  if (recentCalls.size > 500) {
+    for (const [id, times] of recentCalls) if (times.every((time) => now - time >= RATE_WINDOW_MS)) recentCalls.delete(id);
+  }
+  return false;
+}
+
+function json(body: unknown, status: number, cors: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 }
 
 type ChatTurn = { role: 'user' | 'assistant'; content: string };
@@ -204,27 +235,30 @@ async function execute(supabase: any, action: ActionInput): Promise<string | nul
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: CORS });
-  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+  const cors = corsFor(request);
+  const reply = (body: unknown, status = 200) => json(body, status, cors);
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (request.method !== 'POST') return reply({ error: 'method_not_allowed' }, 405);
 
   const apiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!apiKey) return json({ error: 'ia_nao_configurada' }, 503);
+  if (!apiKey) return reply({ error: 'ia_nao_configurada' }, 503);
 
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: request.headers.get('Authorization') ?? '' } },
   });
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return json({ error: 'nao_autenticado' }, 401);
+  if (!userData.user) return reply({ error: 'nao_autenticado' }, 401);
+  if (tooManyCalls(userData.user.id)) return reply({ error: 'muitas_chamadas' }, 429);
   const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', userData.user.id).maybeSingle();
-  if (profile?.role !== 'admin') return json({ error: 'sem_permissao' }, 403);
+  if (profile?.role !== 'admin') return reply({ error: 'sem_permissao' }, 403);
 
   const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return json({ error: 'pedido_grande_demais' }, 413);
+  if (raw.length > MAX_BODY_BYTES) return reply({ error: 'pedido_grande_demais' }, 413);
   let body: { messages?: unknown; confirm?: unknown };
   try {
     body = JSON.parse(raw);
   } catch {
-    return json({ error: 'pedido_invalido' }, 400);
+    return reply({ error: 'pedido_invalido' }, 400);
   }
 
   let dataset: Dataset;
@@ -232,25 +266,25 @@ Deno.serve(async (request) => {
     dataset = await loadDataset(supabase);
   } catch (error) {
     console.error('Falha ao ler os dados', error);
-    return json({ error: 'dados_indisponiveis' }, 502);
+    return reply({ error: 'dados_indisponiveis' }, 502);
   }
 
   // Confirmação: o admin clicou no botão. Revalida tudo contra os dados atuais e executa com o login dele.
   if (body.confirm !== undefined) {
     const input = parseConfirm(body.confirm);
-    if (!input) return json({ error: 'pedido_invalido' }, 400);
+    if (!input) return reply({ error: 'pedido_invalido' }, 400);
     const built = buildAction(dataset, input);
-    if ('error' in built) return json({ error: 'acao_recusada', message: built.error }, 409);
+    if ('error' in built) return reply({ error: 'acao_recusada', message: built.error }, 409);
     const failure = await execute(supabase, built.action);
     if (failure) {
       console.error('Falha ao executar a ação', built.action.type, failure);
-      return json({ error: 'acao_falhou' }, 502);
+      return reply({ error: 'acao_falhou' }, 502);
     }
-    return json({ text: `Feito: ${built.summary}.`, chart: null, actions: [] });
+    return reply({ text: `Feito: ${built.summary}.`, chart: null, actions: [] });
   }
 
   const turns = parseTurns(body.messages);
-  if (!turns) return json({ error: 'pedido_invalido' }, 400);
+  if (!turns) return reply({ error: 'pedido_invalido' }, 400);
 
   const aliases = buildAliases(dataset.members);
   const proposals: Array<{ action: ActionInput; summary: string }> = [];
@@ -302,11 +336,11 @@ Deno.serve(async (request) => {
     });
     if (!response.ok) {
       console.error('Falha na IA', response.status, await response.text());
-      return json({ error: 'ia_indisponivel' }, 502);
+      return reply({ error: 'ia_indisponivel' }, 502);
     }
     const message = (await response.json()).choices?.[0]?.message;
     const calls = message?.tool_calls;
-    if (!Array.isArray(calls) || calls.length === 0) return json({ error: 'ia_sem_resposta' }, 502);
+    if (!Array.isArray(calls) || calls.length === 0) return reply({ error: 'ia_sem_resposta' }, 502);
 
     const final = calls.find((call: { function: { name: string } }) => call.function.name === 'responder');
     if (final) {
@@ -322,7 +356,7 @@ Deno.serve(async (request) => {
       }
       try {
         const { texto, grafico } = JSON.parse(final.function.arguments);
-        if (typeof texto !== 'string' || !texto.trim()) return json({ error: 'ia_sem_resposta' }, 502);
+        if (typeof texto !== 'string' || !texto.trim()) return reply({ error: 'ia_sem_resposta' }, 502);
         const reveal = (value: string) => revealNames(value, aliases.nameByCode);
         const chart = grafico && Array.isArray(grafico.rotulos) && Array.isArray(grafico.valores) && grafico.rotulos.length === grafico.valores.length
           ? {
@@ -335,9 +369,9 @@ Deno.serve(async (request) => {
           : null;
         // O resumo da ação vem do servidor (com nomes reais), não da IA.
         const actions = proposals.map((proposal) => ({ ...proposal.action, summary: proposal.summary }));
-        return json({ text: reveal(texto.trim()), chart, actions });
+        return reply({ text: reveal(texto.trim()), chart, actions });
       } catch {
-        return json({ error: 'ia_sem_resposta' }, 502);
+        return reply({ error: 'ia_sem_resposta' }, 502);
       }
     }
 
@@ -353,5 +387,5 @@ Deno.serve(async (request) => {
       messages.push({ role: 'tool', tool_call_id: call.id, content: hideNames(JSON.stringify(result), dataset.members, aliases) });
     }
   }
-  return json({ error: 'ia_sem_resposta' }, 502);
+  return reply({ error: 'ia_sem_resposta' }, 502);
 });

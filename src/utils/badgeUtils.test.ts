@@ -70,3 +70,39 @@ describe('badgeUtils - getMemberBadges', () => {
     expect(peerForms?.unlocked).toBe(false);
   });
 });
+
+describe('badgeUtils - conjuntos com máximos diferentes', () => {
+  const member = (over: Partial<TeamMember>): TeamMember => ({ ...mockMember, history: undefined, previousRank: undefined, ...over });
+
+  it('compara a pontuação em proporção ao máximo, não em pontos brutos', () => {
+    const big = member({ score: 150, maxScore: 175 }); // 85,7% ~ 132,9 de 155
+    const badges = getMemberBadges(big, [big]);
+    expect(badges.find((b) => b.id === 'top_performer')?.unlocked).toBe(false);
+    expect(badges.find((b) => b.id === 'flying')?.unlocked).toBe(false);
+    expect(badges.find((b) => b.id === 'excellence_path')?.unlocked).toBe(true);
+  });
+
+  it('quem tem máximo menor não é prejudicado', () => {
+    const small = member({ score: 140, maxScore: 150 }); // 93,3% ~ 144,7 de 155
+    const badges = getMemberBadges(small, [small]);
+    expect(badges.find((b) => b.id === 'flying')?.unlocked).toBe(true);
+    expect(badges.find((b) => b.id === 'top_performer')?.unlocked).toBe(false);
+    const perfect = member({ score: 150, maxScore: 150 });
+    expect(getMemberBadges(perfect, [perfect]).find((b) => b.id === 'top_performer')?.unlocked).toBe(true);
+  });
+
+  it('o destaque do time é quem tem o maior percentual', () => {
+    const a = member({ id: 'a', score: 120, maxScore: 150 }); // 80%
+    const b = member({ id: 'b', score: 125, maxScore: 175 }); // 71%
+    expect(getMemberBadges(a, [a, b]).find((x) => x.id === 'team_leader')?.unlocked).toBe(true);
+    expect(getMemberBadges(b, [a, b]).find((x) => x.id === 'team_leader')?.unlocked).toBe(false);
+  });
+
+  it('a evolução compara com o ciclo anterior na mesma escala', () => {
+    const grew = member({ score: 140, maxScore: 150, history: [{ month: 'Out/2026', score: 160, max: 175 }, { month: 'Nov/2026', score: 140, max: 150 }] });
+    // 160/175 = 91,4% ; 140/150 = 93,3% -> subiu
+    expect(getMemberBadges(grew, [grew]).find((b) => b.id === 'rapid_growth')?.unlocked).toBe(true);
+    const fell = member({ score: 130, maxScore: 150, history: [{ month: 'Out/2026', score: 160, max: 175 }, { month: 'Nov/2026', score: 130, max: 150 }] });
+    expect(getMemberBadges(fell, [fell]).find((b) => b.id === 'rapid_growth')?.unlocked).toBe(false);
+  });
+});

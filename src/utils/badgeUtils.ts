@@ -1,39 +1,43 @@
 import { TeamMember, Badge } from '../types';
 import { getDefaultEvaluationCycle } from '../lib/evaluation';
+import { percentOf, scaleScore } from '../lib/scoring';
 
 const getCurrentCycleLabel = () => `Ciclo ${getDefaultEvaluationCycle()}`;
 
 export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = []): Badge[] {
+  // As metas dos selos foram definidas em pontos de 155. Cada pessoa pode usar um conjunto de perguntas com
+  // outro máximo (150, 175...), então a pontuação é levada para a escala de 155 antes de comparar.
+  const on155 = scaleScore(member.score, member.maxScore, 155);
+  const myPercent = percentOf(member.score, member.maxScore);
+
   const teamMembers = allMembers.filter((m) => m.team === member.team);
   const isTeamLeader =
     teamMembers.length > 0 &&
-    teamMembers.every((m) => m.score <= member.score);
+    teamMembers.every((m) => percentOf(m.score, m.maxScore) <= myPercent);
 
-  const prevScore =
-    member.history && member.history.length >= 2
-      ? member.history[member.history.length - 2]?.score ?? member.score
-      : undefined;
+  const previous = member.history && member.history.length >= 2 ? member.history[member.history.length - 2] : undefined;
+  const prevScore = previous ? scaleScore(previous.score, previous.max, member.maxScore) : undefined;
   const isGrowth =
     (member.previousRank !== undefined && member.rank < member.previousRank) ||
     (prevScore !== undefined && member.score > prevScore);
 
   const historyConsistent =
     member.history && member.history.length >= 2
-      ? member.history.every((h) => h.score >= 135)
-      : member.score >= 135;
+      ? member.history.every((h) => scaleScore(h.score, h.max, 155) >= 135)
+      : on155 >= 135;
 
   const badges: Badge[] = [
     {
       id: 'top_performer',
       name: 'Top Performer',
-      description: 'Pontuação extraordinária igual ou superior a 150 pontos.',
+      description: 'Pontuação extraordinária: 150 de 155 pontos ou o equivalente proporcional.',
       iconName: 'Trophy',
       category: 'performance',
       rarity: 'diamond',
-      unlocked: member.score >= 150,
-      unlockedAt: member.score >= 150 ? getCurrentCycleLabel() : undefined,
+      unlocked: on155 >= 150,
+      unlockedAt: on155 >= 150 ? getCurrentCycleLabel() : undefined,
       progress: {
-        current: Math.min(member.score, 150),
+        current: Math.round(Math.min(on155, 150)),
         max: 150,
       },
     },
@@ -54,14 +58,14 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
     {
       id: 'flying',
       name: 'Nível Voando',
-      description: 'Superou a meta máxima de desempenho (>140 pontos).',
+      description: 'Superou a meta máxima de desempenho (acima de 140 de 155 pontos, em proporção).',
       iconName: 'Rocket',
       category: 'performance',
       rarity: 'gold',
-      unlocked: member.score > 140,
-      unlockedAt: member.score > 140 ? getCurrentCycleLabel() : undefined,
+      unlocked: on155 > 140,
+      unlockedAt: on155 > 140 ? getCurrentCycleLabel() : undefined,
       progress: {
-        current: Math.min(member.score, 140),
+        current: Math.round(Math.min(on155, 140)),
         max: 140,
       },
     },
@@ -88,7 +92,7 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
     {
       id: 'gold_consistency',
       name: 'Consistência Ouro',
-      description: 'Manteve desempenho elevado (>135 pts) de forma contínua.',
+      description: 'Manteve desempenho elevado (acima de 135 de 155 pontos, em proporção) de forma contínua.',
       iconName: 'Star',
       category: 'performance',
       rarity: 'gold',
@@ -98,14 +102,14 @@ export function getMemberBadges(member: TeamMember, allMembers: TeamMember[] = [
     {
       id: 'excellence_path',
       name: 'Trilha da Excelência',
-      description: 'Alcançou no mínimo 130 pontos na avaliação do ciclo.',
+      description: 'Alcançou no mínimo 130 de 155 pontos (ou o equivalente proporcional) na avaliação do ciclo.',
       iconName: 'TrendingUp',
       category: 'growth',
       rarity: 'silver',
-      unlocked: member.score >= 130,
-      unlockedAt: member.score >= 130 ? getDefaultEvaluationCycle() : undefined,
+      unlocked: on155 >= 130,
+      unlockedAt: on155 >= 130 ? getDefaultEvaluationCycle() : undefined,
       progress: {
-        current: Math.min(member.score, 130),
+        current: Math.round(Math.min(on155, 130)),
         max: 130,
       },
     },

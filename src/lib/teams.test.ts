@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveTeams } from './teams';
+import { deriveTeams, isIndividualSetId } from './teams';
 import type { TeamStructure } from '../types';
 
 const known: TeamStructure[] = [
@@ -32,5 +32,14 @@ describe('deriveTeams', () => {
     const teams = deriveTeams([m('Fantasma', '#123456', true), m('João Lucas', 'azul')], known);
     expect(teams.map((t) => t.leader)).toEqual(['João Lucas']);
     expect(teams[0].color).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+});
+
+describe('isIndividualSetId', () => {
+  it('reconhece conjuntos de perguntas de uma pessoa ("Equipe - Pessoa") e não equipes reais', () => {
+    expect(isIndividualSetId('Danielle - Wendel')).toBe(true);
+    expect(isIndividualSetId('Mariza Leite - Narah')).toBe(true);
+    expect(isIndividualSetId('Danielle')).toBe(false);
+    expect(isIndividualSetId('Mariza Leite')).toBe(false);
   });
 });

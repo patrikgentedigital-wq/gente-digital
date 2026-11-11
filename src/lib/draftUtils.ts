@@ -1,6 +1,7 @@
 import type { PdiGoal } from '../types';
 
-export const DRAFT_VERSION = 1;
+/** 2: o rascunho passou a guardar de quais perguntas ele é; os da versão 1 são descartados. */
+export const DRAFT_VERSION = 2;
 
 export interface EvaluationDraft {
   version: typeof DRAFT_VERSION;
@@ -9,10 +10,14 @@ export interface EvaluationDraft {
   scores: Record<string, number | undefined>;
   leaderComments: string;
   pdiGoals: PdiGoal[];
+  /** Identifica as perguntas usadas (criteriaFingerprint); vazio quando não se sabe. */
+  criteriaKey: string;
   updatedAt: string;
 }
 
-export type EvaluationDraftInput = Omit<EvaluationDraft, 'version' | 'memberId' | 'cycle' | 'updatedAt'>;
+export type EvaluationDraftInput = Omit<EvaluationDraft, 'version' | 'memberId' | 'cycle' | 'updatedAt' | 'criteriaKey'> & {
+  criteriaKey?: string;
+};
 
 const KEY_PREFIX = 'gd-evaluation-draft:';
 
@@ -28,7 +33,8 @@ export function hasLocalStorage(): boolean {
   }
 }
 
-export function loadDraft(memberId: string, cycle: string): EvaluationDraft | null {
+/** Devolve o rascunho só se ele foi feito com as mesmas perguntas (`criteriaKey`). */
+export function loadDraft(memberId: string, cycle: string, criteriaKey = ''): EvaluationDraft | null {
   if (!hasLocalStorage()) return null;
   try {
     const raw = window.localStorage.getItem(draftKey(memberId, cycle));
@@ -38,6 +44,7 @@ export function loadDraft(memberId: string, cycle: string): EvaluationDraft | nu
       parsed.version !== DRAFT_VERSION ||
       parsed.memberId !== memberId ||
       parsed.cycle !== cycle ||
+      parsed.criteriaKey !== criteriaKey ||
       typeof parsed.scores !== 'object' ||
       parsed.scores === null ||
       typeof parsed.leaderComments !== 'string' ||
@@ -49,6 +56,23 @@ export function loadDraft(memberId: string, cycle: string): EvaluationDraft | nu
     return parsed as EvaluationDraft;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Apaga o rascunho guardado deste membro e ciclo quando ele não vale mais (feito com outras perguntas, de uma
+ * versão antiga ou ilegível). Devolve true se apagou algo.
+ */
+export function discardStaleDraft(memberId: string, cycle: string, criteriaKey = ''): boolean {
+  if (!hasLocalStorage()) return false;
+  try {
+    const raw = window.localStorage.getItem(draftKey(memberId, cycle));
+    if (!raw) return false;
+    if (loadDraft(memberId, cycle, criteriaKey)) return false;
+    window.localStorage.removeItem(draftKey(memberId, cycle));
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -65,6 +89,7 @@ export function saveDraft(
     scores: input.scores,
     leaderComments: input.leaderComments,
     pdiGoals: input.pdiGoals,
+    criteriaKey: input.criteriaKey ?? '',
     updatedAt: new Date().toISOString(),
   };
   try {

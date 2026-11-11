@@ -103,13 +103,6 @@ export function hasCompleteCriteriaScores(
   return keys.length > 0 && keys.every((key) => typeof scores[key] === 'number' && Number.isFinite(scores[key]));
 }
 
-export function getPerformanceStatus(score: number): PerformanceStatus {
-  if (score > 140) return 'Voando';
-  if (score > 130) return 'Caminho Certo';
-  if (score >= 120) return 'Atenção';
-  return 'Alarme';
-}
-
 export function makeEvaluationId(memberId: string, cycle: string) {
   const cycleId = cycle.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
   return `evaluation_${memberId}_${cycleId}`;
@@ -123,11 +116,6 @@ export function isPdiGoalOverdue(goal: { status: 'pending' | 'completed'; dueDat
     String(referenceDate.getDate()).padStart(2, '0'),
   ].join('-');
   return goal.dueDate < today;
-}
-
-export function sumCriteriaScores(scores: Record<string, number>, keys: string[]) {
-  if (keys.some((key) => typeof scores[key] !== 'number')) return null;
-  return keys.reduce((total, key) => total + scores[key], 0);
 }
 
 /** Mesma ordem do banco (view members_ranked): maior percentual do máximo primeiro, empate por nome. */

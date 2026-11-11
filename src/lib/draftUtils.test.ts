@@ -93,4 +93,23 @@ describe('draftUtils', () => {
       isEmptyDraft({ scores: {}, leaderComments: 'ok', pdiGoals: [] }),
     ).toBe(false);
   });
+  it('só restaura o rascunho se as perguntas ainda são as mesmas (criteriaKey igual)', () => {
+    saveDraft('member-1', 'Janeiro/2026', {
+      scores: { '1-0': 4 },
+      leaderComments: 'x',
+      pdiGoals: [],
+      criteriaKey: 'chave-A',
+    });
+    expect(loadDraft('member-1', 'Janeiro/2026', 'chave-A')).not.toBeNull();
+    expect(loadDraft('member-1', 'Janeiro/2026', 'chave-B')).toBeNull();
+    expect(loadDraft('member-1', 'Janeiro/2026')).toBeNull();
+  });
+
+  it('descarta rascunhos de versões antigas, feitos sem identificar as perguntas', () => {
+    window.localStorage.setItem(
+      draftKey('member-1', 'Janeiro/2026'),
+      JSON.stringify({ version: 1, memberId: 'member-1', cycle: 'Janeiro/2026', scores: { '1-0': 4 }, leaderComments: 'velho', pdiGoals: [], updatedAt: new Date().toISOString() }),
+    );
+    expect(loadDraft('member-1', 'Janeiro/2026')).toBeNull();
+  });
 });

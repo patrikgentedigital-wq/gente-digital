@@ -35,7 +35,7 @@ const TrendTooltip: React.FC<TrendTooltipProps> = ({ active, payload, label }) =
           {label}{entry?.year ? ` / ${entry.year}` : ''}
         </p>
         <p className="text-ink">
-          Média Geral: <strong className="font-mono">{payload[0].value} pts</strong>
+          Média Geral: <strong className="font-mono">{payload[0].value}%</strong>
         </p>
       </div>
     );
@@ -56,7 +56,7 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
           Evolução da Média Geral{hasWindow ? ` (${firstMonth} a ${lastMonth})` : ''}
         </h3>
         <p className="text-xs text-muted mt-0.5">
-          Trajetória do desempenho médio da equipe nos últimos meses.
+          Trajetória do desempenho médio (em % do máximo de cada avaliação) nos últimos meses.
         </p>
       </div>
 
@@ -72,7 +72,8 @@ export const HistoricalTrendChart: React.FC<HistoricalTrendChartProps> = ({ time
             <CartesianGrid stroke="#e5e5ea" strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="month" stroke="#86868b" fontSize={11} tickLine={false} />
             <YAxis
-              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 155]}
+              domain={[(dataMin: number) => Math.max(0, Math.floor((dataMin - 10) / 10) * 10), 100]}
+              unit="%"
               stroke="#86868b"
               fontSize={11}
               tickLine={false}

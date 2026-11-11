@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  criteriaFingerprint,
   MAX_CATEGORIES,
   MAX_ITEMS_PER_CATEGORY,
   maxScoreFor,
@@ -54,5 +55,25 @@ describe('validateCriteriaCategories', () => {
 
     const duplicated = [category('1', 1), { ...category('2', 1), items: [{ id: '1-0', text: 'Repetida' }] }];
     expect(validateCriteriaCategories(duplicated)).toContain('Os ids das perguntas precisam ser únicos.');
+  });
+});
+
+describe('criteriaFingerprint', () => {
+  const base = [{ id: '1', name: 'A', items: [{ id: '1-0', text: 'Pergunta um' }, { id: '1-1', text: 'Pergunta dois' }] }];
+
+  it('é vazio sem perguntas e estável para as mesmas perguntas', () => {
+    expect(criteriaFingerprint([])).toBe('');
+    expect(criteriaFingerprint(base)).toBe(criteriaFingerprint(JSON.parse(JSON.stringify(base))));
+    expect(criteriaFingerprint(base)).not.toBe('');
+  });
+
+  it('muda quando o texto, o id ou a quantidade de perguntas muda', () => {
+    const texto = [{ ...base[0], items: [{ id: '1-0', text: 'Outra pergunta' }, base[0].items[1]] }];
+    const id = [{ ...base[0], items: [{ id: '9-9', text: 'Pergunta um' }, base[0].items[1]] }];
+    const menos = [{ ...base[0], items: [base[0].items[0]] }];
+    const original = criteriaFingerprint(base);
+    expect(criteriaFingerprint(texto)).not.toBe(original);
+    expect(criteriaFingerprint(id)).not.toBe(original);
+    expect(criteriaFingerprint(menos)).not.toBe(original);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareByPercent, percentOf, statusForScore } from './scoring';
+import { compareByPercent, historyPercent, percentOf, scaleScore, statusForScore } from './scoring';
 
 describe('statusForScore (faixas de 155 pontos)', () => {
   it.each([
@@ -43,5 +43,28 @@ describe('compareByPercent', () => {
       { name: 'Caio', score: 27, maxScore: 30 },
     ].sort(compareByPercent);
     expect(ordered.map((item) => item.name)).toEqual(['Ana', 'Caio', 'Bia']);
+  });
+});
+
+describe('scaleScore e historyPercent (conjuntos com máximos diferentes)', () => {
+  it('leva uma pontuação de um máximo para outro', () => {
+    expect(scaleScore(150, 150, 155)).toBeCloseTo(155);
+    expect(scaleScore(87.5, 175, 100)).toBeCloseTo(50);
+    expect(scaleScore(100, 100, 150)).toBeCloseTo(150);
+  });
+
+  it('sem máximo conhecido (histórico antigo), assume a escala de 155', () => {
+    expect(scaleScore(155, undefined, 150)).toBeCloseTo(150);
+    expect(scaleScore(31, 0, 62)).toBeCloseTo(12.4);
+  });
+
+  it('devolve 0 quando o destino não tem máximo', () => {
+    expect(scaleScore(50, 100, 0)).toBe(0);
+  });
+
+  it('historyPercent usa o máximo da entrada, ou 155 quando não há', () => {
+    expect(historyPercent({ score: 75, max: 150 })).toBeCloseTo(50);
+    expect(historyPercent({ score: 175, max: 175 })).toBeCloseTo(100);
+    expect(historyPercent({ score: 155 })).toBeCloseTo(100);
   });
 });

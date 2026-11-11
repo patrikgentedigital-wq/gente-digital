@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
 import { getCurrentProfile, listTeams, saveCriteriaSet } from '../lib/backend';
 import type { TeamStructure } from '../types';
+import { isIndividualSetId } from '../lib/teams';
 import { useCriteriaSet } from '../hooks/useCriteriaSet';
 import { maxScoreFor, validateCriteriaCategories, type CriteriaCategory } from '../lib/criteria';
 import {
@@ -121,7 +122,9 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
           >
             <option value="">Escolha uma equipe</option>
             {teams.map((team) => (
-              <option key={team.leader} value={team.leader}>Time {team.leader}</option>
+              <option key={team.leader} value={team.leader}>
+                {isIndividualSetId(team.leader) ? `Perguntas de ${team.leader}` : `Time ${team.leader}`}
+              </option>
             ))}
           </select>
           {teams.length === 0 && (

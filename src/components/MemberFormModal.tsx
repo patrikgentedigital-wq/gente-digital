@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { TeamMember, LeaderName } from '../types';
+import { TeamMember, TeamStructure, LeaderName } from '../types';
 import { TEAMS } from '../data/catalogData';
-import { deriveTeams } from '../lib/teams';
+import { deriveTeams, isIndividualSetId } from '../lib/teams';
+import { listTeams } from '../lib/backend';
 import { X, UserPlus, Edit3, Trash2, Mail, Briefcase, Users, Link as LinkIcon, AlertTriangle, Check } from 'lucide-react';
 import { useDialog } from '../hooks/useDialog';
 
@@ -35,6 +36,8 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarError, setAvatarError] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Equipes ativas do banco: inclui as que estão sem membros no momento (a lista dos membros não as mostra).
+  const [dbTeams, setDbTeams] = useState<TeamStructure[]>([]);
 
   useEffect(() => {
     if (memberToEdit) {
@@ -54,9 +57,31 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
     setAvatarError(false);
   }, [memberToEdit, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    let active = true;
+    listTeams()
+      .then((teams) => {
+        if (active) setDbTeams(teams);
+      })
+      .catch(() => undefined); // Sem a lista do banco, valem as equipes dos membros.
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const teamOptions = deriveTeams(members, TEAMS);
+  // Conjunto de perguntas de uma pessoa ("Danielle - Wendel") existe na tabela de equipes, mas não é uma equipe.
+  const usedAsQuestionSet = new Set(
+    members.filter((m) => m.criteriaTeamId && m.criteriaTeamId !== m.team).map((m) => m.criteriaTeamId as string),
+  );
+  const teamsWithMembers = deriveTeams(members, TEAMS);
+  const listedLeaders = new Set(teamsWithMembers.map((t) => t.leader));
+  const emptyTeams = dbTeams
+    .filter((t) => !listedLeaders.has(t.leader) && !usedAsQuestionSet.has(t.leader) && !isIndividualSetId(t.leader))
+    .sort((a, b) => a.leader.localeCompare(b.leader, 'pt-BR'));
+  const teamOptions = [...teamsWithMembers, ...emptyTeams];
   const selectedTeamData = teamOptions.find((t) => t.leader === team) || teamOptions[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,7 +108,8 @@ export const MemberFormModal: React.FC<MemberFormModalProps> = ({
       score: finalScore,
       maxScore: memberToEdit?.maxScore || 155,
       status,
-      avatarUrl: avatarUrl.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
+      // Sem foto, fica vazio e o app mostra as iniciais: o nome da pessoa não vai para serviço de avatar de terceiros.
+      avatarUrl: avatarUrl.trim(),
       evaluationStatus: memberToEdit?.evaluationStatus || 'Pendente',
       email: email.trim(),
       pdiGoals: memberToEdit?.pdiGoals || [],

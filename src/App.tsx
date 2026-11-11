@@ -204,7 +204,8 @@ export default function App() {
         : selected);
       setImageModalMember(null);
       toast.success('Foto do perfil atualizada com sucesso!');
-    } catch {
+    } catch (error) {
+      clientErrorReporter.report(error, 'save');
       toast.error('Não foi possível salvar a foto do perfil.');
     }
   };
@@ -245,7 +246,8 @@ export default function App() {
           : selected);
       }
       toast.success(isExisting ? 'Dados do colaborador atualizados.' : 'Colaborador cadastrado.');
-    } catch {
+    } catch (error) {
+      clientErrorReporter.report(error, 'save');
       toast.error('Não foi possível persistir os dados do colaborador.');
       throw new Error('member-save-failed');
     }
@@ -259,7 +261,8 @@ export default function App() {
       setMembers((previous) => rankMembers(previous.filter((member) => member.id !== memberId)));
       setSelectedEvaluationMember((selected) => selected?.id === memberId ? null : selected);
       toast.info(`Colaborador ${target?.name || ''} arquivado (pode ser restaurado na Trilha de Auditoria).`);
-    } catch {
+    } catch (error) {
+      clientErrorReporter.report(error, 'save');
       toast.error('Não foi possível arquivar o colaborador.');
       throw new Error('member-archive-failed');
     }
@@ -269,7 +272,8 @@ export default function App() {
     try {
       await restoreMember(memberId);
       toast.success('Colaborador restaurado.');
-    } catch {
+    } catch (error) {
+      clientErrorReporter.report(error, 'save');
       toast.error('Não foi possível restaurar o colaborador.');
     }
   };
@@ -298,7 +302,7 @@ export default function App() {
       });
       const history = [
         ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
-        { month: cycle, score: saved.score },
+        { month: cycle, score: saved.score, max: saved.maxScore },
       ];
       // Um ciclo antigo entra só no histórico: a nota, o status e as metas atuais continuam os do ciclo mais recente.
       const updatedMember: TeamMember = saved.isCurrent

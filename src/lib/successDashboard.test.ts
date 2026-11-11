@@ -87,3 +87,13 @@ describe('summarize', () => {
     ]);
   });
 });
+
+describe('summarize com datas inválidas', () => {
+  it('ignora a semana de uma linha com data malformada, em vez de derrubar o painel', () => {
+    const row: RatingRow = { idOs: '1', idTecnico: 'T1', nomeTecnico: 'Ana', dataOs: '', enviadaEm: '', respondidaEm: 'ontem à tarde', nota: 5, status: 'respondida' };
+    const ok: RatingRow = { ...row, idOs: '2', respondidaEm: '2026-11-03T12:00:00Z' };
+    const summary = summarize([row, ok]);
+    expect(summary.totals.respondidas).toBe(2);
+    expect(summary.semanas).toEqual([{ semana: '2026-11-02', media: 5, n: 1 }]);
+  });
+});

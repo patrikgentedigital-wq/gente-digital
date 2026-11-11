@@ -9,6 +9,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ia_indisponivel: 'A IA está indisponível agora. Tente de novo em instantes.',
   ia_sem_resposta: 'O assistente não conseguiu responder. Tente reformular a pergunta.',
   acao_falhou: 'A ação não pôde ser concluída. Nada foi alterado; tente de novo.',
+  muitas_chamadas: 'Muitos pedidos seguidos. Aguarde alguns minutos e tente de novo.',
 };
 
 /** Envia a conversa (só texto) para a função do servidor e devolve a resposta com gráfico opcional. */

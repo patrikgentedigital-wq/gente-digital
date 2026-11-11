@@ -133,7 +133,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     const byLevel = statusFilter === 'all' ? evaluated : evaluated.filter((m) => m.status === statusFilter);
     const sorted = [...byLevel].sort(compareByPercent);
     const waiting = statusFilter === 'all' ? filtered.filter((m) => !isEvaluated(m)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')) : [];
-    const podium = statusFilter === 'all' && !searchQuery.trim() && sorted.length >= 3 ? sorted.slice(0, 3) : [];
+    // Pódio só com três avaliados e o primeiro acima de 0%.
+    const podium =
+      statusFilter === 'all' && !searchQuery.trim() && sorted.length >= 3 && pct(sorted[0]) > 0 ? sorted.slice(0, 3) : [];
 
     return { ranked: sorted, pending: waiting, top3: podium };
   }, [members, view, selectedTeamLeader, statusFilter, searchQuery]);
@@ -199,11 +201,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     );
   };
 
-  const rowMenu = (person: TeamMember) => {
+  const rowMenu = (person: TeamMember, withReport = true) => {
     const items = [
       ...(onOpenMemberForm ? [{ label: 'Editar dados', run: () => onOpenMemberForm(person) }] : []),
       ...(onSelectMemberForDetail ? [{ label: 'Ver evolução', run: () => onSelectMemberForDetail(person) }] : []),
-      { label: 'Gerar relatório PDF', run: () => onOpenReportModal(person) },
+      // Quem nunca foi avaliado não tem o que levar ao relatório.
+      ...(withReport ? [{ label: 'Gerar relatório PDF', run: () => onOpenReportModal(person) }] : []),
     ];
     return (
       <div className="relative" data-row-menu>
@@ -370,8 +373,10 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
       {/* Avaliados */}
       <div className="flex flex-col gap-2">
-        {ranked.map((person) => {
+        {ranked.map((person, index) => {
           const level = levelOf(person.status);
+          // A posição é a ordem entre os avaliados exibidos; a do banco conta também quem nunca foi avaliado.
+          const position = index + 1;
           return (
             <div
               key={person.id}
@@ -379,7 +384,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="flex flex-col items-center w-8 shrink-0">
-                  <span className="font-display font-extrabold text-sm text-ink">{String(person.rank).padStart(2, '0')}</span>
+                  <span className="font-display font-extrabold text-sm text-ink">{String(position).padStart(2, '0')}</span>
                   <RankTrend rank={person.rank} previous={person.previousRank} />
                 </div>
                 {personInfo(person, true)}
@@ -401,7 +406,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
       {/* Nunca avaliados */}
       {pending.length > 0 && (
-        <details className="blk mt-6 group/pending">
+        <details className="blk mt-6 group/pending" open={ranked.length === 0}>
           <summary className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none">
             <span className="font-display font-extrabold text-sm text-ink">Aguardando avaliação ({pending.length})</span>
             <ChevronDown className="w-4 h-4 text-ink transition-transform group-open/pending:rotate-180" aria-hidden="true" />
@@ -416,7 +421,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   </span>
                   <span className="font-display font-extrabold text-lg text-faint w-14 text-right">—</span>
                   {evaluateButton(person)}
-                  {rowMenu(person)}
+                  {rowMenu(person, false)}
                 </div>
               </div>
             ))}

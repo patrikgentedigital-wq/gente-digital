@@ -87,4 +87,32 @@ describe('LeaderboardView', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Gerar relatório PDF' }));
     expect(onOpenReportModal).toHaveBeenCalledWith(ana);
   });
+
+  it('pendentes não oferecem relatório PDF no menu ⋯', () => {
+    render(<LeaderboardView {...props} members={[m({ name: 'Diego', evaluationStatus: 'Pendente' })]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Mais ações de Diego' }));
+    expect(screen.queryByRole('menuitem', { name: 'Gerar relatório PDF' })).toBeNull();
+  });
+
+  it('posições seguem a ordem dos avaliados, sem pular números', () => {
+    render(
+      <LeaderboardView
+        {...props}
+        members={[m({ name: 'Ana', rank: 1, score: 90 }), m({ name: 'Zé', rank: 4, score: 50 }), m({ name: 'Pendente', rank: 2, evaluationStatus: 'Pendente' })]}
+      />,
+    );
+    expect(screen.getByText('02')).toBeTruthy();
+    expect(screen.queryByText('04')).toBeNull();
+  });
+
+  it('sem pódio quando o primeiro avaliado tem 0%', () => {
+    render(<LeaderboardView {...props} members={[m({ rank: 1 }), m({ rank: 2 }), m({ rank: 3 })]} />);
+    expect(screen.queryByLabelText('Pódio')).toBeNull();
+  });
+
+  it('o bloco de pendentes abre sozinho quando é o único conteúdo', () => {
+    render(<LeaderboardView {...props} members={[m({ evaluationStatus: 'Pendente' })]} />);
+    const details = screen.getByText('Aguardando avaliação (1)').closest('details') as HTMLDetailsElement;
+    expect(details.open).toBe(true);
+  });
 });

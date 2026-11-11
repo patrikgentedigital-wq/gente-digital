@@ -65,4 +65,9 @@ describe('dashboardStats', () => {
     expect(s.teamStats.find((t) => t.leader === 'B')?.topMember).toBeNull();
     expect(s.onTargetCount).toBe(1);
   });
+
+  it('destaque da equipe exige nota acima de 0%', () => {
+    const s = dashboardStats([m({ team: 'Z', score: 0 })]);
+    expect(s.teamStats[0].topMember).toBeNull();
+  });
 });

@@ -31,7 +31,7 @@ export const TeamsView: React.FC<TeamsViewProps> = ({
           ? Math.round(evaluated.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / evaluated.length)
           : null;
 
-      const topPerformer = [...evaluated].sort(compareByPercent)[0];
+      const topPerformer = [...evaluated].filter((m) => percentOf(m.score, m.maxScore) > 0).sort(compareByPercent)[0];
 
       return {
         ...teamStruct,

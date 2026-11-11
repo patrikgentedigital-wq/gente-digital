@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { TeamMember } from '../types';
-import { percentOf, scaleScore } from '../lib/scoring';
+import { isEvaluated, percentOf, scaleScore } from '../lib/scoring';
 import type { EvaluationPayload } from '../lib/backend';
 import type { CriteriaCategory } from '../lib/criteria';
 import { getCategoryScorePercent, isPdiGoalOverdue } from '../lib/evaluation';
@@ -117,6 +117,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
 
   if (!member) return null;
+  const evaluated = isEvaluated(member);
 
   // Quem tem conjunto próprio de perguntas pode ter máximo diferente de 155; a meta (140/155) acompanha em proporção.
   const chartMax = member.maxScore > 0 ? member.maxScore : 155;
@@ -190,7 +191,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                   Time {member.team}
                 </span>
                 <span className="text-[10px] font-mono text-faint">
-                  Rank #{member.rank}
+                  {evaluated ? `Rank #${member.rank}` : 'Sem avaliação'}
                 </span>
               </div>
             </div>
@@ -210,21 +211,21 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-app border border-line p-3.5 rounded-xl text-center">
             <span className="text-[10px] font-mono text-faint block mb-1">PONTUAÇÃO ATUAL</span>
-            <span className="text-2xl font-bold text-accent-text font-mono">{member.score}</span>
+            <span className="text-2xl font-bold text-accent-text font-mono">{evaluated ? member.score : '—'}</span>
             <span className="text-xs text-faint font-mono"> / {member.maxScore}</span>
           </div>
 
           <div className="bg-app border border-line p-3.5 rounded-xl text-center">
             <span className="text-[10px] font-mono text-faint block mb-1">APROVEITAMENTO</span>
             <span className="text-2xl font-bold text-ink font-mono">
-              {Math.round(percentOf(member.score, member.maxScore))}%
+              {evaluated ? `${Math.round(percentOf(member.score, member.maxScore))}%` : '—'}
             </span>
           </div>
 
           <div className="bg-app border border-line p-3.5 rounded-xl text-center flex flex-col justify-center items-center">
             <span className="text-[10px] font-mono text-faint block mb-1">STATUS</span>
             <span className="text-xs font-mono font-bold text-accent-text">
-              {member.status}
+              {evaluated ? member.status : 'Sem avaliação'}
             </span>
           </div>
         </div>

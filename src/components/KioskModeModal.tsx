@@ -4,7 +4,7 @@ import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
 import { compareByPercent, percentOf, scaleScore } from '../lib/scoring';
-import { activeSlide, availableSlides, nextSlide, rankedForKiosk } from '../lib/kioskSlides';
+import { activeSlide, availableSlides, kioskTeamStats, nextSlide, rankedForKiosk } from '../lib/kioskSlides';
 import {
   X,
   Trophy,
@@ -118,32 +118,14 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
     .sort((a, b) => (b.score - (previousScoreOf(b) ?? 0)) - (a.score - (previousScoreOf(a) ?? 0)))
     .slice(0, 6);
 
-  // Teams summary calculations
-  const teamStats = deriveTeams(members, TEAMS).map((team) => {
-    const teamMembers = members.filter((m) => m.team === team.leader);
-    const avgPercent =
-      teamMembers.length > 0
-        ? teamMembers.reduce((acc, m) => acc + percentOf(m.score, m.maxScore), 0) / teamMembers.length
-        : 0;
-    const flyingCount = teamMembers.filter((m) => m.status === 'Voando').length;
-
-    return {
-      name: `Time ${team.leader}`,
-      leader: team.leader,
-      color: team.color,
-      count: teamMembers.length,
-      avgPercent: Math.round(avgPercent * 10) / 10,
-      flyingCount,
-    };
-  })
-    .filter((team) => team.count > 0)
-    .sort((a, b) => b.avgPercent - a.avgPercent);
+  // Equipes: média só de quem já foi avaliado.
+  const teamStats = kioskTeamStats(members);
 
   // A TV fica ligada sem ninguém olhando: só gira os slides que têm o que mostrar.
   const available = availableSlides({
     topScore: top1?.score ?? 0,
     growth: growthLeaders.length,
-    teamsWithScore: teamStats.filter((team) => team.avgPercent > 0).length,
+    teamsWithScore: teamStats.filter((team) => (team.avgPercent ?? 0) > 0).length,
     levelUp: levelUpLeaders.length,
   });
   availableSlidesRef.current = available;
@@ -412,13 +394,13 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                   <div className="space-y-2.5 my-2">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-muted">Média da Equipe:</span>
-                      <span className="font-mono font-bold text-accent-text text-base">{team.avgPercent}%</span>
+                      <span className="font-mono font-bold text-accent-text text-base">{team.avgPercent === null ? '—' : `${team.avgPercent}%`}</span>
                     </div>
                     <div className="w-full bg-app h-2 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-1000"
                         style={{
-                          width: `${team.avgPercent}%`,
+                          width: `${team.avgPercent ?? 0}%`,
                           backgroundColor: team.color,
                         }}
                       />

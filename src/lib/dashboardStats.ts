@@ -52,7 +52,8 @@ export function dashboardStats(members: TeamMember[]): DashboardStats {
         count: teamMembers.length,
         evaluatedCount: teamEvaluated.length,
         avgPercent: averagePercent(teamEvaluated),
-        topMember: [...teamEvaluated].sort(compareByPercent)[0] ?? null,
+        // Destaque só com nota acima de 0%, como a coroa.
+        topMember: [...teamEvaluated].filter((m) => percentOf(m.score, m.maxScore) > 0).sort(compareByPercent)[0] ?? null,
         onTargetCount: teamEvaluated.filter((m) => m.status === 'Voando').length,
       };
     })

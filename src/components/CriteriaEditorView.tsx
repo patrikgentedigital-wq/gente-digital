@@ -100,7 +100,7 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans space-y-6">
-      <header className="bg-surface p-6 rounded-3xl">
+      <header className="blk p-6">
         <h2 className="font-display text-2xl font-semibold text-ink">Perguntas da avaliação</h2>
         <p className="mt-1 text-sm text-muted">
           Cada equipe tem as suas perguntas. A pontuação máxima é o número de perguntas vezes 5.
@@ -108,7 +108,7 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
       </header>
 
       {role === 'admin' && (
-        <div className="bg-surface p-4 rounded-2xl">
+        <div className="blk p-4">
           <label htmlFor="criteria-team" className="block text-xs font-semibold text-muted mb-1.5">Equipe</label>
           <select
             id="criteria-team"
@@ -134,7 +134,7 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
       )}
 
       {role === 'leader' && profileReady && !teamId && (
-        <div className="bg-surface p-6 rounded-2xl text-sm text-muted" role="status">
+        <div className="blk p-6 text-sm text-muted" role="status">
           Sua conta não está ligada a uma equipe. Peça ao admin para ligar a sua conta à equipe.
         </div>
       )}
@@ -144,7 +144,7 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
 
       {teamId && !loading && !error && (
         <>
-          <div className="bg-surface p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+          <div className="blk p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-ink">
               <span className="font-semibold">Time {teamName}</span>
               <span className="text-muted"> · {questionCount} perguntas · máximo de {total} pontos</span>
@@ -159,14 +159,14 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
           </div>
 
           {draft.length === 0 && (
-            <div className="bg-surface p-6 rounded-2xl text-sm text-muted" role="status">
+            <div className="blk p-6 text-sm text-muted" role="status">
               Esta equipe ainda não tem perguntas. Adicione uma categoria para começar.
             </div>
           )}
 
           <div className="space-y-4">
             {draft.map((category, catIndex) => (
-              <section key={category.id} className="bg-surface p-4 rounded-2xl space-y-3" aria-label={`Categoria ${catIndex + 1}`}>
+              <section key={category.id} className="blk p-4 space-y-3" aria-label={`Categoria ${catIndex + 1}`}>
                 <div className="flex items-center gap-2">
                   <input
                     aria-label={`Nome da categoria ${catIndex + 1}`}

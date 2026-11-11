@@ -149,7 +149,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-2xl rounded-3xl p-6 relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
+        className="blk w-full max-w-2xl p-6 relative flex flex-col gap-5 text-ink max-h-[90vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="employee-detail-title"

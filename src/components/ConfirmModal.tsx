@@ -29,7 +29,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4" role="presentation">
       <div
         ref={dialogRef}
-        className="w-full max-w-md rounded-3xl border border-accent/40 bg-surface p-6 text-ink"
+        className="blk w-full max-w-md p-6 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"

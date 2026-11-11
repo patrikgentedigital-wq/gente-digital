@@ -22,7 +22,7 @@ export const InfoModal: React.FC<InfoModalProps> = ({ type, isOpen, onClose }) =
     >
       <div
         ref={dialogRef}
-        className="relative w-full max-w-2xl bg-surface border border-line rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="blk relative w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="info-modal-title"

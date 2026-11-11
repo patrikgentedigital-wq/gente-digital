@@ -76,7 +76,7 @@ export const LeaderLoginModal: React.FC<LeaderLoginModalProps> = ({
     >
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-md rounded-3xl p-6 relative flex flex-col gap-5 text-ink"
+        className="blk w-full max-w-md p-6 relative flex flex-col gap-5 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="leader-login-title"

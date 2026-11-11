@@ -4,7 +4,7 @@ import logoEscuro from '../assets/gente-digital-logo-escuro.svg';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
 import { compareByPercent, percentOf, scaleScore } from '../lib/scoring';
-import { activeSlide, availableSlides, nextSlide } from '../lib/kioskSlides';
+import { activeSlide, availableSlides, nextSlide, rankedForKiosk } from '../lib/kioskSlides';
 import {
   X,
   Trophy,
@@ -92,7 +92,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
   if (!isOpen) return null;
 
   // Sorted members for calculations
-  const sortedMembers = [...members].sort(compareByPercent);
+  const sortedMembers = rankedForKiosk(members);
   const top1 = sortedMembers[0];
   const top2 = sortedMembers[1];
   const top3 = sortedMembers[2];
@@ -230,7 +230,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
       {/* Main Slide Content */}
       <main className="flex-1 p-8 flex flex-col justify-center max-w-7xl w-full mx-auto overflow-hidden">
         {members.length === 0 ? (
-          <div className="text-center p-8 bg-surface rounded-3xl border border-line max-w-md mx-auto">
+          <div className="blk text-center p-8 max-w-md mx-auto">
             <Trophy className="w-12 h-12 text-accent-text mx-auto mb-3 opacity-60" />
             <h3 className="text-lg font-bold text-ink mb-1">Nenhum dado carregado</h3>
             <p className="text-xs text-muted">Aguardando dados dos colaboradores para exibição no telão.</p>
@@ -238,7 +238,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
         ) : (
           <div key={slide} className="flex-1 flex flex-col justify-center animate-slide-fade xl:pr-40">
             {slide === -1 && (
-              <div className="text-center p-8 bg-surface rounded-3xl border border-line max-w-md mx-auto">
+              <div className="blk text-center p-8 max-w-md mx-auto">
                 <Trophy className="w-12 h-12 text-accent-text mx-auto mb-3 opacity-60" />
                 <h3 className="text-lg font-bold text-ink mb-1">Ainda não há avaliações neste ciclo</h3>
                 <p className="text-xs text-muted">Os resultados aparecem aqui assim que as avaliações forem salvas.</p>
@@ -258,7 +258,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end max-w-4xl mx-auto w-full pt-4">
               {/* 2nd Place */}
               {top2 && (
-                <div className="bg-surface border-2 border-muted/40 rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl relative order-1 transform hover:-translate-y-1 transition-transform">
+                <div className="blk p-6 flex flex-col items-center text-center relative order-1 transform hover:-translate-y-1 transition-transform">
                   <div className="absolute -top-5 w-10 h-10 rounded-full bg-slate-300 text-slate-900 font-black text-base flex items-center justify-center shadow-lg border-2 border-white">
                     2º
                   </div>
@@ -280,8 +280,8 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
 
               {/* 1st Place (Center & Highest) */}
               {top1 && (
-                <div className="bg-gradient-to-b from-gold-deep to-surface border-2 border-accent rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl relative order-2 transform -translate-y-4 shadow-accent/20">
-                  <div className="absolute -top-6 w-12 h-12 rounded-full bg-accent text-accent-ink font-black text-xl flex items-center justify-center shadow-xl border-2 border-white animate-bounce">
+                <div className="blk-hero p-8 flex flex-col items-center text-center relative order-2 transform -translate-y-4">
+                  <div className="absolute -top-6 w-12 h-12 rounded-full bg-band text-band-ink font-black text-xl flex items-center justify-center border-2 border-block-edge">
                     <Crown className="w-6 h-6" />
                   </div>
                   <Avatar
@@ -290,19 +290,19 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                     teamColor={top1.teamColor}
                     size="2xl"
                     shape="circle"
-                    className="w-24 h-24 border-4 border-accent shadow-lg mb-3"
+                    className="w-24 h-24 border-4 border-band mb-3"
                   />
-                  <h3 className="font-black text-2xl text-ink truncate max-w-full">{top1.name}</h3>
-                  <p className="text-xs text-accent-text font-semibold mb-3">{top1.role} • Time {top1.team}</p>
-                  <div className="bg-accent/20 px-6 py-2 rounded-2xl border border-accent font-mono font-black text-3xl text-accent-text shadow-inner">
-                    {top1.score} <span className="text-sm font-normal text-muted">/ {top1.maxScore} pts</span>
+                  <h3 className="font-display font-extrabold text-2xl truncate max-w-full">{top1.name}</h3>
+                  <p className="text-xs opacity-80 font-semibold mb-3">{top1.role} • Time {top1.team}</p>
+                  <div className="font-display font-extrabold text-5xl leading-none">
+                    {top1.score} <span className="text-sm font-normal opacity-80">/ {top1.maxScore} pts</span>
                   </div>
                 </div>
               )}
 
               {/* 3rd Place */}
               {top3 && (
-                <div className="bg-surface border-2 border-bronze/50 rounded-3xl p-6 flex flex-col items-center text-center shadow-2xl relative order-3 transform hover:-translate-y-1 transition-transform">
+                <div className="blk p-6 flex flex-col items-center text-center relative order-3 transform hover:-translate-y-1 transition-transform">
                   <div className="absolute -top-5 w-10 h-10 rounded-full bg-bronze text-ink font-black text-base flex items-center justify-center shadow-lg border-2 border-white">
                     3º
                   </div>
@@ -328,7 +328,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               {top10.slice(3, 10).map((m, idx) => (
                 <div
                   key={m.id}
-                  className="bg-surface border border-line rounded-2xl p-3 flex flex-col items-center text-center"
+                  className="blk p-3 flex flex-col items-center text-center"
                 >
                   <span className="font-mono font-bold text-xs text-faint">{idx + 4}º</span>
                   <Avatar name={m.name} src={m.avatarUrl} teamColor={m.teamColor} size="md" shape="circle" className="my-1" />
@@ -357,7 +357,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                 return (
                   <div
                     key={m.id}
-                    className="bg-surface border border-line hover:border-success/50 rounded-2xl p-5 flex items-center gap-4 shadow-xl transition-all"
+                    className="blk p-5 flex items-center gap-4 transition-all"
                   >
                     <div className="relative">
                       <Avatar name={m.name} src={m.avatarUrl} teamColor={m.teamColor} size="xl" className="border border-line" />
@@ -396,7 +396,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
               {teamStats.map((team, idx) => (
                 <div
                   key={team.leader}
-                  className="bg-surface border border-line rounded-2xl p-5 shadow-xl flex flex-col justify-between"
+                  className="blk p-5 flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2.5">
@@ -451,7 +451,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
                 return (
                   <div
                     key={m.id}
-                    className="bg-surface border border-accent/40 hover:border-accent rounded-2xl p-5 flex items-center gap-4 shadow-xl transition-all"
+                    className="blk p-5 flex items-center gap-4 transition-all"
                   >
                     <div className="relative">
                       <Avatar name={m.name} src={m.avatarUrl} teamColor={m.teamColor} size="xl" className="border border-accent/40" />
@@ -495,7 +495,7 @@ export const KioskModeModal: React.FC<KioskModeModalProps> = ({
 
       {/* QR Code linking back to the platform */}
       {qrDataUrl && (
-        <div className="fixed bottom-16 right-6 z-10 bg-surface border border-line rounded-2xl p-3 flex flex-col items-center gap-1.5 shadow-2xl">
+        <div className="blk fixed bottom-16 right-6 z-10 p-3 flex flex-col items-center gap-1.5">
           <img src={qrDataUrl} alt="QR code para acessar a plataforma" className="w-24 h-24" />
           <span className="text-[9px] font-mono text-muted uppercase tracking-wider">Escaneie e acompanhe</span>
         </div>

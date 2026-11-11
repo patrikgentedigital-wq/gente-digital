@@ -402,7 +402,7 @@ export default function App() {
                currentLeader={currentLeader}
              />
            ) : (
-             <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-muted" role="status">
+             <div className="blk p-8 text-center text-sm text-muted" role="status">
                {membersLoading ? 'Carregando colaboradores...' : membersError || 'Nenhum colaborador disponível para avaliação.'}
              </div>
            )
@@ -453,7 +453,7 @@ export default function App() {
         />
       ) : authUser && !authRole ? (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-3xl bg-surface p-8 text-center">
+          <div className="blk max-w-md p-8 text-center">
             <h2 className="text-xl font-bold text-ink">Acesso sem autorização</h2>
             <p className="mt-2 text-sm text-muted">Sua conta está autenticada, mas ainda não possui uma role autorizada para esta plataforma.</p>
             <button
@@ -483,7 +483,7 @@ export default function App() {
         </Suspense>
       ) : (
         <main className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-md rounded-3xl bg-surface p-8 text-center">
+          <div className="blk max-w-md p-8 text-center">
             <h2 className="text-xl font-bold text-ink">Acesso autenticado necessário</h2>
             <p className="mt-2 text-sm text-muted">Os dados de colaboradores só são carregados após autenticação de um líder autorizado.</p>
             <button

@@ -64,7 +64,7 @@ export const ImageLinkModal: React.FC<ImageLinkModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" role="presentation">
       <div
         ref={dialogRef}
-        className="bg-surface border border-line w-full max-w-lg rounded-3xl p-6 relative flex flex-col gap-5 text-ink"
+        className="blk w-full max-w-lg p-6 relative flex flex-col gap-5 text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="image-link-modal-title"

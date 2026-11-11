@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeSlide, availableSlides, nextSlide } from './kioskSlides';
+import { activeSlide, availableSlides, nextSlide, rankedForKiosk } from './kioskSlides';
 
 describe('availableSlides', () => {
   it('sem nenhuma avaliação, nenhum slide aparece', () => {
@@ -37,5 +37,15 @@ describe('activeSlide', () => {
 
   it('devolve -1 quando não há nenhum slide para mostrar', () => {
     expect(activeSlide(0, [false, false, false, false])).toBe(-1);
+  });
+});
+
+describe('rankedForKiosk', () => {
+  const pessoa = (name: string, score: number, evaluationStatus: 'Concluído' | 'Pendente') =>
+    ({ name, score, maxScore: 100, evaluationStatus }) as Parameters<typeof rankedForKiosk>[0][number];
+
+  it('o modo TV ranqueia só avaliados, do maior para o menor percentual', () => {
+    const ranked = rankedForKiosk([pessoa('Bia', 70, 'Concluído'), pessoa('Caio', 0, 'Pendente'), pessoa('Ana', 90, 'Concluído')]);
+    expect(ranked.map((m) => m.name)).toEqual(['Ana', 'Bia']);
   });
 });

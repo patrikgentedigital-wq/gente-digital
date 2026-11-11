@@ -388,7 +388,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
     <>
       <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
       {/* Header Bar */}
-      <div className="bg-surface p-6 rounded-3xl mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="blk p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-2.5 md:ml-auto">
           <button
              onClick={() => onOpenReportModal(selectedMember, {
@@ -533,7 +533,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       </div>
 
       {/* Radar Chart Summary Section */}
-      <div className="bg-surface p-5 rounded-3xl mb-6">
+      <div className="blk p-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-accent-text" />

@@ -1,3 +1,6 @@
+import type { TeamMember } from '../types';
+import { compareByPercent, isEvaluated } from './scoring';
+
 /** Os quatro slides do Modo TV: 0 destaques, 1 evoluções no ranking, 2 comparativo de equipes, 3 quem subiu de nível. */
 export const KIOSK_SLIDE_COUNT = 4;
 
@@ -24,4 +27,9 @@ export function nextSlide(current: number, available: boolean[], direction: 1 | 
 export function activeSlide(current: number, available: boolean[]): number {
   if (available[current]) return current;
   return available.findIndex(Boolean);
+}
+
+/** Ordem do modo TV: só quem já foi avaliado, do maior para o menor percentual. */
+export function rankedForKiosk<T extends { name: string; score: number; maxScore: number; evaluationStatus: string }>(members: readonly T[]): T[] {
+  return members.filter((m) => isEvaluated(m as Pick<TeamMember, 'evaluationStatus'>)).sort(compareByPercent);
 }

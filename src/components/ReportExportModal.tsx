@@ -42,7 +42,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
       {/* Modal Box */}
       <div
         ref={dialogRef}
-        className="report-print-modal bg-surface border border-line w-full max-w-3xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden text-ink"
+        className="blk report-print-modal w-full max-w-3xl relative flex flex-col max-h-[90vh] overflow-hidden text-ink"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-export-title"

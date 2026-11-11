@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 const ACTIONS_SLOT_ID = 'page-header-actions';
@@ -48,7 +48,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ tab, meta, actions }) =>
  */
 export const PageActions: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => setSlot(document.getElementById(ACTIONS_SLOT_ID)), []);
+  // Antes de pintar a tela, para os botões não aparecerem um instante fora da faixa.
+  useLayoutEffect(() => setSlot(document.getElementById(ACTIONS_SLOT_ID)), []);
   if (slot) return createPortal(children, slot);
   return <div className="flex flex-wrap items-center justify-end gap-2 mb-4">{children}</div>;
 };

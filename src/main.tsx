@@ -4,9 +4,11 @@ import App from './App.tsx';
 import './index.css';
 import { clientErrorReporter } from './lib/clientErrors';
 import { installGlobalErrorReporting } from './lib/errorReporting';
+import { installPreloadErrorRecovery } from './lib/preloadRecovery';
 import { applyTheme, readStoredTheme } from './lib/theme';
 
 installGlobalErrorReporting(clientErrorReporter);
+installPreloadErrorRecovery();
 // Antes de desenhar a tela, para não piscar claro quando a escolha salva é o escuro.
 applyTheme(document.documentElement, readStoredTheme());
 

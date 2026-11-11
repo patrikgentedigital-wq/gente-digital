@@ -24,6 +24,7 @@ import { useAuthSession } from './hooks/useAuthSession';
 import { useMembers } from './hooks/useMembers';
 import { useTheme } from './hooks/useTheme';
 import { Navbar } from './components/Navbar';
+import { PageHeader, type Tab } from './components/PageHeader';
 import { AuthenticatedModals } from './components/AuthenticatedModals';
 import type { ReportModalState } from './components/AuthenticatedModals';
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((module) => ({ default: module.LeaderboardView })));
@@ -57,7 +58,7 @@ export default function App() {
     }
   }, []);
   const { members, setMembers, membersError, membersLoading } = useMembers(authUser, authRole);
-  const [activeTab, setActiveTab] = useState<'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant' | 'success'>('ranking');
+  const [activeTab, setActiveTab] = useState<Tab>('ranking');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvaluationMember, setSelectedEvaluationMember] = useState<TeamMember | null>(null);
   const [imageModalMember, setImageModalMember] = useState<TeamMember | null>(null);
@@ -338,6 +339,10 @@ export default function App() {
 
   const authenticatedContent = authUser && (
     <>
+      <PageHeader
+        tab={activeTab}
+        meta={activeTab === 'ranking' || activeTab === 'dashboard' ? `Últimas avaliações · ${getDefaultEvaluationCycle()}` : undefined}
+      />
       {membersError && (
         <div className="mx-auto mt-4 max-w-[1040px] rounded-xl border border-danger/40 bg-danger-soft p-3 text-xs text-danger-ink" role="alert">
           {membersError}

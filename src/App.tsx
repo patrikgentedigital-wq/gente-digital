@@ -14,6 +14,7 @@ import {
   initialAuthLink,
   updateMember,
 } from './lib/backend';
+import { pickEvaluationMember } from './lib/defaultEvaluationMember';
 import type { EvaluationPayload } from './lib/backend';
 import { useTeamCriteria } from './hooks/useTeamCriteria';
 import { CriteriaEditorView } from './components/CriteriaEditorView';
@@ -185,10 +186,7 @@ export default function App() {
       return;
     }
 
-    setSelectedEvaluationMember((selected) => {
-      if (!selected) return members[0];
-      return members.find((member) => member.id === selected.id) || members[0] || null;
-    });
+    setSelectedEvaluationMember((selected) => pickEvaluationMember(members, selected));
   }, [members]);
 
   const handleSaveAvatarUrl = async (newAvatarUrl: string) => {

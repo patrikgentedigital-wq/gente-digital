@@ -24,6 +24,14 @@ export function radarAxisLabel(name: string): string {
   return words.join(' ') || name.trim();
 }
 
+/** Nome curto de uma pergunta: o começo dela, até a primeira vírgula, em no máximo 3 palavras. */
+export function radarQuestionLabel(text: string): string {
+  const clause = text.split(',')[0].replace(/[.?!:;]+$/, '').trim();
+  const words = clause.split(/\s+/).filter(Boolean).slice(0, 3);
+  while (words.length > 1 && CONNECTORS.has(words[words.length - 1].toLowerCase())) words.pop();
+  return words.join(' ') || text.trim();
+}
+
 /** Dica do gráfico (labelFormatter do Tooltip): mostra o nome completo da ponta em vez do rótulo curto. */
 export function radarTooltipLabel(label: unknown, payload: readonly { payload?: Partial<RadarPoint> }[] | undefined): string {
   return payload?.[0]?.payload?.fullName ?? String(label ?? '');
@@ -65,11 +73,13 @@ export function buildRadarData(
     );
   }
 
-  return categories
-    .flatMap((category) => category.items)
-    .flatMap((item, index) => {
-      const value = source[item.id];
-      if (skipIncomplete && !isScore(value)) return [];
-      return [{ label: `P${index + 1}`, fullName: item.text, value: percent(isScore(value) ? value : 0, 1) }];
-    });
+  return withUniqueLabels(
+    categories
+      .flatMap((category) => category.items)
+      .flatMap((item) => {
+        const value = source[item.id];
+        if (skipIncomplete && !isScore(value)) return [];
+        return [{ label: radarQuestionLabel(item.text), fullName: item.text, value: percent(isScore(value) ? value : 0, 1) }];
+      }),
+  );
 }

@@ -68,11 +68,40 @@ describe('buildRadarData', () => {
     expect(new Set(data.map((point) => point.label)).size).toBe(3);
   });
 
-  it('com menos de 3 categorias, usa uma ponta por pergunta', () => {
-    const fernanda = [category('1', 'Competência 6', 6)];
+  const fernanda: CriteriaCategory[] = [
+    {
+      id: '1',
+      name: 'Competência 6',
+      items: [
+        { id: '1-0', text: 'Cumpre prazos, compromissos e responsabilidades do RH com organização e autonomia.' },
+        { id: '1-1', text: 'Registra e documenta adequadamente ocorrências, feedbacks e orientações.' },
+        { id: '1-2', text: 'Realiza ou acompanha feedbacks individuais, garantindo que o colaborador compreenda.' },
+        { id: '1-3', text: 'Programa e acompanha uma segunda conversa para verificar a evolução.' },
+        { id: '1-4', text: 'Mantém histórico organizado dos acompanhamentos, incluindo datas.' },
+        { id: '1-5', text: 'Comunica aos gestores e à Diretoria situações recorrentes.' },
+      ],
+    },
+  ];
+
+  it('com menos de 3 categorias, usa uma ponta por pergunta com o começo da pergunta como nome', () => {
     const data = buildRadarData(fernanda, { '1-0': 3, '1-1': 3, '1-2': 3, '1-3': 3, '1-4': 1, '1-5': 4 });
-    expect(data.map((point) => point.label)).toEqual(['P1', 'P2', 'P3', 'P4', 'P5', 'P6']);
-    expect(data[4]).toEqual({ label: 'P5', fullName: 'Pergunta 1.5', value: 20 });
+    expect(data.map((point) => point.label)).toEqual([
+      'Cumpre prazos',
+      'Registra e documenta',
+      'Realiza ou acompanha',
+      'Programa e acompanha',
+      'Mantém histórico organizado',
+      'Comunica aos gestores',
+    ]);
+    expect(data[4]).toEqual({ label: 'Mantém histórico organizado', fullName: fernanda[0].items[4].text, value: 20 });
+  });
+
+  it('no radar por pergunta, nomes repetidos ganham o número da pergunta', () => {
+    const repeated: CriteriaCategory[] = [
+      { id: '1', name: 'Único', items: [{ id: '1-0', text: 'Cumpre prazos, a.' }, { id: '1-1', text: 'Cumpre prazos, b.' }] },
+    ];
+    const labels = buildRadarData(repeated, {}).map((point) => point.label);
+    expect(new Set(labels).size).toBe(2);
   });
 
   it('com skipIncomplete, deixa de fora a categoria sem todas as notas', () => {
@@ -82,6 +111,6 @@ describe('buildRadarData', () => {
 
   it('com skipIncomplete, deixa de fora a pergunta sem nota no radar por pergunta', () => {
     const data = buildRadarData([category('1', 'Competência 6', 3)], { '1-0': 5, '1-2': 0 }, { skipIncomplete: true });
-    expect(data.map((point) => point.label)).toEqual(['P1', 'P3']);
+    expect(data.map((point) => point.fullName)).toEqual(['Pergunta 1.1', 'Pergunta 1.3']);
   });
 });

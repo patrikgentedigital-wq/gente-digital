@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ClipboardPaste, Plus, Save, Trash2 } from 'lucide-react';
 import { getCurrentProfile, listTeams, saveCriteriaSet } from '../lib/backend';
 import type { TeamStructure } from '../types';
 import { isIndividualSetId } from '../lib/teams';
@@ -16,6 +16,7 @@ import {
   updateItemText,
 } from '../lib/criteriaEditing';
 import { toast } from '../utils/toastUtils';
+import { parseCriteriaText } from '../lib/criteriaImport';
 
 interface CriteriaEditorViewProps {
   role: 'leader' | 'admin';
@@ -36,6 +37,8 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
   const [saving, setSaving] = useState(false);
   const [savedVersion, setSavedVersion] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   const { set, loading, error, reload } = useCriteriaSet(teamId);
 
@@ -74,6 +77,20 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
     setDraft(next);
     setErrors([]);
     setSavedVersion(null);
+  };
+
+  const parsed = parseCriteriaText(pasteText);
+  const parsedQuestions = parsed.categories.reduce((count, category) => count + category.items.length, 0);
+
+  const closePaste = () => {
+    setPasteOpen(false);
+    setPasteText('');
+  };
+
+  const usePasted = () => {
+    if (parsed.errors.length > 0 || parsed.categories.length === 0) return;
+    edit(parsed.categories);
+    closePaste();
   };
 
   const handleSave = async () => {
@@ -149,6 +166,14 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
               <span className="font-semibold">Time {teamName}</span>
               <span className="text-muted"> · {questionCount} perguntas · máximo de {total} pontos</span>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPasteOpen((open) => !open)}
+              className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold bg-surface-2 border border-line text-ink hover:border-accent cursor-pointer"
+            >
+              <ClipboardPaste className="w-3.5 h-3.5" /> Colar formulário
+            </button>
             <button
               type="button"
               onClick={() => edit(addCategory(draft, 'Nova categoria'))}
@@ -156,7 +181,60 @@ export const CriteriaEditorView: React.FC<CriteriaEditorViewProps> = ({ role }) 
             >
               <Plus className="w-3.5 h-3.5" /> Nova categoria
             </button>
+            </div>
           </div>
+
+          {pasteOpen && (
+            <div className="blk p-4 space-y-3">
+              <label htmlFor="criteria-paste" className="block text-xs font-semibold text-muted">Texto do formulário</label>
+              <textarea
+                id="criteria-paste"
+                aria-label="Texto do formulário"
+                value={pasteText}
+                onChange={(event) => setPasteText(event.target.value)}
+                rows={8}
+                placeholder="Cole aqui o formulário. Títulos de categoria em uma linha e as perguntas em linhas que terminam em ponto ou ?."
+                className={inputClass}
+              />
+              {pasteText.trim() && (
+                <div className="space-y-2 text-xs" role="status">
+                  <p className="font-semibold text-ink">
+                    Li {parsed.categories.length} {parsed.categories.length === 1 ? 'categoria' : 'categorias'} e {parsedQuestions} {parsedQuestions === 1 ? 'pergunta' : 'perguntas'}
+                    <span className="text-muted font-normal"> · </span>
+                    <span className="text-muted font-normal">máximo de {parsedQuestions * 5} pontos</span>
+                  </p>
+                  <ul className="list-disc pl-5 text-muted space-y-0.5">
+                    {parsed.categories.map((category) => (
+                      <li key={category.id}>{category.name} ({category.items.length})</li>
+                    ))}
+                  </ul>
+                  {parsed.errors.length > 0 && (
+                    <div className="bg-danger-soft border border-danger/40 text-danger-ink p-3 rounded-xl space-y-1" role="alert">
+                      {parsed.errors.map((message) => (
+                        <p key={message}>{message}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <button type="button" onClick={closePaste} className="rounded-xl px-3.5 py-2 text-xs font-semibold border border-line text-muted hover:text-ink cursor-pointer">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={usePasted}
+                  disabled={parsed.categories.length === 0 || parsed.errors.length > 0}
+                  className="rounded-xl px-4 py-2 text-xs font-bold bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-40 cursor-pointer"
+                >
+                  Usar estas perguntas
+                </button>
+              </div>
+              <p className="text-[11px] text-muted">
+                As perguntas só entram no rascunho: nada é salvo até você clicar em "Salvar perguntas". Quem já foi avaliado mantém as perguntas antigas.
+              </p>
+            </div>
+          )}
 
           {draft.length === 0 && (
             <div className="blk p-6 text-sm text-muted" role="status">

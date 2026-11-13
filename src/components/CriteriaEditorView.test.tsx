@@ -86,3 +86,39 @@ describe('aba Perguntas', () => {
     expect(backend.getCriteriaSet).not.toHaveBeenCalled();
   });
 });
+
+describe('colar formulário', () => {
+  const pasted = ['1. CRIATIVIDADE', 'Demonstra criatividade?', 'Tem atenção aos detalhes?', '2. PRAZOS', 'Cumpre os prazos?'].join('\n');
+
+  it('mostra a prévia do que foi lido antes de trocar as perguntas', async () => {
+    render(<CriteriaEditorView role="leader" />);
+    await screen.findByText(/máximo de 10 pontos/);
+    fireEvent.click(screen.getByRole('button', { name: /Colar formulário/ }));
+    fireEvent.change(screen.getByLabelText('Texto do formulário'), { target: { value: pasted } });
+    expect(await screen.findByText(/2 categorias e 3 perguntas/)).toBeTruthy();
+    expect(screen.getByText(/máximo de 15 pontos/, { selector: 'span' })).toBeTruthy();
+    // ainda não trocou nada
+    expect(screen.getByLabelText('Pergunta 1.1')).toHaveProperty('value', 'Clareza');
+  });
+
+  it('ao confirmar, as perguntas viram o rascunho e nada é salvo no servidor', async () => {
+    render(<CriteriaEditorView role="leader" />);
+    await screen.findByText(/máximo de 10 pontos/);
+    fireEvent.click(screen.getByRole('button', { name: /Colar formulário/ }));
+    fireEvent.change(screen.getByLabelText('Texto do formulário'), { target: { value: pasted } });
+    fireEvent.click(screen.getByRole('button', { name: /Usar estas perguntas/ }));
+    expect(await screen.findByDisplayValue('Demonstra criatividade?')).toBeTruthy();
+    expect(screen.getByDisplayValue('Criatividade')).toBeTruthy();
+    expect(screen.getByText(/máximo de 15 pontos/)).toBeTruthy();
+    expect(backend.saveCriteriaSet).not.toHaveBeenCalled();
+  });
+
+  it('com problema no texto, mostra o aviso e não deixa usar', async () => {
+    render(<CriteriaEditorView role="leader" />);
+    await screen.findByText(/máximo de 10 pontos/);
+    fireEvent.click(screen.getByRole('button', { name: /Colar formulário/ }));
+    fireEvent.change(screen.getByLabelText('Texto do formulário'), { target: { value: 'só um título' } });
+    expect(await screen.findByText('Inclua ao menos uma pergunta.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Usar estas perguntas/ })).toHaveProperty('disabled', true);
+  });
+});

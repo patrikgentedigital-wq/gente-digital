@@ -3,7 +3,8 @@ import type { TeamMember } from '../types';
 import { isEvaluated, percentOf, scaleScore } from '../lib/scoring';
 import type { EvaluationPayload } from '../lib/backend';
 import type { CriteriaCategory } from '../lib/criteria';
-import { getCategoryScorePercent, isPdiGoalOverdue } from '../lib/evaluation';
+import { isPdiGoalOverdue } from '../lib/evaluation';
+import { buildRadarData, radarTooltipLabel } from '../lib/radar';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { useDialog } from '../hooks/useDialog';
 import { Avatar } from './Avatar';
@@ -135,12 +136,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
   });
 
   const radarData = evaluation && criteria
-    ? criteria.flatMap((category) => {
-        const score = getCategoryScorePercent(evaluation.criteriaScores, category.id, criteria);
-        return score === null
-          ? []
-          : [{ category: category.name.split(' ')[0], fullName: category.name, score }];
-      })
+    ? buildRadarData(criteria, evaluation.criteriaScores, { skipIncomplete: true })
     : [];
 
   const pdiGoals = member.pdiGoals || [];
@@ -249,9 +245,10 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData} outerRadius="70%">
                   <PolarGrid stroke="#e5e5ea" />
-                  <PolarAngleAxis dataKey="category" stroke="#6e6e73" tick={{ fill: '#6e6e73', fontSize: 10 }} />
+                  <PolarAngleAxis dataKey="label" stroke="#6e6e73" tick={{ fill: '#6e6e73', fontSize: 10 }} />
                   <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#d2d2d7" tick={{ fill: '#86868b', fontSize: 9 }} />
                   <Tooltip
+                    labelFormatter={radarTooltipLabel}
                     contentStyle={{
                       backgroundColor: '#ffffff',
                       borderColor: '#d2d2d7',
@@ -260,7 +257,7 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                       fontSize: '11px',
                     }}
                   />
-                  <Radar name="Aderência" dataKey="score" stroke="#000000" fill="#ffe708" fillOpacity={0.4} />
+                  <Radar name="Aderência" dataKey="value" stroke="#000000" fill="#ffe708" fillOpacity={0.4} />
                 </RadarChart>
               </ResponsiveContainer>
             )}

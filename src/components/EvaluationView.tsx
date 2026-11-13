@@ -42,6 +42,7 @@ import {
   isPdiGoalOverdue,
   normalizeCriteriaScores,
 } from '../lib/evaluation';
+import { buildRadarData, radarTooltipLabel } from '../lib/radar';
 import {
   clearDraft,
   isEmptyDraft,
@@ -265,17 +266,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const grandTotal = scoreKeys.reduce((total, key) => total + (scores[key] ?? 0), 0);
   const maxScore = scoreKeys.length * 5;
 
-  // Radar chart data comparing category percentages
-  const radarData = categories.map((cat) => {
-    const catSum = getCategorySum(cat.id);
-    const catMax = cat.items.length * 5;
-    const leaderPct = Math.round((catSum / catMax) * 100);
-    return {
-      category: cat.name.split(' ')[0], // Short category name for radar axis
-      fullName: cat.name,
-      lider: leaderPct,
-    };
-  });
+  // Radar: percentual por categoria (ou por pergunta, quando há menos de 3 categorias)
+  const radarData = buildRadarData(categories, scores);
 
   const sectionsProgress = [
     { id: 'eval-criterios', label: 'Critérios', done: hasAllScores },
@@ -555,9 +547,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} outerRadius="70%">
                 <PolarGrid stroke="#d2d2d7" />
-                <PolarAngleAxis dataKey="category" stroke="#6e6e73" tick={{ fill: '#6e6e73', fontSize: 11 }} />
+                <PolarAngleAxis dataKey="label" stroke="#6e6e73" tick={{ fill: '#6e6e73', fontSize: 11 }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#d2d2d7" tick={{ fill: '#86868b', fontSize: 10 }} />
                 <Tooltip
+                  labelFormatter={radarTooltipLabel}
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     borderColor: '#d2d2d7',
@@ -567,7 +560,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <Radar name="Avaliação do Líder" dataKey="lider" stroke="#000000" fill="#ffe708" fillOpacity={0.4} />
+                <Radar name="Avaliação do Líder" dataKey="value" stroke="#000000" fill="#ffe708" fillOpacity={0.4} />
               </RadarChart>
             </ResponsiveContainer>
           )}

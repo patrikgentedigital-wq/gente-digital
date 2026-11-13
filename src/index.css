@@ -194,6 +194,13 @@ body {
     visibility: visible !important;
   }
 
+  /* Sem isto, o Chrome e o Edge tiram fundos e degradês ao imprimir e o relatório sai sem cor. */
+  .report-print-root,
+  .report-print-root * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .report-print-root {
     position: absolute !important;
     inset: 0 !important;

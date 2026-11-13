@@ -374,6 +374,10 @@ export default function App() {
               setActiveTab('ranking');
             }}
             onSelectMemberForDetail={setDetailModalMember}
+            onEvaluateMember={authUser ? (member) => {
+              setSelectedEvaluationMember(member);
+              setActiveTab('leader');
+            } : undefined}
           />
         )}
         {activeTab === 'teams' && (

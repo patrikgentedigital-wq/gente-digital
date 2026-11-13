@@ -21,6 +21,7 @@ import {
   Clock,
   Compass,
   Filter,
+  ArrowRight,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -43,6 +44,7 @@ import {
   normalizeCriteriaScores,
 } from '../lib/evaluation';
 import { buildRadarData, radarTooltipLabel } from '../lib/radar';
+import { hasEvaluationInCycle, nextPendingMember } from '../lib/pending';
 import {
   clearDraft,
   isEmptyDraft,
@@ -128,6 +130,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const autosaveTimer = useRef<number | undefined>(undefined);
   const [lastSaved, setLastSaved] = useState<{ at: string; revision: number; score: number; max: number } | null>(null);
   const restoredDraftKeys = useRef<Set<string>>(new Set());
+
+// "Próxima pessoa pendente" respeita o filtro de time e o ciclo escolhido.
+  const pendingPool = teamFilter === 'all' ? members : members.filter((m) => m.team.toLowerCase() === teamFilter.toLowerCase());
+  const pendingCount = pendingPool.filter((m) => !hasEvaluationInCycle(m, cycle)).length;
+  const nextPending = nextPendingMember(pendingPool, selectedMember, cycle);
 
   const runOrConfirmDiscard = (action: () => void) => {
     if (isDirty) {
@@ -470,6 +477,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
               </button>
             )}
           </div>
+          {nextPending && (
+            <button
+              type="button"
+              onClick={() => runOrConfirmDiscard(() => onSelectMember(nextPending))}
+              className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-accent-text hover:underline cursor-pointer"
+            >
+              Próxima pessoa pendente · faltam {pendingCount}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Cycle */}

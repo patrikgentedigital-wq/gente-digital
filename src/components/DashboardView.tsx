@@ -11,14 +11,18 @@ import { TeamComparisonChart } from './dashboard/TeamComparisonChart';
 import { StatusDistributionChart } from './dashboard/StatusDistributionChart';
 import { HistoricalTrendChart } from './dashboard/HistoricalTrendChart';
 import { TeamAnalyticSummary } from './dashboard/TeamAnalyticSummary';
+import { PendingPanel } from './dashboard/PendingPanel';
+import { getDefaultEvaluationCycle } from '../lib/evaluation';
 
 interface DashboardViewProps {
   members: TeamMember[];
   onSelectTeamFilter: (team: string) => void;
   onSelectMemberForDetail: (member: TeamMember) => void;
+  /** Só com login: abre a avaliação da pessoa pendente. */
+  onEvaluateMember?: (member: TeamMember) => void;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ members, onSelectTeamFilter }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ members, onSelectTeamFilter, onEvaluateMember }) => {
   const stats = useMemo(() => dashboardStats(members), [members]);
   // Em percentual do máximo de cada avaliação: cada pessoa pode ter um conjunto de perguntas com máximo diferente.
   const timelineData = useMemo(() => monthlyTrend(members), [members]);
@@ -40,6 +44,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ members, onSelectT
       </PageActions>
 
       <DashboardKpiCards stats={stats} />
+
+      <PendingPanel
+        members={members}
+        cycle={getDefaultEvaluationCycle()}
+        onEvaluateMember={onEvaluateMember ? (memberId) => {
+          const target = members.find((member) => member.id === memberId);
+          if (target) onEvaluateMember(target);
+        } : undefined}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
         <TeamComparisonChart teamStats={stats.teamStats} />

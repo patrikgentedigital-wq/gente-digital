@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { tab: 'leader', label: 'Avaliar', needsAuth: true },
   ];
   const management: Array<{ tab: Tab; label: string; needsAuth?: boolean }> = [
-    ...(role === 'admin' ? [{ tab: 'audit' as Tab, label: 'Auditoria' }] : []),
+    ...(role === 'admin' ? [{ tab: 'audit' as Tab, label: 'Auditoria' }, { tab: 'leaders' as Tab, label: 'Líderes' }] : []),
     ...(isAuthenticated && role ? [{ tab: 'criteria' as Tab, label: 'Perguntas' }] : []),
     ...(role === 'admin'
       ? [{ tab: 'success' as Tab, label: 'Sucesso do Cliente' }, { tab: 'assistant' as Tab, label: 'Assistente' }]

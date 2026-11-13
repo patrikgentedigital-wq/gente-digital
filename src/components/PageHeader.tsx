@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 
 const ACTIONS_SLOT_ID = 'page-header-actions';
 
-export type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant' | 'success';
+export type Tab = 'ranking' | 'dashboard' | 'teams' | 'leader' | 'audit' | 'criteria' | 'assistant' | 'success' | 'leaders';
 
 export const PAGE_TITLES: Record<Tab, string> = {
   dashboard: 'Visão geral',
@@ -14,6 +14,7 @@ export const PAGE_TITLES: Record<Tab, string> = {
   criteria: 'Perguntas',
   success: 'Sucesso do Cliente',
   assistant: 'Assistente',
+  leaders: 'Líderes',
 };
 
 interface PageHeaderProps {

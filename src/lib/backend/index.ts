@@ -25,6 +25,14 @@ export { askAssistant, confirmAssistantAction } from './assistant';
 export { getTechnicianRatings } from './success';
 export { countOpenClientErrors, listOpenClientErrors, reportError, resolveClientError } from './errors';
 export type { ClientErrorItem } from './errors';
+export {
+  changeLeaderTeam,
+  describeLeaderError,
+  inviteLeader,
+  listLeaderAccounts,
+  removeLeaderAccess,
+} from './leaders';
+export type { AccessHistoryEntry, LeaderAccount, LeaderOverview } from './leaders';
 export { getCriteriaSet, saveCriteriaSet } from './criteria';
 export type { CriteriaSet } from './criteria';
 export {

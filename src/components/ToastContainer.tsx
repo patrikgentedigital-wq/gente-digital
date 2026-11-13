@@ -23,19 +23,19 @@ export const ToastContainer: React.FC = () => {
         if (t.type === 'success') {
           borderCls = 'border-success/40';
           bgCls = 'bg-success-soft';
-          textCls = 'text-success-pale';
+          textCls = 'text-success';
           IconComponent = CheckCircle2;
           iconColor = 'text-success';
         } else if (t.type === 'error') {
           borderCls = 'border-danger/40';
           bgCls = 'bg-danger-soft';
-          textCls = 'text-danger-pale';
+          textCls = 'text-danger-ink';
           IconComponent = AlertCircle;
           iconColor = 'text-danger';
         } else if (t.type === 'warning') {
           borderCls = 'border-accent/40';
           bgCls = 'bg-gold-soft';
-          textCls = 'text-warn-pale';
+          textCls = 'text-warn';
           IconComponent = AlertTriangle;
           iconColor = 'text-accent-text';
         }

@@ -89,6 +89,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 }) => {
   const [cycle, setCycle] = useState<string>(() => getDefaultEvaluationCycle());
   const availableEvaluationCycles = getEvaluationCycles();
+  const currentCycle = getDefaultEvaluationCycle();
+  const cycleLabel = (id: string) => id.replace('/', ' / ');
   const [teamFilter, setTeamFilter] = useState<string>(() => {
     if (currentLeader && deriveTeams(members, TEAMS).some((t) => t.leader.toLowerCase() === currentLeader.toLowerCase())) {
       return currentLeader;
@@ -494,6 +496,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           </div>
         </div>
       </div>
+
+      {cycle !== currentCycle && (
+        <div
+          role="status"
+          aria-label="Ciclo anterior"
+          className="mb-4 rounded-xl border border-accent/50 bg-gold-soft px-4 py-3 text-xs font-semibold text-ink"
+        >
+          Você está avaliando {cycleLabel(cycle)}, um ciclo anterior. O ciclo atual é {cycleLabel(currentCycle)}.
+        </div>
+      )}
 
       {/* Section Progress */}
       <div className="bg-surface p-4 rounded-xl mb-6 shadow-lg">

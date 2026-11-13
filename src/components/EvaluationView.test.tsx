@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EvaluationView } from './EvaluationView';
 import type { TeamMember } from '../types';
-import { CRITERIA_SCORE_KEYS, getDefaultEvaluationCycle } from '../lib/evaluation';
+import { CRITERIA_SCORE_KEYS, getDefaultEvaluationCycle, getEvaluationCycles } from '../lib/evaluation';
 import { clearDraft, saveDraft } from '../lib/draftUtils';
 import { DEFAULT_CRITERIA_CATEGORIES } from '../data/catalogData';
 import { loadDraft } from '../lib/draftUtils';
@@ -78,6 +78,22 @@ describe('EvaluationView integration', () => {
     expect(screen.getByRole('dialog', { name: 'Descartar alterações?' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
     await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalledTimes(2));
+  });
+
+  it('avisa quando o ciclo escolhido não é o atual, e não avisa no ciclo atual', async () => {
+    const { onLoadEvaluation } = renderEvaluation();
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+    expect(screen.queryByText(/ciclo anterior/i)).toBeNull();
+
+    const previous = getEvaluationCycles()[1];
+    fireEvent.change(screen.getAllByRole('combobox')[2], { target: { value: previous.id } });
+
+    const banner = await screen.findByRole('status', { name: /ciclo anterior/i });
+    expect(banner.textContent).toContain(previous.id.replace('/', ' / '));
+    expect(banner.textContent).toContain(getDefaultEvaluationCycle().replace('/', ' / '));
+
+    fireEvent.change(screen.getAllByRole('combobox')[2], { target: { value: getDefaultEvaluationCycle() } });
+    await waitFor(() => expect(screen.queryByText(/ciclo anterior/i)).toBeNull());
   });
 
   it('submits all criteria and forwards the optimistic-concurrency revision', async () => {

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { TeamMember } from '../types';
 import { DashboardView } from './DashboardView';
+import { getDefaultEvaluationCycle } from '../lib/evaluation';
 
 afterEach(() => cleanup());
 
@@ -28,6 +29,26 @@ const renderDashboard = (members: TeamMember[], onSelectTeamFilter = vi.fn()) =>
   render(<DashboardView members={members} onSelectTeamFilter={onSelectTeamFilter} onSelectMemberForDetail={vi.fn()} />);
 
 describe('DashboardView', () => {
+  it('mostra quem falta avaliar no ciclo atual e deixa abrir a avaliação com login', () => {
+    const cycle = getDefaultEvaluationCycle();
+    const onEvaluateMember = vi.fn();
+    render(
+      <DashboardView
+        members={[
+          m({ id: 'a', name: 'Ana', history: [{ month: cycle, score: 50, max: 100 }] }),
+          m({ id: 'b', name: 'Bia' }),
+        ]}
+        onSelectTeamFilter={vi.fn()}
+        onSelectMemberForDetail={vi.fn()}
+        onEvaluateMember={onEvaluateMember}
+      />,
+    );
+    expect(screen.getByText(/Faltam avaliar em/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Avaliar Bia' }));
+    expect(onEvaluateMember).toHaveBeenCalledWith(expect.objectContaining({ id: 'b', name: 'Bia' }));
+    expect(screen.queryByRole('button', { name: 'Avaliar Ana' })).toBeNull();
+  });
+
   it('mostra — na média quando ninguém foi avaliado', () => {
     renderDashboard([m({}), m({})]);
     expect(within(screen.getByLabelText('Média geral')).getByText('—')).toBeTruthy();

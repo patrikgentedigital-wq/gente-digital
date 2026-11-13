@@ -80,6 +80,40 @@ describe('EvaluationView integration', () => {
     await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalledTimes(2));
   });
 
+  it('o botão "Próxima pessoa pendente" leva a quem ainda não foi avaliado no ciclo', async () => {
+    const other = { ...member, id: 'member-2', name: 'Bia', history: [] };
+    const done = { ...member, id: 'member-3', name: 'Caio', history: [{ month: getDefaultEvaluationCycle(), score: 100, max: 155 }] };
+    const onSelectMember = vi.fn();
+    const { onLoadEvaluation } = renderEvaluation({ members: [member, done, other], onSelectMember });
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+
+    const button = screen.getByRole('button', { name: /Próxima pessoa pendente/ });
+    expect(button.textContent).toContain('faltam 2');
+    fireEvent.click(button);
+    expect(onSelectMember).toHaveBeenCalledWith(other);
+  });
+
+  it('o botão de próxima pessoa pede confirmação quando há alterações não salvas', async () => {
+    const other = { ...member, id: 'member-2', name: 'Bia', history: [] };
+    const onSelectMember = vi.fn();
+    const { onLoadEvaluation } = renderEvaluation({ members: [member, other], onSelectMember });
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+
+    fireEvent.click(screen.getAllByRole('button', { name: '+' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Próxima pessoa pendente/ }));
+    expect(onSelectMember).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Descartar alterações?' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Descartar' }));
+    expect(onSelectMember).toHaveBeenCalledWith(other);
+  });
+
+  it('não mostra o botão quando não há outra pessoa pendente', async () => {
+    const done = { ...member, id: 'member-3', name: 'Caio', history: [{ month: getDefaultEvaluationCycle(), score: 100, max: 155 }] };
+    const { onLoadEvaluation } = renderEvaluation({ members: [member, done] });
+    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /Próxima pessoa pendente/ })).toBeNull();
+  });
+
   it('avisa quando o ciclo escolhido não é o atual, e não avisa no ciclo atual', async () => {
     const { onLoadEvaluation } = renderEvaluation();
     await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());

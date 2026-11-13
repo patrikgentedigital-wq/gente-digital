@@ -32,6 +32,7 @@ const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
+const LeadersView = lazy(() => import('./components/LeadersView').then((module) => ({ default: module.LeadersView })));
 const SuccessView = lazy(() => import('./components/SuccessView').then((module) => ({ default: module.SuccessView })));
 const AssistantView = lazy(() => import('./components/AssistantView').then((module) => ({ default: module.AssistantView })));
 const AuditLogsView = lazy(() => import('./components/AuditLogsView').then((module) => ({ default: module.AuditLogsView })));
@@ -92,7 +93,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant' || tab === 'success') {
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant' || tab === 'success' || tab === 'leaders') {
       setActiveTab(tab);
     }
     const query = params.get('q');
@@ -408,6 +409,7 @@ export default function App() {
         {activeTab === 'criteria' && authRole && <CriteriaEditorView role={authRole} />}
         {activeTab === 'assistant' && authRole === 'admin' && <AssistantView />}
         {activeTab === 'success' && authRole === 'admin' && <SuccessView />}
+        {activeTab === 'leaders' && authRole === 'admin' && authUser && <LeadersView currentUserId={authUser.id} />}
         {activeTab === 'audit' && authRole === 'admin' && (
           <>
             <ClientErrorsPanel onChange={refreshErrorCount} />

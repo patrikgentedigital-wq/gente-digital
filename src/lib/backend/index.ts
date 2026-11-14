@@ -21,6 +21,7 @@ export {
   updateMember,
 } from './members';
 export { requestEvaluationDraft } from './aiDraft';
+export { requestCycleBriefing } from './briefing';
 export { askAssistant, confirmAssistantAction } from './assistant';
 export { getTechnicianRatings } from './success';
 export { countOpenClientErrors, listOpenClientErrors, reportError, resolveClientError } from './errors';

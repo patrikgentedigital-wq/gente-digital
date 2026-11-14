@@ -8,6 +8,7 @@ import { buildRadarData, radarTooltipLabel } from '../lib/radar';
 import { getMemberBadges } from '../utils/badgeUtils';
 import { useDialog } from '../hooks/useDialog';
 import { Avatar } from './Avatar';
+import { LevelSimulator } from './LevelSimulator';
 import {
   X,
   Award,
@@ -263,6 +264,10 @@ export const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
             )}
           </div>
         </div>
+
+        {evaluated && evaluation && criteria && criteria.length > 0 && (
+          <LevelSimulator criteria={criteria} scores={evaluation.criteriaScores} />
+        )}
 
         {/* PDI / Plano de Desenvolvimento Individual */}
         <div className="bg-app border border-line p-4.5 rounded-xl space-y-3">

@@ -22,6 +22,12 @@ const ACTION_LABELS: Record<string, string> = {
   member_archived: 'Colaborador arquivado',
   member_restored: 'Colaborador restaurado',
   criteria_saved: 'Perguntas salvas',
+  member_created: 'Colaborador cadastrado',
+  team_created: 'Equipe criada',
+  team_changed: 'Equipe alterada',
+  profile_created: 'Acesso criado',
+  profile_changed: 'Acesso alterado',
+  profile_removed: 'Acesso removido',
 };
 
 const formatDate = (iso: string | null) =>

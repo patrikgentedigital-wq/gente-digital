@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { tab: 'dashboard', label: 'Visão geral' },
     { tab: 'ranking', label: 'Ranking' },
     { tab: 'teams', label: 'Equipes' },
+    { tab: 'org', label: 'Organograma' },
     { tab: 'leader', label: 'Avaliar', needsAuth: true },
   ];
   const management: Array<{ tab: Tab; label: string; needsAuth?: boolean }> = [

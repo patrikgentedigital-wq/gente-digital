@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { cyclesFromMembers, membersAtCycle } from './lib/cycleView';
 import type { TeamMember, PerformanceStatus, PdiGoal } from './types';
 import {
   addMember,
@@ -30,6 +31,7 @@ import { AuthenticatedModals } from './components/AuthenticatedModals';
 import type { ReportModalState } from './components/AuthenticatedModals';
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((module) => ({ default: module.LeaderboardView })));
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
+const OrgChartView = lazy(() => import('./components/OrgChartView').then((module) => ({ default: module.OrgChartView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
 const LeadersView = lazy(() => import('./components/LeadersView').then((module) => ({ default: module.LeadersView })));
@@ -74,6 +76,12 @@ export default function App() {
   const [isKioskOpen, setIsKioskOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
   const [openErrorCount, setOpenErrorCount] = useState(0);
+  // null = a última avaliação de cada pessoa; um ciclo mostra as notas daquele mês.
+  const [cycleFilter, setCycleFilter] = useState<string | null>(null);
+  const availableCycles = useMemo(() => cyclesFromMembers(members), [members]);
+  const viewMembers = useMemo(() => membersAtCycle(members, cycleFilter), [members, cycleFilter]);
+  // Quem abre o detalhe ou a avaliação trabalha com o cadastro real, não com a foto do ciclo escolhido.
+  const realMember = useCallback((member: TeamMember) => members.find((m) => m.id === member.id) ?? member, [members]);
 
   const refreshErrorCount = useCallback(() => {
     countOpenClientErrors().then(setOpenErrorCount);
@@ -93,7 +101,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant' || tab === 'success' || tab === 'leaders') {
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant' || tab === 'success' || tab === 'leaders' || tab === 'org') {
       setActiveTab(tab);
     }
     const query = params.get('q');
@@ -340,7 +348,28 @@ export default function App() {
     <>
       <PageHeader
         tab={activeTab}
-        meta={activeTab === 'ranking' || activeTab === 'dashboard' ? `Últimas avaliações · ${getDefaultEvaluationCycle()}` : undefined}
+        meta={
+          activeTab === 'ranking' || activeTab === 'dashboard' || activeTab === 'teams'
+            ? cycleFilter ? `Avaliações de ${cycleFilter}` : `Últimas avaliações · ${getDefaultEvaluationCycle()}`
+            : undefined
+        }
+        actions={
+          (activeTab === 'ranking' || activeTab === 'dashboard' || activeTab === 'teams') && availableCycles.length > 0 ? (
+            <label className="flex items-center gap-2 text-xs font-bold">
+              Ciclo
+              <select
+                value={cycleFilter ?? ''}
+                onChange={(event) => setCycleFilter(event.target.value || null)}
+                className="rounded-md border-2 border-block-edge bg-surface px-2 py-1 text-xs font-bold text-ink"
+              >
+                <option value="">Última avaliação</option>
+                {availableCycles.map((cycle) => (
+                  <option key={cycle} value={cycle}>{cycle}</option>
+                ))}
+              </select>
+            </label>
+          ) : undefined
+        }
       />
       {membersError && (
         <div className="mx-auto mt-4 max-w-[1040px] rounded-xl border border-danger/40 bg-danger-soft p-3 text-xs text-danger-ink" role="alert">
@@ -350,16 +379,16 @@ export default function App() {
       <main className="flex-1 p-4 md:p-6 max-w-[1040px] w-full mx-auto">
          {activeTab === 'ranking' && (
           <LeaderboardView
-            members={members}
-            onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
+            members={viewMembers}
+            onOpenImageModal={authRole === 'admin' ? (member) => setImageModalMember(realMember(member)) : undefined}
             onSelectMemberForEvaluation={(member) => {
-              setSelectedEvaluationMember(member);
+              setSelectedEvaluationMember(realMember(member));
               setActiveTab('leader');
             }}
-            onOpenReportModal={openReportModal}
-            onSelectMemberForDetail={setDetailModalMember}
+            onOpenReportModal={(member, context) => openReportModal(realMember(member), context)}
+            onSelectMemberForDetail={(member) => setDetailModalMember(realMember(member))}
             onOpenMemberForm={authRole === 'admin' ? (member) => {
-              setMemberToEdit(member || null);
+              setMemberToEdit(member ? realMember(member) : null);
               setIsMemberFormOpen(true);
             } : undefined}
             searchQuery={searchQuery}
@@ -368,28 +397,31 @@ export default function App() {
         )}
         {activeTab === 'dashboard' && (
           <DashboardView
-            members={members}
+            members={viewMembers}
             onSelectTeamFilter={(team) => {
               setSearchQuery(team);
               setActiveTab('ranking');
             }}
-            onSelectMemberForDetail={setDetailModalMember}
+            onSelectMemberForDetail={(member) => setDetailModalMember(realMember(member))}
             onEvaluateMember={authUser ? (member) => {
-              setSelectedEvaluationMember(member);
+              setSelectedEvaluationMember(realMember(member));
               setActiveTab('leader');
             } : undefined}
           />
         )}
         {activeTab === 'teams' && (
           <TeamsView
-            members={members}
-            onOpenImageModal={authRole === 'admin' ? setImageModalMember : undefined}
-            onSelectMemberForDetail={setDetailModalMember}
+            members={viewMembers}
+            onOpenImageModal={authRole === 'admin' ? (member) => setImageModalMember(realMember(member)) : undefined}
+            onSelectMemberForDetail={(member) => setDetailModalMember(realMember(member))}
             onSelectTeamFilter={(team) => {
               setSearchQuery(team);
               setActiveTab('ranking');
             }}
           />
+        )}
+        {activeTab === 'org' && (
+          <OrgChartView members={members} onSelectMemberForDetail={setDetailModalMember} />
         )}
          {activeTab === 'leader' && (
            selectedEvaluationMember ? (

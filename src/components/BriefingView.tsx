@@ -53,7 +53,12 @@ export const BriefingView: React.FC<BriefingViewProps> = ({ members }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const activeTeam = team && teams.includes(team) ? team : teams[0] ?? '';
+  // Abre na primeira equipe que já tem avaliação, para não cair numa tela vazia.
+  const teamsWithEvaluations = useMemo(
+    () => teams.filter((name) => cyclesFromMembers(members.filter((member) => member.team === name)).length > 0),
+    [teams, members],
+  );
+  const activeTeam = team && teams.includes(team) ? team : teamsWithEvaluations[0] ?? teams[0] ?? '';
   const teamMembers = useMemo(() => members.filter((member) => member.team === activeTeam), [members, activeTeam]);
   const cycles = useMemo(() => cyclesFromMembers(teamMembers), [teamMembers]);
   const activeCycle = cycle && cycles.includes(cycle) ? cycle : cycles[0] ?? '';
@@ -66,10 +71,59 @@ export const BriefingView: React.FC<BriefingViewProps> = ({ members }) => {
 
   const facts = useMemo(() => (activeTeam && activeCycle ? buildBriefingFacts(members, activeTeam, activeCycle) : null), [members, activeTeam, activeCycle]);
 
-  if (teams.length === 0 || !facts) {
+  if (teams.length === 0) {
     return (
       <div className="blk p-8 text-center text-sm text-muted" role="status">
         Ainda não há avaliações para montar um briefing.
+      </div>
+    );
+  }
+
+  // Os seletores ficam sempre na tela: uma equipe sem avaliação não pode impedir de escolher outra.
+  const controls = (
+    <div className="blk p-4 flex flex-wrap items-center gap-3">
+      <label className="flex items-center gap-2 text-xs font-bold">
+        Equipe
+        <select className={selectClass} value={activeTeam} onChange={(event) => setTeam(event.target.value)}>
+          {teams.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 text-xs font-bold">
+        Ciclo
+        <select className={selectClass} value={activeCycle} onChange={(event) => setCycle(event.target.value)} disabled={cycles.length === 0}>
+          {cycles.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+      </label>
+      {facts && (
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(formatBriefing(facts, text));
+              toast.success('Briefing copiado.');
+            } catch {
+              toast.error('Não foi possível copiar. Selecione o texto e copie manualmente.');
+            }
+          }}
+          className="ml-auto flex items-center gap-1.5 rounded-brand border border-line px-3 py-1.5 text-xs font-semibold text-ink cursor-pointer"
+        >
+          <Copy className="w-3.5 h-3.5" aria-hidden="true" /> Copiar briefing
+        </button>
+      )}
+    </div>
+  );
+
+  if (!facts) {
+    return (
+      <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans space-y-4">
+        {controls}
+        <div className="blk p-8 text-center text-sm text-muted" role="status">
+          A equipe {activeTeam} ainda não tem avaliações. Escolha outra equipe acima.
+        </div>
       </div>
     );
   }
@@ -88,44 +142,11 @@ export const BriefingView: React.FC<BriefingViewProps> = ({ members }) => {
     }
   };
 
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(formatBriefing(facts, text));
-      toast.success('Briefing copiado.');
-    } catch {
-      toast.error('Não foi possível copiar. Selecione o texto e copie manualmente.');
-    }
-  };
-
   const reveal = (value: string) => revealNames(value, facts.people);
 
   return (
     <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans space-y-4">
-      <div className="blk p-4 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-xs font-bold">
-          Equipe
-          <select className={selectClass} value={activeTeam} onChange={(event) => setTeam(event.target.value)}>
-            {teams.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-xs font-bold">
-          Ciclo
-          <select className={selectClass} value={activeCycle} onChange={(event) => setCycle(event.target.value)} disabled={cycles.length === 0}>
-            {cycles.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={copy}
-          className="ml-auto flex items-center gap-1.5 rounded-brand border border-line px-3 py-1.5 text-xs font-semibold text-ink cursor-pointer"
-        >
-          <Copy className="w-3.5 h-3.5" aria-hidden="true" /> Copiar briefing
-        </button>
-      </div>
+      {controls}
 
       <section className="blk p-5 space-y-3" aria-label="Números do ciclo">
         <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">

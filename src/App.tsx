@@ -32,6 +32,7 @@ import type { ReportModalState } from './components/AuthenticatedModals';
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((module) => ({ default: module.LeaderboardView })));
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const OrgChartView = lazy(() => import('./components/OrgChartView').then((module) => ({ default: module.OrgChartView })));
+const BriefingView = lazy(() => import('./components/BriefingView').then((module) => ({ default: module.BriefingView })));
 const TeamsView = lazy(() => import('./components/TeamsView').then((module) => ({ default: module.TeamsView })));
 const EvaluationView = lazy(() => import('./components/EvaluationView').then((module) => ({ default: module.EvaluationView })));
 const LeadersView = lazy(() => import('./components/LeadersView').then((module) => ({ default: module.LeadersView })));
@@ -101,7 +102,7 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant' || tab === 'success' || tab === 'leaders' || tab === 'org') {
+    if (tab === 'ranking' || tab === 'dashboard' || tab === 'teams' || tab === 'leader' || tab === 'audit' || tab === 'criteria' || tab === 'assistant' || tab === 'success' || tab === 'leaders' || tab === 'org' || tab === 'briefing') {
       setActiveTab(tab);
     }
     const query = params.get('q');
@@ -420,6 +421,7 @@ export default function App() {
             }}
           />
         )}
+        {activeTab === 'briefing' && authRole && <BriefingView members={members} />}
         {activeTab === 'org' && (
           <OrgChartView members={members} onSelectMemberForDetail={setDetailModalMember} />
         )}

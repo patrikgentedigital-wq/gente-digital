@@ -58,6 +58,22 @@ describe('BriefingView', () => {
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('indisponível'));
   });
 
+  it('abre na primeira equipe que tem avaliação, mesmo que outra venha antes na ordem alfabética', () => {
+    const semAvaliacao: TeamMember = { ...m('9', 'Zeca', undefined), team: 'Alexandre', evaluationStatus: 'Pendente' };
+    render(<BriefingView members={[semAvaliacao, ...members]} />);
+    expect(screen.getByText(/Avaliados:/).textContent).toContain('2 de 2');
+    expect((screen.getByLabelText('Equipe') as HTMLSelectElement).value).toBe('Danielle');
+  });
+
+  it('equipe sem avaliação mostra aviso e mantém os seletores para trocar de equipe', () => {
+    const semAvaliacao: TeamMember = { ...m('9', 'Zeca', undefined), team: 'Alexandre', evaluationStatus: 'Pendente' };
+    render(<BriefingView members={[semAvaliacao, ...members]} />);
+    fireEvent.change(screen.getByLabelText('Equipe'), { target: { value: 'Alexandre' } });
+    expect(screen.getByRole('status').textContent).toContain('Alexandre ainda não tem avaliações');
+    fireEvent.change(screen.getByLabelText('Equipe'), { target: { value: 'Danielle' } });
+    expect(screen.getByText(/Avaliados:/)).toBeTruthy();
+  });
+
   it('avisa quando ainda não há avaliações', () => {
     render(<BriefingView members={[]} />);
     expect(screen.getByRole('status').textContent).toContain('Ainda não há avaliações');

@@ -10,14 +10,17 @@ const KioskModeModal = lazy(() => import('./KioskModeModal').then((module) => ({
 const EmployeeDetailModal = lazy(() => import('./EmployeeDetailModal').then((module) => ({ default: module.EmployeeDetailModal })));
 const ReportExportModal = lazy(() => import('./ReportExportModal').then((module) => ({ default: module.ReportExportModal })));
 
-export interface ReportModalState {
+export interface ReportContext {
+  criteriaScores: Record<string, number>;
+  leaderComments: string;
+  cycle: string;
+  criteria: CriteriaCategory[];
+  draft: boolean;
+}
+
+export interface ReportModalState extends ReportContext {
   member: TeamMember;
-  criteriaScores?: Record<string, number>;
-  leaderComments?: string;
-  cycle?: string;
-  /** Conjunto e versão de perguntas da avaliação salva; sem eles vale a versão atual. */
-  criteriaTeamId?: string;
-  criteriaVersion?: number;
+  rank?: number;
 }
 
 interface AuthenticatedModalsProps {
@@ -42,7 +45,6 @@ interface AuthenticatedModalsProps {
   onCloseDetail: () => void;
   onSelectForEvaluation: (member: TeamMember) => void;
   reportModal: ReportModalState | null;
-  reportCriteria: CriteriaCategory[] | null;
   onCloseReport: () => void;
 }
 
@@ -65,7 +67,6 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
   detailModalMember,
   detailEvaluation,
   detailCriteria,
-  reportCriteria,
   onCloseDetail,
   onSelectForEvaluation,
   reportModal,
@@ -118,7 +119,9 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
           criteriaScores={reportModal.criteriaScores}
           leaderComments={reportModal.leaderComments}
           cycle={reportModal.cycle}
-          criteria={reportCriteria}
+          criteria={reportModal.criteria}
+          draft={reportModal.draft}
+          rank={reportModal.rank}
         />
       )}
     </Suspense>

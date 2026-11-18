@@ -141,7 +141,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   }, [members, view, selectedTeamLeader, statusFilter, searchQuery]);
 
   const handleExportCSV = () => {
-    const rows = [...ranked, ...pending];
+    const rows = [...ranked.map((member, index) => ({ ...member, rank: index + 1 })), ...pending];
     exportMembersToCSV(rows, `ranking-gente-digital-${view}.csv`);
     toast.success(`${rows.length} colaboradores exportados para CSV.`, 'Exportação concluída');
   };

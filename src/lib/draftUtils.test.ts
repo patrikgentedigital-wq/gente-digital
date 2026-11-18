@@ -85,7 +85,7 @@ describe('draftUtils', () => {
     ).toBe(true);
     expect(
       isEmptyDraft({ scores: { '1-0': 0 }, leaderComments: ' ', pdiGoals: [] }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       isEmptyDraft({ scores: { '1-0': 3 }, leaderComments: '', pdiGoals: [] }),
     ).toBe(false);

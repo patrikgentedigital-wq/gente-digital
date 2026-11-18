@@ -28,6 +28,11 @@ describe('AiDraftPanel', () => {
     expect((screen.getByRole('button', { name: /Sugerir rascunho/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('informa que o conteúdo das perguntas também é enviado', () => {
+    render(<AiDraftPanel {...baseProps} />);
+    expect(screen.getByText(/títulos e textos das perguntas/).textContent).toContain('Evite incluir nomes ou dados pessoais');
+  });
+
   it('pede o rascunho sem nome do colaborador e mostra a sugestão para o líder decidir', async () => {
     requestEvaluationDraft.mockResolvedValue({ comment: 'Bom ciclo.', goals: [{ title: 'Reduzir retrabalho', deadline: '30 dias' }] });
     render(<AiDraftPanel {...baseProps} />);

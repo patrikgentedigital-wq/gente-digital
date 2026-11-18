@@ -27,6 +27,8 @@ const member: TeamMember = {
   history: [],
 };
 
+const defaultSet = { teamId: member.team, version: 1, categories: DEFAULT_CRITERIA_CATEGORIES, maxScore: 155 };
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: () => ({
@@ -54,7 +56,7 @@ function renderEvaluation(overrides: Partial<React.ComponentProps<typeof Evaluat
   const onSaveEvaluation = vi.fn().mockResolvedValue(2);
   const props: React.ComponentProps<typeof EvaluationView> = {
     members: [member],
-    criteria: DEFAULT_CRITERIA_CATEGORIES,
+    onLoadCriteria: vi.fn().mockResolvedValue(defaultSet),
     selectedMember: member,
     onSelectMember: vi.fn(),
     onSaveEvaluation,
@@ -154,6 +156,7 @@ describe('EvaluationView integration', () => {
       expect.any(String),
       [],
       0,
+      { teamId: member.team, version: 1 },
     );
   });
 
@@ -215,9 +218,8 @@ describe('EvaluationView integration', () => {
 
   it('mostra o total máximo do conjunto de perguntas do membro, não um valor fixo', async () => {
     const own = [{ id: 'c1', name: 'Própria', items: [{ id: '9-0', text: 'Z' }, { id: '9-1', text: 'Y' }] }];
-    const { onLoadEvaluation } = renderEvaluation({ criteria: own });
-    await waitFor(() => expect(onLoadEvaluation).toHaveBeenCalled());
-    expect(screen.getByText('/ 10')).toBeTruthy();
+    renderEvaluation({ onLoadCriteria: vi.fn().mockResolvedValue({ ...defaultSet, categories: own, maxScore: 10 }) });
+    expect(await screen.findByText('/ 10')).toBeTruthy();
   });
 });
 
@@ -234,11 +236,13 @@ describe('EvaluationView com avaliação já salva', () => {
     comments: 'Parecer salvo.',
     pdiGoals: [],
     criteriaScores: saved,
+    criteriaTeamId: 'Equipe anterior',
+    criteriaVersion: 2,
     revision: 3,
   };
   const baseProps = (): React.ComponentProps<typeof EvaluationView> => ({
     members: [member],
-    criteria: null,
+    onLoadCriteria: vi.fn().mockResolvedValue({ ...defaultSet, teamId: 'Equipe anterior', version: 2 }),
     selectedMember: member,
     onSelectMember: vi.fn(),
     onSaveEvaluation: vi.fn().mockResolvedValue(4),
@@ -248,16 +252,13 @@ describe('EvaluationView com avaliação já salva', () => {
 
   it('mostra as notas salvas mesmo quando as perguntas chegam depois da avaliação', async () => {
     const props = baseProps();
-    const { rerender } = render(<EvaluationView {...props} />);
-    await waitFor(() => expect(props.onLoadEvaluation).toHaveBeenCalled());
-    await waitFor(() => expect((screen.getByRole('button', { name: /salvar/i }) as HTMLButtonElement).disabled).toBe(true));
-
-    rerender(<EvaluationView {...props} criteria={DEFAULT_CRITERIA_CATEGORIES} />);
-    await waitFor(() => expect(screen.getByText('62')).toBeTruthy());
+    render(<EvaluationView {...props} />);
+    expect(await screen.findByText('62')).toBeTruthy();
+    expect(props.onLoadCriteria).toHaveBeenCalledExactlyOnceWith('Equipe anterior', 2);
   });
 
   it('descarta um rascunho feito com outras perguntas, em vez de aplicá-lo às perguntas novas', async () => {
-    const props = { ...baseProps(), criteria: DEFAULT_CRITERIA_CATEGORIES };
+    const props = baseProps();
     const cycle = getDefaultEvaluationCycle();
     // rascunho de quando a pessoa usava OUTRAS perguntas (outra chave), com todas as notas preenchidas
     saveDraft(member.id, cycle, {
@@ -281,7 +282,7 @@ describe('EvaluationView com avaliação já salva', () => {
   });
 
   it('restaura o rascunho com a revisão do servidor, para o salvar não dar conflito', async () => {
-    const props = { ...baseProps(), criteria: DEFAULT_CRITERIA_CATEGORIES };
+    const props = baseProps();
     const cycle = getDefaultEvaluationCycle();
     saveDraft(member.id, cycle, {
       scores: Object.fromEntries(CRITERIA_SCORE_KEYS.map((key) => [key, 5])),
@@ -297,7 +298,7 @@ describe('EvaluationView com avaliação já salva', () => {
 
       await waitFor(() => expect(props.onSaveEvaluation).toHaveBeenCalledTimes(1));
       expect(props.onSaveEvaluation).toHaveBeenCalledWith(
-        member.id, 155, expect.any(Object), 'Rascunho novo.', cycle, [], 3,
+        member.id, 155, expect.any(Object), 'Rascunho novo.', cycle, [], 3, { teamId: 'Equipe anterior', version: 2 },
       );
     } finally {
       clearDraft(member.id, cycle);
@@ -307,8 +308,8 @@ describe('EvaluationView com avaliação já salva', () => {
 
 describe('EvaluationView sem perguntas da equipe', () => {
   it('avisa que a equipe ainda não tem perguntas e não deixa salvar', async () => {
-    const { onSaveEvaluation } = renderEvaluation({ criteria: null });
-    expect(screen.getByText('Esta equipe ainda não tem perguntas de avaliação.')).toBeTruthy();
+    const { onSaveEvaluation } = renderEvaluation({ onLoadCriteria: vi.fn().mockResolvedValue(null) });
+    expect(await screen.findByText('Esta equipe ainda não tem perguntas de avaliação.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /salvar/i }));
     await waitFor(() => expect(onSaveEvaluation).not.toHaveBeenCalled());
   });

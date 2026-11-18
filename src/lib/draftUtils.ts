@@ -110,6 +110,6 @@ export function clearDraft(memberId: string, cycle: string): void {
 }
 
 export function isEmptyDraft(input: EvaluationDraftInput): boolean {
-  const hasAnyScore = Object.values(input.scores).some((value) => typeof value === 'number' && value > 0);
+  const hasAnyScore = Object.values(input.scores).some((value) => typeof value === 'number');
   return !hasAnyScore && !input.leaderComments.trim() && input.pdiGoals.length === 0;
 }

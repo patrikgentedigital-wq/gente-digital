@@ -17,12 +17,12 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', admin_id, 'role', 'authenticated')::text, true);
   set local role authenticated;
 
-  r := public.save_evaluation('bia', 'Novembro/2026', '{"1-0":5,"1-1":5}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('bia', 'Novembro/2026', '{"1-0":5,"1-1":5}', '', '[]', 0, 'ta', 1);
   assert (r ->> 'is_current')::boolean, 'primeiro ciclo salvo deveria ser o atual';
   assert (select score from public.members where id = 'bia') = 10, 'nota atual deveria ser 10';
 
   -- Corrige outubro depois de novembro: a nota atual (novembro) não pode mudar
-  r := public.save_evaluation('bia', 'Outubro/2026', '{"1-0":1,"1-1":1}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('bia', 'Outubro/2026', '{"1-0":1,"1-1":1}', '', '[]', 0, 'ta', 1);
   assert not (r ->> 'is_current')::boolean, 'outubro não deveria ser o ciclo atual';
   assert (select score from public.members where id = 'bia') = 10, 'FALHOU: ciclo antigo trocou a nota atual';
   assert (select status from public.members where id = 'bia') = 'Voando', 'FALHOU: ciclo antigo trocou o status atual';
@@ -30,16 +30,16 @@ begin
   assert jsonb_array_length((select history from public.members where id = 'bia')) = 2, 'histórico deveria ter os dois ciclos';
 
   -- Um ciclo mais novo volta a atualizar o membro
-  r := public.save_evaluation('bia', 'Dezembro/2026', '{"1-0":2,"1-1":2}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('bia', 'Dezembro/2026', '{"1-0":2,"1-1":2}', '', '[]', 0, 'ta', 1);
   assert (r ->> 'is_current')::boolean, 'dezembro deveria ser o atual';
   assert (select score from public.members where id = 'bia') = 4, 'nota atual deveria ir para 4';
 
   -- Regravar o próprio ciclo atual continua atualizando
-  r := public.save_evaluation('bia', 'Dezembro/2026', '{"1-0":3,"1-1":3}', '', '[]', 1);
+  r := public.save_evaluation_with_criteria('bia', 'Dezembro/2026', '{"1-0":3,"1-1":3}', '', '[]', 1, 'ta', 1);
   assert (select score from public.members where id = 'bia') = 6, 'regravar o ciclo atual deveria atualizar';
 
   -- Formato de ciclo fora do padrão do app continua atualizando (comportamento anterior)
-  r := public.save_evaluation('bia', 'Ciclo especial', '{"1-0":5,"1-1":4}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('bia', 'Ciclo especial', '{"1-0":5,"1-1":4}', '', '[]', 0, 'ta', 1);
   assert (select score from public.members where id = 'bia') = 9, 'ciclo fora do padrão deveria atualizar como antes';
   reset role;
 

@@ -31,25 +31,25 @@ begin
 
   -- Ana é avaliada com as perguntas dela; as da equipe não servem
   begin
-    perform public.save_evaluation('ana', 'c', '{"1-0":5,"1-1":4}', '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ana', 'c', '{"1-0":5,"1-1":4}', '', '[]', 0, 'ta-ana', 1);
     raise exception 'FALHOU: aceitou perguntas da equipe para a Ana';
   exception when others then
     assert sqlerrm like '%perguntas_desatualizadas%', 'esperava perguntas_desatualizadas, veio: ' || sqlerrm;
   end;
-  r := public.save_evaluation('ana', 'c', '{"9-0":5}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('ana', 'c', '{"9-0":5}', '', '[]', 0, 'ta-ana', 1);
   assert (r ->> 'max_score')::int = 5, 'máximo da avaliação da Ana deveria ser 5';
   assert (select criteria_team_id from public.evaluations where member_id = 'ana') = 'ta-ana', 'avaliação deveria apontar para o conjunto da Ana';
   assert (select team_id from public.evaluations where member_id = 'ana') = 'ta', 'avaliação continua na equipe A';
 
   -- Bia segue com as perguntas da equipe
-  r := public.save_evaluation('bia', 'c', '{"1-0":5,"1-1":4}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('bia', 'c', '{"1-0":5,"1-1":4}', '', '[]', 0, 'ta', 1);
   assert (r ->> 'max_score')::int = 10, 'máximo da Bia deveria ser 10';
   reset role;
 
   -- Líder da equipe A avalia a Ana normalmente (o acesso é pela equipe do membro)
   perform set_config('request.jwt.claims', json_build_object('sub', leader_a, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  r := public.save_evaluation('ana', 'c2', '{"9-0":3}', '', '[]', 0);
+  r := public.save_evaluation_with_criteria('ana', 'c2', '{"9-0":3}', '', '[]', 0, 'ta-ana', 1);
   assert (r ->> 'score')::int = 3, 'líder da equipe deveria conseguir avaliar a Ana';
   reset role;
 

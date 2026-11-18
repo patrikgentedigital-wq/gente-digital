@@ -2,10 +2,11 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { TeamMember, PdiGoal } from '../types';
 import { AiDraftPanel } from './AiDraftPanel';
 import { goalsToPdi } from '../lib/aiDraft';
-import type { EvaluationPayload } from '../lib/backend';
+import type { CriteriaSet, EvaluationCriteriaRef, EvaluationPayload } from '../lib/backend';
+import type { ReportContext } from './AuthenticatedModals';
 import { TEAMS } from '../data/catalogData';
 import { deriveTeams } from '../lib/teams';
-import { criteriaFingerprint, type CriteriaCategory } from '../lib/criteria';
+import { criteriaFingerprint } from '../lib/criteria';
 import {
   FileText,
   Save,
@@ -56,8 +57,7 @@ import { Skeleton } from './Skeleton';
 
 interface EvaluationViewProps {
   members: TeamMember[];
-  /** Perguntas da equipe do membro selecionado; null enquanto carrega ou quando a equipe não tem perguntas. */
-  criteria?: CriteriaCategory[] | null;
+  onLoadCriteria: (teamId: string, version?: number) => Promise<CriteriaSet | null>;
   selectedMember: TeamMember;
   onSelectMember: (member: TeamMember) => void;
   onSaveEvaluation: (
@@ -65,14 +65,15 @@ interface EvaluationViewProps {
     newTotalScore: number,
     criteriaScores: Record<string, number>,
     comments: string,
-    cycle?: string,
-    pdiGoals?: PdiGoal[],
-    expectedRevision?: number,
+    cycle: string,
+    pdiGoals: PdiGoal[],
+    expectedRevision: number,
+    criteriaRef: EvaluationCriteriaRef,
   ) => Promise<number>;
   onOpenImageModal?: (member: TeamMember) => void;
   onOpenReportModal: (
     member: TeamMember,
-    context?: { criteriaScores?: Record<string, number>; leaderComments?: string; cycle?: string },
+    context: ReportContext,
   ) => void | Promise<void>;
   onLoadEvaluation: (memberId: string, cycle: string) => Promise<EvaluationPayload | null | undefined>;
   currentLeader?: string | null;
@@ -80,7 +81,7 @@ interface EvaluationViewProps {
 
 export const EvaluationView: React.FC<EvaluationViewProps> = ({
   members,
-  criteria,
+  onLoadCriteria,
   selectedMember,
   onSelectMember,
   onSaveEvaluation,
@@ -104,7 +105,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [scores, setScores] = useState<Record<string, number | undefined>>({});
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
-  const categories = criteria ?? [];
+  const memberId = selectedMember.id;
+  const criteriaTeam = selectedMember.criteriaTeamId ?? selectedMember.team;
+  const formKey = JSON.stringify([memberId, cycle]);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [criteriaSet, setCriteriaSet] = useState<CriteriaSet | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [evaluationTeam, setEvaluationTeam] = useState<string | undefined>();
+  const isLoadingEvaluation = loadedKey !== formKey;
+  const activeCriteria = isLoadingEvaluation ? null : criteriaSet;
+  const categories = activeCriteria?.categories ?? [];
   // Identifica estas perguntas: um rascunho só vale se foi feito com as mesmas (os conjuntos reutilizam os mesmos ids).
   const criteriaKey = criteriaFingerprint(categories);
 
@@ -117,17 +127,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const [newGoalDeadline, setNewGoalDeadline] = useState('');
   const [newGoalDueDate, setNewGoalDueDate] = useState('');
   const [showAddGoal, setShowAddGoal] = useState(false);
-  const [isLoadingEvaluation, setIsLoadingEvaluation] = useState(false);
-  // Membro e ciclo cuja avaliação salva já terminou de carregar: só então o rascunho local pode ser aplicado por cima.
-  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [evaluationRevision, setEvaluationRevision] = useState(0);
   const [pendingDiscardAction, setPendingDiscardAction] = useState<(() => void) | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
-  // Notas como vieram do servidor, sem filtrar: as perguntas podem chegar depois da avaliação.
-  const [loadedScores, setLoadedScores] = useState<unknown>(null);
-  const isDirtyRef = useRef(false);
-  isDirtyRef.current = isDirty;
-  const autosaveTimer = useRef<number | undefined>(undefined);
   const [lastSaved, setLastSaved] = useState<{ at: string; revision: number; score: number; max: number } | null>(null);
   const restoredDraftKeys = useRef<Set<string>>(new Set());
 
@@ -135,9 +138,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   const pendingPool = teamFilter === 'all' ? members : members.filter((m) => m.team.toLowerCase() === teamFilter.toLowerCase());
   const pendingCount = pendingPool.filter((m) => !hasEvaluationInCycle(m, cycle)).length;
   const nextPending = nextPendingMember(pendingPool, selectedMember, cycle);
+  const hasUnaddedGoal = Boolean(newGoalTitle.trim() || newGoalDeadline.trim() || newGoalDueDate);
 
   const runOrConfirmDiscard = (action: () => void) => {
-    if (isDirty) {
+    if (isDirty || hasUnaddedGoal) {
       setPendingDiscardAction(() => action);
       return;
     }
@@ -147,68 +151,76 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   // Warn if closing window with unsaved draft
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty || hasUnaddedGoal) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
+  }, [isDirty, hasUnaddedGoal]);
 
-  // Load the persisted evaluation whenever the member or cycle changes.
-  // Note: we intentionally depend only on selectedMember.id (not the object/array
-  // identities) so live updates do not wipe in-progress drafts.
-  const memberId = selectedMember.id;
+  // Mudanças no cadastro em outra sessão não substituem o formulário aberto.
+  // O banco revalida a referência de critérios quando a avaliação é salva.
   const memberPdiGoals = selectedMember.pdiGoals;
   useEffect(() => {
     let active = true;
     setScores({});
     setLeaderComments('');
     setPdiGoals([]);
+    setShowAddGoal(false);
+    setNewGoalTitle('');
+    setNewGoalDeadline('');
+    setNewGoalDueDate('');
     setIsDirty(false);
-    setIsLoadingEvaluation(true);
+    setCriteriaSet(null);
+    setLoadError(null);
+    setEvaluationTeam(undefined);
     setEvaluationRevision(0);
     setDraftSavedAt(null);
     setLastSaved(null);
-    setLoadedScores(null);
     setLoadedKey(null);
 
     onLoadEvaluation(memberId, cycle)
-      .then((evaluation) => {
+      .then(async (evaluation) => {
         if (!active) return;
-        setLoadedScores(evaluation?.criteriaScores ?? null);
-        setScores(normalizeCriteriaScores(evaluation?.criteriaScores, categories));
+        if (evaluation && (!evaluation.criteriaTeamId || evaluation.criteriaVersion === undefined)) {
+          throw new Error('A avaliação salva está sem a referência às perguntas originais.');
+        }
+        const loaded = await onLoadCriteria(evaluation?.criteriaTeamId ?? criteriaTeam, evaluation?.criteriaVersion);
+        if (!active) return;
+        if (evaluation && !loaded) {
+          throw new Error('As perguntas originais desta avaliação não estão disponíveis para sua conta.');
+        }
+        setCriteriaSet(loaded);
+        setScores(normalizeCriteriaScores(evaluation?.criteriaScores, loaded?.categories ?? []));
         setLeaderComments(evaluation?.comments || '');
-        setPdiGoals(evaluation?.pdiGoals || memberPdiGoals || []);
+        setPdiGoals(evaluation?.pdiGoals ?? (cycle === currentCycle ? memberPdiGoals ?? [] : []));
+        setEvaluationTeam(evaluation?.teamId);
         setEvaluationRevision(evaluation?.revision ?? 0);
       })
       .catch((error) => {
         console.error('Unable to load evaluation:', error);
-        if (active) toast.error('Não foi possível carregar a avaliação salva.');
+        if (active) {
+          const message = error instanceof Error ? error.message : 'Não foi possível carregar a avaliação e suas perguntas.';
+          setLoadError(message);
+        }
       })
       .finally(() => {
         if (!active) return;
-        setIsLoadingEvaluation(false);
-        setLoadedKey(`${memberId}::${cycle}`);
+        setLoadedKey(formKey);
       });
 
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cycle, memberId, onLoadEvaluation]);
-
-  // As perguntas podem chegar depois da avaliação salva: refiltra as notas quando chegarem (sem tocar no que o líder já editou).
-  useEffect(() => {
-    if (loadedScores == null || isDirtyRef.current) return;
-    setScores(normalizeCriteriaScores(loadedScores, criteria ?? []));
-  }, [criteria, loadedScores]);
+  }, [cycle, memberId, formKey, onLoadEvaluation, onLoadCriteria]);
 
   // Restaura o rascunho local, mas só quando as perguntas já chegaram e são as mesmas de quando ele foi feito.
   // Em useLayoutEffect para aplicar na mesma atualização da tela: sem isso, o Salvar ficaria clicável por um instante com os dados do servidor.
   useLayoutEffect(() => {
-    if (loadedKey !== `${memberId}::${cycle}` || categories.length === 0) return;
+    if (loadedKey !== formKey || categories.length === 0) return;
     const key = `${memberId}::${cycle}::${criteriaKey}`;
     if (restoredDraftKeys.current.has(key)) return;
     restoredDraftKeys.current.add(key);
@@ -220,8 +232,6 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       }
       return;
     }
-    // O efeito das notas salvas (abaixo) lê esta marca antes de a tela atualizar: sem ela, apagaria as notas do rascunho.
-    isDirtyRef.current = true;
     setScores(draft.scores);
     setLeaderComments(draft.leaderComments);
     setPdiGoals(draft.pdiGoals);
@@ -233,21 +243,20 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         : 'Rascunho local restaurado.',
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadedKey, memberId, cycle, criteriaKey]);
+  }, [loadedKey, formKey, memberId, cycle, criteriaKey]);
 
-  // Autosave draft (debounced) to localStorage whenever the form changes.
-  useEffect(() => {
-    if (isLoadingEvaluation || !isDirty || !criteriaKey) return;
-    if (isEmptyDraft({ scores, leaderComments, pdiGoals })) return;
+  // Persiste a edição antes que uma troca de aba possa desmontar o formulário.
+  useLayoutEffect(() => {
+    if (isLoadingEvaluation || loadedKey !== formKey || !isDirty || !criteriaKey) return;
+    if (isEmptyDraft({ scores, leaderComments, pdiGoals })) {
+      clearDraft(memberId, cycle);
+      setDraftSavedAt(null);
+      return;
+    }
 
-    const timer = window.setTimeout(() => {
-      const saved = saveDraft(memberId, cycle, { scores, leaderComments, pdiGoals, criteriaKey });
-      if (saved) setDraftSavedAt(saved.updatedAt);
-    }, 600);
-    autosaveTimer.current = timer;
-
-    return () => window.clearTimeout(timer);
-  }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation, isDirty, criteriaKey]);
+    const saved = saveDraft(memberId, cycle, { scores, leaderComments, pdiGoals, criteriaKey });
+    if (saved) setDraftSavedAt(saved.updatedAt);
+  }, [scores, leaderComments, pdiGoals, cycle, memberId, isLoadingEvaluation, isDirty, criteriaKey, loadedKey, formKey]);
 
 
   const toggleCategory = (catId: string) => {
@@ -336,6 +345,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
   };
 
   const handleSave = async () => {
+    if (isSaving || isLoadingEvaluation || !activeCriteria) return;
     if (categories.length === 0) {
       toast.error('Esta equipe ainda não tem perguntas. Peça ao admin para cadastrá-las na aba Perguntas.');
       return;
@@ -350,8 +360,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
       return;
     }
 
-    // Um rascunho agendado não pode reaparecer depois que a avaliação for salva.
-    window.clearTimeout(autosaveTimer.current);
+    const draft = saveDraft(memberId, cycle, { scores, leaderComments, pdiGoals, criteriaKey });
+    if (draft) setDraftSavedAt(draft.updatedAt);
+    setIsSaving(true);
     const scoresToSave = Object.fromEntries(scoreKeys.map((key) => [key, scores[key] as number]));
     try {
       const savedRevision = await onSaveEvaluation(
@@ -362,9 +373,10 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         cycle,
         pdiGoals,
         evaluationRevision,
+        { teamId: activeCriteria.teamId, version: activeCriteria.version },
       );
       setEvaluationRevision(savedRevision);
-      setLoadedScores(scoresToSave);
+      setEvaluationTeam((team) => team ?? selectedMember.team);
       setIsDirty(false);
       clearDraft(selectedMember.id, cycle);
       setDraftSavedAt(null);
@@ -382,22 +394,27 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         return;
       }
       // The parent reports persistence errors and keeps the draft in memory.
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <>
-      <div className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
+      <fieldset disabled={isSaving} className="w-full max-w-[1040px] mx-auto pb-16 font-sans">
       {/* Header Bar */}
       <div className="blk p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-2.5 md:ml-auto">
           <button
-             onClick={() => onOpenReportModal(selectedMember, {
+             disabled={isLoadingEvaluation || !activeCriteria}
+             onClick={() => onOpenReportModal({ ...selectedMember, team: evaluationTeam ?? selectedMember.team }, {
                criteriaScores: Object.fromEntries(
                  Object.entries(scores).filter(([, score]) => typeof score === 'number'),
                ) as Record<string, number>,
                leaderComments: leaderComments.trim(),
                cycle,
+               criteria: categories,
+               draft: isDirty || evaluationRevision === 0,
              })}
             className="bg-surface-2 hover:bg-line border border-line text-accent-text font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
           >
@@ -419,14 +436,16 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
             value={teamFilter}
             onChange={(e) => {
               const newFilter = e.target.value;
+              const filtered = newFilter === 'all'
+                ? members
+                : members.filter((m) => m.team.toLowerCase() === newFilter.toLowerCase());
+              if (filtered.length === 0 || filtered.some((m) => m.id === selectedMember.id)) {
+                setTeamFilter(newFilter);
+                return;
+              }
               runOrConfirmDiscard(() => {
                 setTeamFilter(newFilter);
-                const filtered = newFilter === 'all'
-                  ? members
-                  : members.filter((m) => m.team.toLowerCase() === newFilter.toLowerCase());
-                if (filtered.length > 0 && !filtered.some((m) => m.id === selectedMember.id)) {
-                  onSelectMember(filtered[0]);
-                }
+                onSelectMember(filtered[0]);
               });
             }}
             className="w-full bg-surface-2 border border-line text-ink font-sans text-sm p-3 rounded-xl focus:outline-none focus:border-accent"
@@ -524,6 +543,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         </div>
       )}
 
+      <fieldset disabled={isLoadingEvaluation || !activeCriteria}>
       {/* Section Progress */}
       <div className="bg-surface p-4 rounded-xl mb-6 shadow-lg">
         <div className="flex items-center justify-between mb-2.5">
@@ -598,9 +618,9 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
 
       {/* Criteria Categories Cards */}
       <div id="eval-criterios" className="space-y-3 scroll-mt-4">
-        {categories.length === 0 && (
+        {!isLoadingEvaluation && categories.length === 0 && (
           <div className="rounded-xl border border-line bg-surface p-6 text-center text-sm text-muted" role="status">
-            Esta equipe ainda não tem perguntas de avaliação.
+            {loadError ?? 'Esta equipe ainda não tem perguntas de avaliação.'}
           </div>
         )}
         {categories.map((cat, catIndex) => {
@@ -820,6 +840,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           className="w-full bg-app border border-line rounded-xl p-3 text-xs text-ink focus:outline-none focus:border-accent resize-none"
         />
         <AiDraftPanel
+          key={JSON.stringify([memberId, cycle, criteriaKey, selectedMember.role, scores])}
           jobTitle={selectedMember.role}
           categories={categories}
           scores={scores}
@@ -840,6 +861,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         />
       </div>
 
+      </fieldset>
       {/* Sticky Bottom Total Bar */}
       <div className="sticky bottom-4 mt-6 bg-surface/95 backdrop-blur-md border border-line rounded-xl p-4 px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-30">
         <div className="flex items-center gap-4 flex-wrap">
@@ -879,7 +901,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         )}
         <button
           onClick={handleSave}
-          disabled={isLoadingEvaluation || categories.length === 0}
+          disabled={isSaving || isLoadingEvaluation || categories.length === 0}
           aria-disabled={!hasAllScores || !leaderComments.trim() ? true : undefined}
           className={`bg-accent hover:bg-accent-hover text-accent-ink font-bold font-sans text-sm px-6 py-2.5 rounded-brand cursor-pointer transition-all shadow-md flex items-center gap-2 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed disabled:shadow-none disabled:hover:bg-accent ${!hasAllScores || !leaderComments.trim() ? 'opacity-60 grayscale' : ''}`}
         >
@@ -887,7 +909,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
           Salvar Avaliação
         </button>
       </div>
-      </div>
+      </fieldset>
       <ConfirmModal
         isOpen={Boolean(pendingDiscardAction)}
         title="Descartar alterações?"
@@ -897,6 +919,8 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({
         onConfirm={() => {
           const action = pendingDiscardAction;
           setPendingDiscardAction(null);
+          clearDraft(memberId, cycle);
+          restoredDraftKeys.current.delete(`${memberId}::${cycle}::${criteriaKey}`);
           setIsDirty(false);
           action?.();
         }}

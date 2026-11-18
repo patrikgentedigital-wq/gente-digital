@@ -7,6 +7,7 @@ export interface EvaluationPayload {
   memberName: string;
   leaderName: string;
   score: number;
+  maxScore?: number;
   status: PerformanceStatus;
   cycle: string;
   comments: string;
@@ -74,6 +75,7 @@ interface EvaluationRow {
   cycle: string;
   scores: Record<string, number>;
   score: number;
+  max_score: number;
   status: PerformanceStatus;
   comments: string;
   pdi_goals: PdiGoal[];
@@ -90,7 +92,7 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('evaluations')
-    .select('id, member_id, cycle, scores, score, status, comments, pdi_goals, leader_id, criteria_team_id, criteria_version, revision, created_at, updated_at, members(name)')
+    .select('id, member_id, cycle, scores, score, max_score, status, comments, pdi_goals, leader_id, criteria_team_id, criteria_version, revision, created_at, updated_at, members(name)')
     .eq('id', evaluationId)
     .maybeSingle();
   if (error) throw error;
@@ -110,6 +112,7 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
     memberName: row.members?.name ?? '',
     leaderName,
     score: row.score,
+    maxScore: row.max_score,
     status: row.status,
     cycle: row.cycle,
     comments: row.comments,

@@ -29,6 +29,9 @@ npm test
 npm run build
 ```
 
+Para verificar a paginação dos relatórios em Chromium, rode
+`npx playwright test --config playwright.print.config.ts`. O teste usa dados fictícios.
+
 ## Banco, segurança e publicação
 
 - O esquema, as regras de acesso e as funções ficam em `supabase/migrations/`

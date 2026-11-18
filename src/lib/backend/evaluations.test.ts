@@ -103,7 +103,7 @@ describe('getEvaluation', () => {
   it('monta a avaliação com o nome do membro e do líder', async () => {
     fake.evaluationResult = {
       data: {
-        id: 'evaluation_ana_ta_out', member_id: 'ana_ta', cycle: 'Outubro/2026', scores: { '1-0': 5 }, score: 12,
+        id: 'evaluation_ana_ta_out', member_id: 'ana_ta', cycle: 'Outubro/2026', scores: { '1-0': 5 }, score: 12, max_score: 15,
         status: 'Atenção', comments: 'ok', pdi_goals: [], leader_id: 'u1', revision: 2,
         created_at: '2026-10-27T10:00:00Z', updated_at: '2026-10-28T10:00:00Z', members: { name: 'Ana' },
       },
@@ -111,7 +111,7 @@ describe('getEvaluation', () => {
     };
     fake.profileResult = { data: { name: 'Brenda' }, error: null };
     expect(await getEvaluation('evaluation_ana_ta_out')).toEqual({
-      id: 'evaluation_ana_ta_out', memberId: 'ana_ta', memberName: 'Ana', leaderName: 'Brenda', score: 12,
+      id: 'evaluation_ana_ta_out', memberId: 'ana_ta', memberName: 'Ana', leaderName: 'Brenda', score: 12, maxScore: 15,
       status: 'Atenção', cycle: 'Outubro/2026', comments: 'ok', pdiGoals: [], criteriaScores: { '1-0': 5 },
       revision: 2, createdAt: '2026-10-27T10:00:00Z', updatedAt: '2026-10-28T10:00:00Z',
     });

@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { isEvaluated } from '../lib/scoring';
 import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
 import { TeamMember } from '../types';
@@ -36,7 +37,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
     window.print();
   };
 
-  return (
+  return createPortal(
     <div
       className="report-print-root fixed inset-0 z-50 flex items-center justify-center bg-overlay/85 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200"
       role="presentation"
@@ -183,6 +184,6 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>, document.body
   );
 };

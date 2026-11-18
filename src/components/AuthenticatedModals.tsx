@@ -18,6 +18,7 @@ export interface ReportModalState {
   /** Conjunto e versão de perguntas da avaliação salva; sem eles vale a versão atual. */
   criteriaTeamId?: string;
   criteriaVersion?: number;
+  reportCategories?: CriteriaCategory[];
 }
 
 interface AuthenticatedModalsProps {
@@ -118,7 +119,7 @@ export const AuthenticatedModals: React.FC<AuthenticatedModalsProps> = ({
           criteriaScores={reportModal.criteriaScores}
           leaderComments={reportModal.leaderComments}
           cycle={reportModal.cycle}
-          criteria={reportCriteria}
+          criteria={reportModal.reportCategories ?? reportCriteria}
         />
       )}
     </Suspense>

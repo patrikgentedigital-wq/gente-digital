@@ -7,6 +7,7 @@ import {
   countOpenClientErrors,
   describeEvaluationError,
   getEvaluation,
+  getCriteriaSet,
   isEvaluationConflictError,
   isEvaluationCriteriaOutdatedError,
   logoutLeader,
@@ -167,6 +168,7 @@ export default function App() {
   const openReportModal = async (
     member: TeamMember,
     context?: Pick<ReportModalState, 'criteriaScores' | 'leaderComments' | 'cycle'>,
+    selectedCycle?: string | null,
   ) => {
     if (context) {
       setReportModal({ member, ...context });
@@ -174,19 +176,33 @@ export default function App() {
     }
 
     try {
-      const evaluation = await loadEvaluation(member.id, getDefaultEvaluationCycle());
+      const cycle = selectedCycle ?? cyclesFromMembers([member])[0];
+      if (!cycle) {
+        toast.error('Não há ciclo de avaliação salvo disponível para este colaborador.');
+        return;
+      }
+      const evaluation = await loadEvaluation(member.id, cycle);
+      if (!evaluation) {
+        toast.error('Não há avaliação salva para este colaborador no ciclo selecionado.');
+        return;
+      }
+      if (!evaluation.criteriaTeamId || !evaluation.criteriaVersion || !evaluation.maxScore) {
+        throw new Error('A avaliação não tem os dados necessários para gerar o relatório.');
+      }
+      const criteria = await getCriteriaSet(evaluation.criteriaTeamId, evaluation.criteriaVersion);
+      if (!criteria) throw new Error('Não foi possível carregar as perguntas originais da avaliação.');
       setReportModal({
-        member,
-        criteriaScores: cleanCriteriaScores(evaluation?.criteriaScores),
-        leaderComments: evaluation?.comments,
-        cycle: evaluation?.cycle || getDefaultEvaluationCycle(),
-        criteriaTeamId: evaluation?.criteriaTeamId,
-        criteriaVersion: evaluation?.criteriaVersion,
+        member: { ...member, score: evaluation.score, maxScore: evaluation.maxScore, status: evaluation.status, evaluationStatus: 'Concluído' },
+        criteriaScores: cleanCriteriaScores(evaluation.criteriaScores),
+        leaderComments: evaluation.comments,
+        cycle: evaluation.cycle,
+        criteriaTeamId: evaluation.criteriaTeamId,
+        criteriaVersion: evaluation.criteriaVersion,
+        reportCategories: criteria.categories,
       });
     } catch (error) {
       console.error('Unable to load report data:', error);
-      setReportModal({ member, cycle: getDefaultEvaluationCycle() });
-      toast.error('Não foi possível carregar os detalhes da avaliação.');
+      toast.error('Não foi possível carregar a avaliação e suas perguntas. Tente novamente.');
     }
   };
 
@@ -386,7 +402,7 @@ export default function App() {
               setSelectedEvaluationMember(realMember(member));
               setActiveTab('leader');
             }}
-            onOpenReportModal={(member, context) => openReportModal(realMember(member), context)}
+            onOpenReportModal={(member, context) => openReportModal(member, context, cycleFilter)}
             onSelectMemberForDetail={(member) => setDetailModalMember(realMember(member))}
             onOpenMemberForm={authRole === 'admin' ? (member) => {
               setMemberToEdit(member ? realMember(member) : null);

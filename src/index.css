@@ -185,13 +185,8 @@ body {
     color: #111827 !important;
   }
 
-  body * {
-    visibility: hidden !important;
-  }
-
-  .report-print-root,
-  .report-print-root * {
-    visibility: visible !important;
+  body:has(> .report-print-root) > :not(.report-print-root) {
+    display: none !important;
   }
 
   /* Sem isto, o Chrome e o Edge tiram fundos e degradês ao imprimir e o relatório sai sem cor. */
@@ -202,8 +197,8 @@ body {
   }
 
   .report-print-root {
-    position: absolute !important;
-    inset: 0 !important;
+    position: static !important;
+    inset: auto !important;
     display: block !important;
     overflow: visible !important;
     padding: 0 !important;
@@ -211,6 +206,7 @@ body {
   }
 
   .report-print-modal {
+    display: block !important;
     width: 100% !important;
     max-width: none !important;
     max-height: none !important;
@@ -227,9 +223,6 @@ body {
     color: #111827 !important;
   }
 
-  .report-print-content * {
-    break-inside: avoid;
-  }
 }
 
 /* Custom scrollbars */

@@ -1,4 +1,5 @@
 import { TeamMember } from '../types';
+import { isEvaluated } from '../lib/scoring';
 
 /**
  * Sanitizes a cell to prevent CSV / Formula Injection (leading =, +, -, @, \t, \r)
@@ -41,7 +42,7 @@ export function buildMembersCSVContent(members: TeamMember[]): string {
     const pdiTotal = m.pdiGoals ? m.pdiGoals.length : 0;
 
     return [
-      m.rank,
+      isEvaluated(m) ? m.rank : '',
       escapeCSVCell(m.name),
       escapeCSVCell(m.role),
       escapeCSVCell(m.team),

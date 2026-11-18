@@ -38,7 +38,7 @@ npm run build
   para não deixar dados.
 - Quem pode o quê: o **admin** lê e edita tudo; o **líder** lê e avalia só a própria
   equipe e edita só as perguntas dela. Notas, totais e status são calculados no
-  servidor (`save_evaluation`); o navegador nunca grava pontuação.
+  servidor (`save_evaluation_with_criteria`). O banco confere a versão do formulário enviada pela tela.
 - Contas: crie o usuário em Authentication no painel do Supabase e depois uma linha
   em `profiles` (papel `admin` ou `leader` e a equipe).
 - Seed inicial: `node scripts/build-seed.mjs` gera `supabase/seed/0001_seed.sql` a
@@ -46,6 +46,16 @@ npm run build
   dados reais ficam fora do git porque o repositório é público.
 - Publicação: a Vercel publica a `main` em produção e as outras branches como
   preview. Os cabeçalhos de segurança estão em `vercel.json`.
+
+Para publicar a correção de versionamento, valide o app e a migração `0013`
+juntos em homologação. Em produção, aplique a migração antes de promover o
+frontend. A versão anterior do app bloqueia gravações de avaliações a partir
+da migração. Oriente quem estiver avaliando a salvar seu trabalho antes da
+janela de publicação e recarregar o app após a promoção.
+
+Antes de publicar a função `sucesso-tecnicos`, configure no Supabase
+`N8N_SUCESSO_TECNICOS_URL` com o endereço HTTPS homologado do webhook na
+instância atual. A função exige esse endereço e recusa redirecionamentos.
 
 > A versão antiga em Firebase (Cloud Functions, regras do Firestore, scripts de contas)
 > foi removida do código; o que ela documentava está em `docs/historico-firebase/` e

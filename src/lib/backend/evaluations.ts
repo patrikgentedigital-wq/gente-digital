@@ -1,5 +1,8 @@
 import type { PdiGoal, PerformanceStatus, TeamMember } from '../../types';
 import { getSupabase } from './client';
+import type { CriteriaSet } from './criteria';
+
+export type EvaluationCriteriaRef = Pick<CriteriaSet, 'teamId' | 'version'>;
 
 export interface EvaluationPayload {
   id: string;
@@ -15,6 +18,7 @@ export interface EvaluationPayload {
   /** Conjunto e versão de perguntas que valiam quando a avaliação foi salva. */
   criteriaTeamId?: string;
   criteriaVersion?: number;
+  teamId?: string;
   revision?: number;
   createdAt?: unknown;
   updatedAt?: unknown;
@@ -55,6 +59,7 @@ export function isEvaluationCriteriaOutdatedError(error: unknown): boolean {
 const KNOWN_ERRORS: Array<[string, string]> = [
   ['perguntas_desatualizadas', 'As perguntas da equipe mudaram. Recarregue a avaliação.'],
   ['sem_permissao', 'Você não tem permissão para avaliar este membro.'],
+  ['avaliacao_historica_sem_acesso', 'A avaliação deste ciclo pertence à equipe anterior. Peça a um administrador para revisá-la.'],
   ['membro_indisponivel', 'Este membro não está disponível para avaliação.'],
   ['equipe_sem_perguntas', 'Esta equipe ainda não tem perguntas.'],
   ['nota_invalida', 'Há uma nota inválida. Use números inteiros de 0 a 5.'],
@@ -80,6 +85,7 @@ interface EvaluationRow {
   leader_id: string | null;
   criteria_team_id?: string | null;
   criteria_version?: number | null;
+  team_id?: string;
   revision: number;
   created_at: string;
   updated_at: string;
@@ -90,7 +96,7 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from('evaluations')
-    .select('id, member_id, cycle, scores, score, status, comments, pdi_goals, leader_id, criteria_team_id, criteria_version, revision, created_at, updated_at, members(name)')
+    .select('id, member_id, cycle, scores, score, status, comments, pdi_goals, leader_id, team_id, criteria_team_id, criteria_version, revision, created_at, updated_at, members(name)')
     .eq('id', evaluationId)
     .maybeSingle();
   if (error) throw error;
@@ -117,6 +123,7 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
     criteriaScores: row.scores,
     criteriaTeamId: row.criteria_team_id ?? undefined,
     criteriaVersion: row.criteria_version ?? undefined,
+    teamId: row.team_id,
     revision: row.revision,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -126,19 +133,23 @@ export async function getEvaluation(evaluationId: string): Promise<EvaluationPay
 export async function saveEvaluation({
   member,
   evaluation,
+  criteriaRef,
   expectedRevision = 0,
 }: {
   member: TeamMember;
   evaluation: Pick<EvaluationPayload, 'cycle' | 'comments' | 'pdiGoals' | 'criteriaScores'>;
+  criteriaRef: EvaluationCriteriaRef;
   expectedRevision?: number;
 }): Promise<SavedEvaluation> {
-  const { data, error } = await getSupabase().rpc('save_evaluation', {
+  const { data, error } = await getSupabase().rpc('save_evaluation_with_criteria', {
     p_member_id: member.id,
     p_cycle: evaluation.cycle,
     p_scores: evaluation.criteriaScores,
     p_comments: evaluation.comments,
     p_pdi_goals: evaluation.pdiGoals ?? [],
     p_expected_revision: expectedRevision,
+    p_criteria_team_id: criteriaRef.teamId,
+    p_criteria_version: criteriaRef.version,
   });
   if (error) {
     if (error.message.includes('conflito_de_revisao')) throw new EvaluationConflictError();

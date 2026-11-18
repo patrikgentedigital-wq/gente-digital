@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { TeamMember } from '../types';
 
 // Função comum (não vi.fn) para a recusa: o espião do vitest deixa a rejeição sem tratamento.
@@ -28,7 +28,57 @@ const members = [
   m('2', 'Bia', [{ month: 'Outubro/2026', score: 95, max: 100 }, { month: 'Novembro/2026', score: 80, max: 100 }]),
 ];
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
+const reply = (headline: string) => ({ headline, highlights: [], attention: [], talkingPoints: [], nextSteps: [] });
+
 describe('BriefingView', () => {
+  it('descarta resposta de equipe anterior mesmo ao voltar e preserva o carregamento da nova requisição', async () => {
+    const first = deferred<ReturnType<typeof reply>>();
+    const second = deferred<ReturnType<typeof reply>>();
+    requestCycleBriefing.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const other = { ...m('3', 'Caio', [{ month: 'Novembro/2026', score: 80, max: 100 }]), team: 'Outra' };
+    render(<BriefingView members={[...members, other]} />);
+    fireEvent.click(screen.getByRole('button', { name: /Gerar texto com IA/ }));
+    fireEvent.change(screen.getByLabelText('Equipe'), { target: { value: 'Outra' } });
+    fireEvent.change(screen.getByLabelText('Equipe'), { target: { value: 'Danielle' } });
+    fireEvent.click(screen.getByRole('button', { name: /Gerar texto com IA/ }));
+    await act(async () => first.resolve(reply('P1 resultado antigo')));
+    expect(screen.queryByText('Ana resultado antigo')).toBeNull();
+    expect((screen.getByRole('button', { name: /Gerando briefing/ }) as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => second.resolve(reply('P1 resultado novo')));
+    expect(screen.getByText('Ana resultado novo')).toBeTruthy();
+  });
+
+  it('descarta erros e textos quando dados ou associação dos códigos mudam', async () => {
+    const first = deferred<ReturnType<typeof reply>>();
+    requestCycleBriefing.mockReturnValueOnce(first.promise);
+    const { rerender } = render(<BriefingView members={members} />);
+    fireEvent.click(screen.getByRole('button', { name: /Gerar texto com IA/ }));
+    rerender(<BriefingView members={[{ ...members[0], id: 'nova-pessoa' }, members[1]]} />);
+    await act(async () => first.reject(new Error('erro antigo')));
+    expect(screen.queryByRole('alert')).toBeNull();
+    requestCycleBriefing.mockResolvedValueOnce(reply('P1 resultado'));
+    fireEvent.click(screen.getByRole('button', { name: /Gerar texto com IA/ }));
+    await screen.findByText('Ana resultado');
+    rerender(<BriefingView members={[{ ...members[0], id: 'nova-pessoa', history: [{ month: 'Novembro/2026', score: 60, max: 100 }] }, members[1]]} />);
+    expect(screen.queryByText('Ana resultado')).toBeNull();
+  });
+
+  it('descarta a resposta em voo ao trocar de ciclo', async () => {
+    const pending = deferred<ReturnType<typeof reply>>();
+    requestCycleBriefing.mockReturnValueOnce(pending.promise);
+    render(<BriefingView members={members} />);
+    fireEvent.click(screen.getByRole('button', { name: /Gerar texto com IA/ }));
+    fireEvent.change(screen.getByLabelText('Ciclo'), { target: { value: 'Outubro/2026' } });
+    await act(async () => pending.resolve(reply('P1 do ciclo anterior')));
+    expect(screen.queryByText('Ana do ciclo anterior')).toBeNull();
+  });
   it('mostra os números do ciclo sem precisar da IA', () => {
     render(<BriefingView members={members} />);
     expect(screen.getByText(/Avaliados:/).textContent).toContain('2 de 2');

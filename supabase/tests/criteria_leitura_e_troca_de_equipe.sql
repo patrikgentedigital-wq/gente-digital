@@ -51,7 +51,7 @@ begin
   assert (select max_score from public.members where id = 'ana') = 5, 'Ana segue com o conjunto próprio (5)';
 
   set local role authenticated;
-  perform public.save_evaluation('bia', 'c', '{"1-0":5,"1-1":4,"1-2":3}', '', '[]', 0);
+  perform public.save_evaluation_with_criteria('bia', 'c', '{"1-0":5,"1-1":4,"1-2":3}', '', '[]', 0, 'tb', 1);
   update public.members set team_id = 'ta' where id = 'bia';
   reset role;
   assert (select max_score from public.members where id = 'bia') = 15, 'Bia já avaliada não deveria mudar o máximo ao mudar de equipe';

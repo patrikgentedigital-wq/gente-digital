@@ -43,4 +43,4 @@ export {
   isEvaluationCriteriaOutdatedError,
   saveEvaluation,
 } from './evaluations';
-export type { EvaluationPayload, SavedEvaluation } from './evaluations';
+export type { EvaluationCriteriaRef, EvaluationPayload, SavedEvaluation } from './evaluations';

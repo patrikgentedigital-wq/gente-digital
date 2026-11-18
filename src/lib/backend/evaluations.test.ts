@@ -28,6 +28,7 @@ import {
 } from './evaluations';
 
 const member = { id: 'ana_ta', name: 'Ana' } as TeamMember;
+const criteriaRef = { teamId: 'Equipe histórica', version: 2 };
 const evaluation: EvaluationPayload = {
   id: 'evaluation_ana_ta_out',
   memberId: 'ana_ta',
@@ -50,34 +51,36 @@ beforeEach(() => {
 describe('saveEvaluation', () => {
   it('envia as notas ao servidor e devolve o resultado calculado por ele', async () => {
     fake.rpc.mockResolvedValue({ data: { id: 'x', revision: 2, score: 12, max_score: 15, status: 'Atenção' }, error: null });
-    const saved = await saveEvaluation({ member, evaluation, expectedRevision: 1 });
-    expect(fake.rpc).toHaveBeenCalledWith('save_evaluation', {
+    const saved = await saveEvaluation({ member, evaluation, criteriaRef, expectedRevision: 1 });
+    expect(fake.rpc).toHaveBeenCalledWith('save_evaluation_with_criteria', {
       p_member_id: 'ana_ta',
       p_cycle: 'Outubro/2026',
       p_scores: evaluation.criteriaScores,
       p_comments: 'Bom ciclo',
       p_pdi_goals: [],
       p_expected_revision: 1,
+      p_criteria_team_id: 'Equipe histórica',
+      p_criteria_version: 2,
     });
     expect(saved).toEqual({ revision: 2, score: 12, maxScore: 15, status: 'Atenção', isCurrent: true });
   });
 
   it('informa quando o ciclo salvo é antigo e não vira a nota atual do membro', async () => {
     fake.rpc.mockResolvedValue({ data: { id: 'x', revision: 1, score: 5, max_score: 15, status: 'Alarme', is_current: false }, error: null });
-    const saved = await saveEvaluation({ member, evaluation });
+    const saved = await saveEvaluation({ member, evaluation, criteriaRef });
     expect(saved.isCurrent).toBe(false);
   });
 
   it('reconhece conflito de revisão', async () => {
     fake.rpc.mockResolvedValue({ data: null, error: { message: 'conflito_de_revisao' } });
-    const failure = await saveEvaluation({ member, evaluation }).catch((error) => error);
+    const failure = await saveEvaluation({ member, evaluation, criteriaRef }).catch((error) => error);
     expect(isEvaluationConflictError(failure)).toBe(true);
     expect(isEvaluationCriteriaOutdatedError(failure)).toBe(false);
   });
 
   it('reconhece perguntas desatualizadas', async () => {
     fake.rpc.mockResolvedValue({ data: null, error: { message: 'perguntas_desatualizadas' } });
-    const failure = await saveEvaluation({ member, evaluation }).catch((error) => error);
+    const failure = await saveEvaluation({ member, evaluation, criteriaRef }).catch((error) => error);
     expect(isEvaluationCriteriaOutdatedError(failure)).toBe(true);
     expect(isEvaluationConflictError(failure)).toBe(false);
     expect(describeEvaluationError(failure)).toBe('As perguntas da equipe mudaram. Recarregue a avaliação.');

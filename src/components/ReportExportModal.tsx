@@ -1,5 +1,8 @@
-import React, { useRef } from 'react';
-import { isEvaluated } from '../lib/scoring';
+import React from 'react';
+import { statusForScore } from '../lib/scoring';
+import { maxScoreFor } from '../lib/criteria';
+import { hasCompleteCriteriaScores } from '../lib/evaluation';
+import { projectScore } from '../lib/levelPlan';
 import { X, Printer, CheckCircle2, Sparkles } from 'lucide-react';
 import { TeamMember } from '../types';
 import type { CriteriaCategory } from '../lib/criteria';
@@ -15,6 +18,8 @@ interface ReportExportModalProps {
   leaderComments?: string;
   cycle?: string;
   criteria?: CriteriaCategory[] | null;
+  draft?: boolean;
+  rank?: number;
 }
 
 export const ReportExportModal: React.FC<ReportExportModalProps> = ({
@@ -25,9 +30,13 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
   leaderComments = '',
   cycle = 'Ciclo atual',
   criteria = null,
+  draft = false,
+  rank,
 }) => {
-  const evaluated = isEvaluated(member);
-  const printRef = useRef<HTMLDivElement>(null);
+  const categories = criteria ?? [];
+  const maximum = maxScoreFor(categories);
+  const complete = hasCompleteCriteriaScores(criteriaScores ?? {}, categories);
+  const total = projectScore(categories, criteriaScores ?? {});
   const dialogRef = useDialog(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -77,7 +86,7 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
         </div>
 
         {/* Printable Report Canvas */}
-        <div className="report-print-content p-8 overflow-y-auto space-y-6 print:p-0 print:overflow-visible" ref={printRef}>
+        <div className="report-print-content p-8 overflow-y-auto space-y-6 print:p-0 print:overflow-visible">
           
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-surface-2 to-app border border-line p-6 rounded-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -98,19 +107,20 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
                 <p className="text-xs text-muted font-sans">{member.role}</p>
                 <div className="flex items-center gap-2 mt-2 font-mono text-[11px] text-faint">
                   <span>Líder: <strong className="text-ink">{member.team}</strong></span>
-                  <span>•</span>
-                  <span>Rank: <strong className="text-accent-text">{evaluated ? `#${member.rank}` : '—'}</strong></span>
+                  {rank !== undefined && (
+                    <span>Posição geral: <strong className="text-accent-text">#{rank}</strong></span>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="text-right border-t md:border-t-0 border-line pt-3 md:pt-0 w-full md:w-auto">
-              <div className="font-mono text-[10px] text-faint uppercase">Pontuação Final</div>
+              <div className="font-mono text-[10px] text-faint uppercase">{draft ? 'Pontuação do rascunho' : 'Pontuação Final'}</div>
               <div className="text-4xl font-mono font-bold text-accent-text">
-                {evaluated ? member.score : '—'} <span className="text-sm font-normal text-faint">/ {member.maxScore || 155}</span>
+                {complete || (draft && maximum > 0) ? total : '—'} {maximum > 0 && <span className="text-sm font-normal text-faint">/ {maximum}</span>}
               </div>
               <div className="mt-1 inline-block font-mono text-[11px] font-bold px-3 py-1 rounded-md bg-gold-soft text-accent-text border border-accent/30 uppercase">
-                {evaluated ? member.status : 'Sem avaliação'}
+                {draft ? 'Rascunho' : complete ? statusForScore(total, maximum) : 'Sem avaliação'}
               </div>
             </div>
           </div>
@@ -123,16 +133,17 @@ export const ReportExportModal: React.FC<ReportExportModalProps> = ({
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(criteria ?? []).map((cat, catIndex) => {
-                const { sum, max } = getCategoryScore(cat.id, criteriaScores, criteria ?? []);
-                const percent = sum === null ? 0 : Math.round((sum / max) * 100);
+              {categories.map((cat, catIndex) => {
+                const { sum, max } = getCategoryScore(cat.id, criteriaScores, categories);
+                const shownScore = draft && criteriaScores ? projectScore([cat], criteriaScores) : sum;
+                const percent = shownScore === null || max === 0 ? 0 : Math.round((shownScore / max) * 100);
 
                 return (
                   <div key={cat.id} className="bg-surface-2/60 border border-line p-3.5 rounded-xl flex flex-col justify-between">
                     <div className="flex justify-between items-center text-xs mb-2">
                       <span className="font-semibold text-ink">{catIndex + 1}. {cat.name}</span>
                       <span className="font-mono text-accent-text font-bold">
-                        {sum === null ? '—' : `${sum}/${max}`}
+                        {shownScore === null ? '—' : `${shownScore}/${max}`}
                       </span>
                     </div>
 

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { TeamMember } from '../types';
 import { LeaderboardView } from './LeaderboardView';
+import * as exportUtils from '../utils/exportUtils';
 
 afterEach(() => cleanup());
 
@@ -39,6 +40,23 @@ const avaliados = () => [
 ];
 
 describe('LeaderboardView', () => {
+  it('exporta as posições exibidas na equipe e deixa pendentes sem posição', () => {
+    const exportSpy = vi.spyOn(exportUtils, 'exportMembersToCSV').mockImplementation(() => {});
+    render(<LeaderboardView {...props} members={[
+      m({ name: 'Ana', rank: 8, score: 90 }),
+      m({ name: 'Bia', rank: 12, score: 80 }),
+      m({ name: 'Caio', rank: 19, evaluationStatus: 'Pendente' }),
+      m({ name: 'Outra', team: 'Outra', rank: 1, score: 100 }),
+    ]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Por equipe' }));
+    fireEvent.click(screen.getByRole('button', { name: /Exportar CSV/ }));
+    const exported = exportSpy.mock.calls[0][0];
+    const lines = exportUtils.buildMembersCSVContent(exported).split('\r\n');
+    expect(lines[1]).toMatch(/^1;"Ana"/);
+    expect(lines[2]).toMatch(/^2;"Bia"/);
+    expect(lines[3]).toMatch(/^;"Caio"/);
+    exportSpy.mockRestore();
+  });
   it('não avaliados ficam no bloco Aguardando avaliação, sem posição', () => {
     render(<LeaderboardView {...props} members={[...avaliados(), m({ name: 'Diego', rank: 4, evaluationStatus: 'Pendente' })]} />);
     const pendentes = screen.getByText('Aguardando avaliação (1)').closest('details') as HTMLElement;

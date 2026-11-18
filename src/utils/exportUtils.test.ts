@@ -53,7 +53,7 @@ describe('exportUtils - buildMembersCSVContent', () => {
     expect(lines[1]).toContain('1;"Patrik Teste";"Analista";"Djemerson";154;155;"Voando";"Concluído";"patrik@gentedigital.com.br";1;2');
 
     // Line 2 checks (proper quotes escaping)
-    expect(lines[2]).toContain('2;"Mayson ""NOC""";"Técnico";"Alexandre";148;155;"Voando";"Forms Respondido";"mayson@gentedigital.com.br";0;0');
+    expect(lines[2]).toContain(';"Mayson ""NOC""";"Técnico";"Alexandre";148;155;"Voando";"Forms Respondido";"mayson@gentedigital.com.br";0;0');
   });
 
   it('neutralizes formula injection characters (=, +, -, @)', () => {

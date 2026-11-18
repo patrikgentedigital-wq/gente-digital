@@ -23,6 +23,14 @@ const member = {
 } as TeamMember;
 
 describe('ReportExportModal', () => {
+  it('usa as notas do ciclo do relatório para o total e para a categoria', () => {
+    const criteria = [{ id: 'cat', name: 'Campo', items: [{ id: 'q1', text: 'Um' }, { id: 'q2', text: 'Dois' }] }];
+    render(<ReportExportModal member={member} isOpen onClose={vi.fn()} cycle="Outubro/2026" criteria={criteria} criteriaScores={{ q1: 2, q2: 3 }} />);
+    expect(screen.getByText(/Ciclo: Outubro\/2026/)).toBeTruthy();
+    expect(screen.getByText('5', { exact: false, selector: '.text-4xl' }).textContent).toMatch(/5\s*\/ 10/);
+    expect(screen.getByText('5/10')).toBeTruthy();
+  });
+
   it('numera as categorias pela posição, mesmo com identificador gerado pelo editor', () => {
     const criteria = [
       { id: 'c8k2x1ab', name: 'Atendimento', items: [{ id: 'q1', text: 'Um' }, { id: 'q2', text: 'Dois' }] },

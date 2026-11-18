@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Sparkles } from 'lucide-react';
 import type { TeamMember } from '../types';
 import { requestCycleBriefing } from '../lib/backend';
@@ -52,6 +52,7 @@ export const BriefingView: React.FC<BriefingViewProps> = ({ members }) => {
   const [text, setText] = useState<BriefingText | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
 
   // Abre na primeira equipe que já tem avaliação, para não cair numa tela vazia.
   const teamsWithEvaluations = useMemo(
@@ -63,13 +64,18 @@ export const BriefingView: React.FC<BriefingViewProps> = ({ members }) => {
   const cycles = useMemo(() => cyclesFromMembers(teamMembers), [teamMembers]);
   const activeCycle = cycle && cycles.includes(cycle) ? cycle : cycles[0] ?? '';
 
-  // Trocar de equipe ou de ciclo descarta o texto da IA, que seria de outro briefing.
-  useEffect(() => {
+  const facts = useMemo(() => (activeTeam && activeCycle ? buildBriefingFacts(members, activeTeam, activeCycle) : null), [members, activeTeam, activeCycle]);
+  // Inclui as identidades: dois colaboradores podem ter dados e nomes iguais, mas códigos diferentes.
+  const snapshot = JSON.stringify({ activeTeam, activeCycle, facts, members: teamMembers.filter((member) => !member.deleted) });
+
+  // Invalida também requisições em voo e seus erros ao mudar equipe, ciclo ou dados.
+  useLayoutEffect(() => {
+    requestId.current += 1;
     setText(null);
     setError(null);
-  }, [activeTeam, activeCycle]);
-
-  const facts = useMemo(() => (activeTeam && activeCycle ? buildBriefingFacts(members, activeTeam, activeCycle) : null), [members, activeTeam, activeCycle]);
+    setLoading(false);
+    return () => { requestId.current += 1; };
+  }, [snapshot]);
 
   if (teams.length === 0) {
     return (
@@ -131,14 +137,16 @@ export const BriefingView: React.FC<BriefingViewProps> = ({ members }) => {
   const { summary } = facts;
 
   const generate = async () => {
+    const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
-      setText(await requestCycleBriefing(toAiPayload(facts)));
+      const result = await requestCycleBriefing(toAiPayload(facts));
+      if (requestId.current === id) setText(result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Não foi possível gerar o briefing agora.');
+      if (requestId.current === id) setError(e instanceof Error ? e.message : 'Não foi possível gerar o briefing agora.');
     } finally {
-      setLoading(false);
+      if (requestId.current === id) setLoading(false);
     }
   };
 

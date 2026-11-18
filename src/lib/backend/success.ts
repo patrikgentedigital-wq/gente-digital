@@ -4,6 +4,7 @@ import { getSupabase } from './client';
 const ERROR_MESSAGES: Record<string, string> = {
   nao_autenticado: 'Sua sessão expirou. Entre de novo.',
   sem_permissao: 'Só o administrador pode ver este painel.',
+  fonte_nao_configurada: 'A fonte das notas de pós-atendimento ainda não foi configurada.',
   fonte_indisponivel: 'Não foi possível ler as notas agora. Tente de novo em instantes.',
 };
 

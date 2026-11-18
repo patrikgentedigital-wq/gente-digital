@@ -9,6 +9,7 @@ const projectRoot = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    css: { postcss: { plugins: [] } },
     resolve: {
       alias: {
         '@': resolve(projectRoot, '.'),

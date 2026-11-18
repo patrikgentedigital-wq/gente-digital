@@ -4,7 +4,6 @@
 // aqui o corpo é refeito campo a campo mesmo assim.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const N8N_URL = 'https://n8n.srv1693737.hstgr.cloud/webhook/sucesso-tecnicos';
 const MAX_ROWS = 5000;
 
 // Só o site do quadro (e o ambiente local) pode chamar esta função a partir do navegador.
@@ -44,9 +43,18 @@ Deno.serve(async (request) => {
   const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', userData.user.id).maybeSingle();
   if (profile?.role !== 'admin') return reply({ error: 'sem_permissao' }, 403);
 
+  const webhook = URL.parse(Deno.env.get('N8N_SUCESSO_TECNICOS_URL') ?? '');
+  if (!webhook || webhook.protocol !== 'https:' || webhook.username || webhook.password) {
+    return reply({ error: 'fonte_nao_configurada' }, 503);
+  }
+
   let payload: { geradoEm?: unknown; linhas?: unknown };
   try {
-    const response = await fetch(N8N_URL, { headers: { Authorization: authorization }, signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(webhook, {
+      headers: { Authorization: authorization },
+      redirect: 'error',
+      signal: AbortSignal.timeout(15_000),
+    });
     if (!response.ok) {
       console.error('n8n respondeu', response.status);
       return reply({ error: 'fonte_indisponivel' }, 502);

@@ -45,7 +45,7 @@ export const AiDraftPanel: React.FC<AiDraftPanelProps> = ({ jobTitle, categories
           <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
           {loading ? 'Gerando rascunho...' : 'Sugerir rascunho com IA'}
         </button>
-        <span className="text-[11px] text-faint">Só as notas e o cargo são enviados, sem o nome da pessoa. Você revisa tudo.</span>
+        <span className="text-[11px] text-faint">São enviados o cargo, as notas e os títulos e textos das perguntas. Evite incluir nomes ou dados pessoais nesses campos. Revise a sugestão antes de usar.</span>
       </div>
 
       {error && <p className="text-xs text-danger" role="alert">{error}</p>}

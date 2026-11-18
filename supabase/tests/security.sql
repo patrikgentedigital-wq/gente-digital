@@ -43,7 +43,7 @@ begin
     assert sqlerrm like '%permission denied%', 'esperava permission denied para anon, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('ma', 'c', good_scores, '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'c', good_scores, '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: anônimo chamou save_evaluation';
   exception when others then
     assert sqlerrm like '%permission denied%', 'esperava permission denied para anon na função, veio: ' || sqlerrm;
@@ -88,7 +88,7 @@ begin
     assert sqlerrm like '%sem_permissao%', 'esperava sem_permissao, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('ma', 'c', good_scores, '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'c', good_scores, '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: líder sem equipe avaliou';
   exception when others then
     assert sqlerrm like '%sem_permissao%', 'esperava sem_permissao, veio: ' || sqlerrm;
@@ -134,61 +134,61 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', leader_a, 'role', 'authenticated')::text, true);
   set local role authenticated;
   begin
-    perform public.save_evaluation('ma', 'Out', '{"1-0":6,"1-1":4,"2-0":3}', '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Out', '{"1-0":6,"1-1":4,"2-0":3}', '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: nota 6 aceita';
   exception when others then
     assert sqlerrm like '%nota_invalida%', 'esperava nota_invalida, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('ma', 'Out', '{"1-0":2.5,"1-1":4,"2-0":3}', '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Out', '{"1-0":2.5,"1-1":4,"2-0":3}', '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: nota 2.5 aceita';
   exception when others then
     assert sqlerrm like '%nota_invalida%', 'esperava nota_invalida para 2.5, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('ma', 'Out', '{"1-0":"5","1-1":4,"2-0":3}', '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Out', '{"1-0":"5","1-1":4,"2-0":3}', '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: nota em texto aceita';
   exception when others then
     assert sqlerrm like '%nota_invalida%', 'esperava nota_invalida para texto, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('ma', 'Out', '{"1-0":5,"1-1":4}', '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Out', '{"1-0":5,"1-1":4}', '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: nota faltando aceita';
   exception when others then
     assert sqlerrm like '%perguntas_desatualizadas%', 'esperava perguntas_desatualizadas, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('ma', 'Out', '{"1-0":5,"1-1":4,"2-0":3,"9-9":1}', '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Out', '{"1-0":5,"1-1":4,"2-0":3,"9-9":1}', '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: nota extra aceita';
   exception when others then
     assert sqlerrm like '%perguntas_desatualizadas%', 'esperava perguntas_desatualizadas para chave extra, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('mb', 'Out', good_scores, '', '[]', 0);
+    perform public.save_evaluation_with_criteria('mb', 'Out', good_scores, '', '[]', 0, 'tb', 1);
     raise exception 'FALHOU: líder A avaliou membro da B';
   exception when others then
     assert sqlerrm like '%sem_permissao%', 'esperava sem_permissao, veio: ' || sqlerrm;
   end;
   begin
-    perform public.save_evaluation('marc', 'Out', good_scores, '', '[]', 0);
+    perform public.save_evaluation_with_criteria('marc', 'Out', good_scores, '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: avaliou membro arquivado';
   exception when others then
     assert sqlerrm like '%membro_indisponivel%', 'esperava membro_indisponivel, veio: ' || sqlerrm;
   end;
 
   -- avaliação válida: 12 de 15 = 80% (>= 77,4%) é Atenção
-  r := public.save_evaluation('ma', 'Out', good_scores, 'ok', '[]', 0);
+  r := public.save_evaluation_with_criteria('ma', 'Out', good_scores, 'ok', '[]', 0, 'ta', 1);
   assert (r ->> 'revision')::int = 1 and (r ->> 'score')::int = 12 and (r ->> 'max_score')::int = 15
          and r ->> 'status' = 'Atenção', 'resultado inesperado: ' || r::text;
 
   -- (h) conflito de revisão
   begin
-    perform public.save_evaluation('ma', 'Out', good_scores, 'ok', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Out', good_scores, 'ok', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: revisão antiga aceita';
   exception when others then
     assert sqlerrm like '%conflito_de_revisao%', 'esperava conflito_de_revisao, veio: ' || sqlerrm;
   end;
-  r := public.save_evaluation('ma', 'Out', '{"1-0":5,"1-1":5,"2-0":5}', 'melhor', '[]', 1);
+  r := public.save_evaluation_with_criteria('ma', 'Out', '{"1-0":5,"1-1":5,"2-0":5}', 'melhor', '[]', 1, 'ta', 1);
   assert (r ->> 'revision')::int = 2 and r ->> 'status' = 'Voando', 'segunda revisão inesperada: ' || r::text;
   reset role;
 
@@ -244,7 +244,7 @@ begin
   assert (r ->> 'version')::int = 2 and (r ->> 'max_score')::int = 20, 'versão 2 inesperada: ' || r::text;
   -- avaliação feita com as perguntas antigas agora é recusada
   begin
-    perform public.save_evaluation('ma', 'Nov', good_scores, '', '[]', 0);
+    perform public.save_evaluation_with_criteria('ma', 'Nov', good_scores, '', '[]', 0, 'ta', 1);
     raise exception 'FALHOU: perguntas antigas aceitas após edição';
   exception when others then
     assert sqlerrm like '%perguntas_desatualizadas%', 'esperava perguntas_desatualizadas, veio: ' || sqlerrm;

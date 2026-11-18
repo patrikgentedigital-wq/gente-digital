@@ -7,6 +7,7 @@ import {
   countOpenClientErrors,
   describeEvaluationError,
   getEvaluation,
+  getCriteriaSet,
   isEvaluationConflictError,
   isEvaluationCriteriaOutdatedError,
   logoutLeader,
@@ -16,7 +17,7 @@ import {
   updateMember,
 } from './lib/backend';
 import { pickEvaluationMember } from './lib/defaultEvaluationMember';
-import type { EvaluationPayload } from './lib/backend';
+import type { EvaluationCriteriaRef, EvaluationPayload } from './lib/backend';
 import { useTeamCriteria } from './hooks/useTeamCriteria';
 import { CriteriaEditorView } from './components/CriteriaEditorView';
 import { ClientErrorsPanel } from './components/ClientErrorsPanel';
@@ -28,7 +29,7 @@ import { useTheme } from './hooks/useTheme';
 import { Navbar } from './components/Navbar';
 import { PageHeader, type Tab } from './components/PageHeader';
 import { AuthenticatedModals } from './components/AuthenticatedModals';
-import type { ReportModalState } from './components/AuthenticatedModals';
+import type { ReportContext, ReportModalState } from './components/AuthenticatedModals';
 const LeaderboardView = lazy(() => import('./components/LeaderboardView').then((module) => ({ default: module.LeaderboardView })));
 const DashboardView = lazy(() => import('./components/DashboardView').then((module) => ({ default: module.DashboardView })));
 const OrgChartView = lazy(() => import('./components/OrgChartView').then((module) => ({ default: module.OrgChartView })));
@@ -125,18 +126,11 @@ export default function App() {
     }
   }, [authUser]);
 
-  const evaluationCriteria = useTeamCriteria(
-    selectedEvaluationMember ? (selectedEvaluationMember.criteriaTeamId ?? selectedEvaluationMember.team) : null,
-  );
   // Uma avaliação já salva é mostrada com as perguntas (e a versão) que valiam quando foi feita.
   const detailSaved = detailEvaluation && detailEvaluation.memberId === detailModalMember?.id ? detailEvaluation : null;
   const detailCriteria = useTeamCriteria(
     detailModalMember ? (detailSaved?.criteriaTeamId ?? detailModalMember.criteriaTeamId ?? detailModalMember.team) : null,
     detailSaved?.criteriaVersion,
-  );
-  const reportCriteria = useTeamCriteria(
-    reportModal ? (reportModal.criteriaTeamId ?? reportModal.member.criteriaTeamId ?? reportModal.member.team) : null,
-    reportModal?.criteriaVersion,
   );
 
   const loadEvaluation = useCallback(async (memberId: string, cycle: string) => {
@@ -166,7 +160,7 @@ export default function App() {
 
   const openReportModal = async (
     member: TeamMember,
-    context?: Pick<ReportModalState, 'criteriaScores' | 'leaderComments' | 'cycle'>,
+    context?: ReportContext,
   ) => {
     if (context) {
       setReportModal({ member, ...context });
@@ -174,18 +168,28 @@ export default function App() {
     }
 
     try {
-      const evaluation = await loadEvaluation(member.id, getDefaultEvaluationCycle());
+      const cycle = cycleFilter ?? cyclesFromMembers([member])[0] ?? getDefaultEvaluationCycle();
+      const evaluation = await loadEvaluation(member.id, cycle);
+      if (!evaluation?.criteriaTeamId || evaluation.criteriaVersion === undefined) {
+        toast.error(`Não há avaliação detalhada disponível para ${cycle}.`);
+        return;
+      }
+      const criteria = await getCriteriaSet(evaluation.criteriaTeamId, evaluation.criteriaVersion);
+      if (!criteria) {
+        toast.error('As perguntas originais deste relatório não estão disponíveis.');
+        return;
+      }
       setReportModal({
-        member,
-        criteriaScores: cleanCriteriaScores(evaluation?.criteriaScores),
-        leaderComments: evaluation?.comments,
-        cycle: evaluation?.cycle || getDefaultEvaluationCycle(),
-        criteriaTeamId: evaluation?.criteriaTeamId,
-        criteriaVersion: evaluation?.criteriaVersion,
+        member: { ...member, team: evaluation.teamId ?? member.team },
+        criteriaScores: cleanCriteriaScores(evaluation.criteriaScores),
+        leaderComments: evaluation.comments,
+        cycle: evaluation.cycle,
+        criteria: criteria.categories,
+        draft: false,
+        rank: member.rank > 0 ? member.rank : undefined,
       });
     } catch (error) {
       console.error('Unable to load report data:', error);
-      setReportModal({ member, cycle: getDefaultEvaluationCycle() });
       toast.error('Não foi possível carregar os detalhes da avaliação.');
     }
   };
@@ -292,9 +296,10 @@ export default function App() {
     _clientTotal: number,
     criteriaScores: Record<string, number>,
     comments: string,
-    cycle = getDefaultEvaluationCycle(),
-    pdiGoals: PdiGoal[] = [],
-    expectedRevision = 0,
+    cycle: string,
+    pdiGoals: PdiGoal[],
+    expectedRevision: number,
+    criteriaRef: EvaluationCriteriaRef,
   ): Promise<number> => {
     const targetMember = members.find((member) => member.id === memberId);
     if (!targetMember || !authUser) {
@@ -308,6 +313,7 @@ export default function App() {
         member: targetMember,
         evaluation: { cycle, comments, pdiGoals, criteriaScores },
         expectedRevision,
+        criteriaRef,
       });
       const history = [
         ...(targetMember.history || []).filter((entry) => entry.month !== cycle),
@@ -328,7 +334,7 @@ export default function App() {
       setMembers((previous) => rankMembers(previous.map((member) =>
         member.id === memberId ? updatedMember : member
       )));
-      setSelectedEvaluationMember(updatedMember);
+      setSelectedEvaluationMember((current) => current?.id === memberId ? updatedMember : current);
       return saved.revision;
     } catch (error) {
       if (isEvaluationConflictError(error)) {
@@ -386,7 +392,7 @@ export default function App() {
               setSelectedEvaluationMember(realMember(member));
               setActiveTab('leader');
             }}
-            onOpenReportModal={(member, context) => openReportModal(realMember(member), context)}
+            onOpenReportModal={(member) => openReportModal(member)}
             onSelectMemberForDetail={(member) => setDetailModalMember(realMember(member))}
             onOpenMemberForm={authRole === 'admin' ? (member) => {
               setMemberToEdit(member ? realMember(member) : null);
@@ -429,7 +435,7 @@ export default function App() {
            selectedEvaluationMember ? (
              <EvaluationView
                members={members}
-               criteria={evaluationCriteria}
+               onLoadCriteria={getCriteriaSet}
                selectedMember={selectedEvaluationMember}
                onSelectMember={setSelectedEvaluationMember}
                onSaveEvaluation={handleSaveEvaluation}
@@ -574,7 +580,6 @@ export default function App() {
         detailModalMember={detailModalMember}
         detailEvaluation={detailEvaluation}
         detailCriteria={detailCriteria}
-        reportCriteria={reportCriteria}
         onCloseDetail={() => setDetailModalMember(null)}
         onSelectForEvaluation={(member) => {
           setSelectedEvaluationMember(member);
